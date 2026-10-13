@@ -183,7 +183,7 @@ export const pt: Dictionary = {
       promises: ["100% grátis", "Sem app no iPhone", "Sem cabos", "Sem conta"],
       worksWith: "Funciona por AirPlay com",
       devices: ["iPhone", "iPad", "Mac"],
-      requires: "Windows 10 e 11",
+      requires: "Windows 10 e 11 · Download de 12 MB",
       sceneLabel:
         "Animação: um iPhone envia o seu ecrã, sem fios, para um PC com Windows, onde aparece na janela do Mirlow.",
       sceneReady: "Pronto para projetar",

@@ -177,7 +177,7 @@ export const en = {
       promises: ["100% free", "No app on your iPhone", "No cables", "No account"],
       worksWith: "Works over AirPlay with",
       devices: ["iPhone", "iPad", "Mac"],
-      requires: "Windows 10 and 11",
+      requires: "Windows 10 and 11 · 12 MB download",
       sceneLabel:
         "Animation: an iPhone sends its screen wirelessly to a Windows PC, where it appears in the Mirlow window.",
       sceneReady: "Ready to mirror",
