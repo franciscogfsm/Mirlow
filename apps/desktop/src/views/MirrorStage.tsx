@@ -120,20 +120,9 @@ export function MirrorStage({
     // `key` captures every value the native layout depends on.
   }, [key]);
 
-  // The window's own bottom corners follow the picture's, one frame further
-  // out. Its shape is a fixed outline, so it is redrawn at every new size.
-  const areaWidth = area ? Math.round(area.width) : 0;
-  const areaHeight = area ? Math.round(area.height) : 0;
-  useEffect(() => {
-    if (!areaWidth || !areaHeight) return;
-    const scale = window.devicePixelRatio || 1;
-    void api.shapeWindow(fullscreen ? 0 : Math.round((WINDOWED_RADIUS + MIRROR_FRAME) * scale));
-  }, [areaWidth, areaHeight, fullscreen]);
-
   useEffect(
     () => () => {
       void api.layoutVideo({ x: 0, y: 0, width: 0, height: 0 }, false, 0);
-      void api.shapeWindow(0);
     },
     [],
   );

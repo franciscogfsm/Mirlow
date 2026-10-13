@@ -139,15 +139,6 @@ pub fn layout(app: &AppHandle, rect: Rect, radius: i32, visible: bool) {
     }
 }
 
-/// Rounds the bottom corners of the Mirlow window itself by `radius` physical
-/// pixels, so the window follows the picture's corners while mirroring. Zero
-/// gives the window back its ordinary shape.
-pub fn shape_window(app: &AppHandle, radius: i32) {
-    if let Some(hwnd) = main_hwnd(app) {
-        platform::shape(hwnd, radius.max(0));
-    }
-}
-
 fn main_hwnd(app: &AppHandle) -> Option<isize> {
     #[cfg(windows)]
     {
@@ -166,9 +157,7 @@ mod platform {
     use super::Rect;
     use windows::core::BOOL;
     use windows::Win32::Foundation::{HWND, LPARAM, RECT};
-    use windows::Win32::Graphics::Gdi::{
-        CombineRgn, CreateRectRgn, CreateRoundRectRgn, DeleteObject, SetWindowRgn, RGN_AND, RGN_OR,
-    };
+    use windows::Win32::Graphics::Gdi::{CreateRoundRectRgn, SetWindowRgn};
     use windows::Win32::UI::WindowsAndMessaging::{
         EnumWindows, GetWindow, GetWindowLongPtrW, GetWindowRect, GetWindowThreadProcessId,
         IsWindow, IsWindowVisible, SetParent, SetWindowLongPtrW, SetWindowPos, GWL_EXSTYLE,
@@ -241,34 +230,6 @@ mod platform {
         }
     }
 
-    /// Clips a top-level window to a shape with gently rounded top corners,
-    /// as Windows draws them, and bottom corners of the given radius. A window
-    /// with a region loses the system's own rounding, hence the top corners.
-    pub fn shape(hwnd: isize, radius: i32) {
-        let hwnd = handle(hwnd);
-        unsafe {
-            let mut rect = RECT::default();
-            if radius == 0 || GetWindowRect(hwnd, &mut rect).is_err() {
-                SetWindowRgn(hwnd, None, true);
-                return;
-            }
-            let (width, height) = (rect.right - rect.left, rect.bottom - rect.top);
-            let top_radius = radius / 3;
-            let shape = CreateRoundRectRgn(0, 0, width + 1, height + 1, top_radius * 2, top_radius * 2);
-            let bottom = CreateRoundRectRgn(0, 0, width + 1, height + 1, radius * 2, radius * 2);
-            let upper_half = CreateRectRgn(0, 0, width, height / 2);
-            let lower_half = CreateRectRgn(0, height / 2, width, height);
-            CombineRgn(Some(shape), Some(shape), Some(upper_half), RGN_AND);
-            CombineRgn(Some(bottom), Some(bottom), Some(lower_half), RGN_AND);
-            CombineRgn(Some(shape), Some(shape), Some(bottom), RGN_OR);
-            for spare in [bottom, upper_half, lower_half] {
-                let _ = DeleteObject(spare.into());
-            }
-            // The system takes ownership of the region it is given.
-            SetWindowRgn(hwnd, Some(shape), true);
-        }
-    }
-
     pub fn place(hwnd: isize, rect: Rect, radius: i32, visible: bool) {
         let show = visible && rect.width > 0 && rect.height > 0;
         let flags = SWP_NOACTIVATE | SWP_FRAMECHANGED | if show { SWP_SHOWWINDOW } else { SWP_HIDEWINDOW };
@@ -302,6 +263,5 @@ mod platform {
         None
     }
     pub fn adopt(_hwnd: isize, _parent: isize) {}
-    pub fn shape(_hwnd: isize, _radius: i32) {}
     pub fn place(_hwnd: isize, _rect: Rect, _radius: i32, _visible: bool) {}
 }
