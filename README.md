@@ -4,9 +4,9 @@
 
 # Mirlow
 
-**Mirror your iPhone to Windows. For free.**
+**Mirror your iPhone or Android phone to Windows. For free.**
 
-Open Mirlow, tap Screen Mirroring on your iPhone, and your screen is on your PC.<br>
+Open Mirlow, tap Screen Mirroring on your iPhone or Smart View on your Android, and your screen is on your PC.<br>
 No app on the phone, no account, no cable.
 
 [![Downloads](https://img.shields.io/github/downloads/franciscogfsm/Mirlow/total?style=flat-square&label=downloads&color=111111)](https://github.com/franciscogfsm/Mirlow/releases)
@@ -21,7 +21,7 @@ No app on the phone, no account, no cable.
 
 <br>
 
-<img src="apps/web/public/og.png" width="820" alt="Mirror your iPhone to Windows. For free.">
+<img src="apps/web/public/og.png" width="820" alt="Mirror your phone to Windows. For free.">
 
 </div>
 
@@ -29,11 +29,11 @@ No app on the phone, no account, no cable.
 
 | 1. Open Mirlow | 2. Tap Screen Mirroring | 3. See it on your PC |
 | --- | --- | --- |
-| Your PC becomes discoverable the moment the app opens. There is nothing to set up. | Swipe down to Control Centre on your iPhone or iPad and choose your PC from the list. | Your screen appears with its sound, and follows along as you rotate your phone. |
+| Your PC becomes discoverable the moment the app opens. There is nothing to set up. | On an iPhone or iPad it is in Control Centre. On Android it is called Smart View, Cast or Wireless display. Choose your PC from the list. | Your screen appears with its sound, and follows along as you rotate your phone. |
 
 ## What you get
 
-- **Wireless mirroring.** Uses the Screen Mirroring built into your iPhone, iPad and Mac. No app, no cable.
+- **Wireless mirroring.** Uses the screen mirroring built into your iPhone, iPad, Mac or Android phone. No app, no cable.
 - **Sound included.** Hear your phone's audio through your PC speakers, in step with the picture.
 - **Full screen.** One key takes your phone edge to edge. Portrait and landscape both fit.
 - **Private by design.** Everything stays on your own network. No servers, no account, no tracking.
@@ -44,8 +44,12 @@ No app on the phone, no account, no cable.
 1. [Download the installer](https://github.com/franciscogfsm/Mirlow/releases/latest/download/Mirlow-Setup-x64.exe) and run it.
 2. Open Mirlow.
 3. On your iPhone, open Control Centre, tap **Screen Mirroring** and choose your PC.
+   On Android, open **Smart View**, **Cast** or **Wireless display** and choose your PC.
 
-Both devices need to be on the same Wi-Fi or wired network.
+An iPhone, iPad or Mac needs to be on the same Wi-Fi or wired network as the PC.
+An Android phone connects to the PC directly over Miracast, so the PC needs a
+Wi-Fi adapter that supports it. Google Pixel phones do not have Miracast and
+cannot connect.
 
 The installer is not code-signed yet, so Windows may say "Windows protected
 your PC" the first time. Choose **More info**, then **Run anyway**. You do not
@@ -80,16 +84,17 @@ apps, not by Mirlow.
 <details>
 <summary><b>Does my screen go through the internet?</b></summary>
 
-No. Your iPhone sends its screen straight to your PC over your local network.
+No. Your phone sends its screen straight to your PC, over your local network
+or a direct Wi-Fi link.
 Mirlow has no servers and collects nothing.
 </details>
 
 <details>
-<summary><b>Is Mirlow made by Apple?</b></summary>
+<summary><b>Is Mirlow made by Apple or Google?</b></summary>
 
 No. Mirlow is an independent open-source project built on
 [UxPlay](https://github.com/FDH2/UxPlay). It is not affiliated with, endorsed
-by, or certified by Apple Inc.
+by, or certified by Apple Inc. or Google LLC.
 </details>
 
 ## Support the project
@@ -105,7 +110,7 @@ when something does not work.
 | Part | Where | What it is |
 | --- | --- | --- |
 | Desktop app | [`apps/desktop`](apps/desktop) | Tauri 2 (Rust) and React. The window, the notification-area icon, settings and diagnostics. |
-| Engine integration | [`apps/desktop/src-tauri/src`](apps/desktop/src-tauri/src) | Runs and supervises the AirPlay engine, and places its video window inside the app. |
+| Engine integration | [`apps/desktop/src-tauri/src`](apps/desktop/src-tauri/src) | Runs and supervises the AirPlay engine, receives Android phones through the Miracast receiver built into Windows, and places the picture inside the app. |
 | AirPlay engine | [`engine`](engine) | [UxPlay](https://github.com/FDH2/UxPlay) at a pinned commit, plus two small [patches](engine/patches). Mirlow does not reimplement the protocol. |
 | Website | [`apps/web`](apps/web) | Next.js, exported as static files. English and European Portuguese. |
 | Design system | [`packages/ui`](packages/ui) | Colour tokens, the logo, and the glass material used by both the app and the site. |

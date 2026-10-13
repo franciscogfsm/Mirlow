@@ -1,7 +1,7 @@
 export const en = {
   brand: {
     name: "Mirlow",
-    tagline: "Your iPhone. On your PC. Just like that.",
+    tagline: "Your phone. On your PC. Just like that.",
   },
 
   app: {
@@ -20,7 +20,7 @@ export const en = {
       step1: "Open Control Centre on your iPhone",
       step2: "Tap Screen Mirroring",
       step3: "Choose {name}",
-      hint: "Your iPhone and this PC need to be on the same Wi‑Fi.",
+      hint: "An iPhone needs to be on the same Wi‑Fi as this PC. On Android, open Smart View or Cast instead.",
     },
     starting: {
       headline: "Getting ready",
@@ -61,7 +61,7 @@ export const en = {
       copied: "Copied",
     },
     help: {
-      toggle: "Can't see this PC on your iPhone?",
+      toggle: "Can't see this PC on your phone?",
       title: "If this PC doesn't show up",
       sameNetwork: {
         title: "Use the same Wi‑Fi",
@@ -86,11 +86,11 @@ export const en = {
       },
       vpn: {
         title: "Turn off any VPN",
-        body: "A VPN on your iPhone or PC can stop them from seeing each other.",
+        body: "A VPN on your phone or PC can stop them from seeing each other.",
       },
       restart: {
         title: "Still nothing?",
-        body: "Restart the receiver and look again on your iPhone.",
+        body: "Restart the receiver and look again on your phone.",
         action: "Restart receiver",
       },
       network: "Network: {name}",
@@ -101,13 +101,13 @@ export const en = {
       close: "Close",
       name: {
         label: "Name",
-        description: "How this PC appears on your iPhone.",
+        description: "How this PC appears on your phone.",
         placeholder: "Mirlow",
         save: "Save",
       },
       sound: {
         label: "Play sound",
-        description: "Hear your iPhone's audio through this PC.",
+        description: "Hear your phone's audio through this PC.",
       },
       compatibility: {
         label: "Compatibility mode",
@@ -128,9 +128,9 @@ export const en = {
         licenses: "Open‑source licences",
         source: "Source code",
         website: "Website",
-        free: "Free and open source. Your screen never leaves your network.",
+        free: "Free and open source. Your screen goes straight to this PC and nowhere else.",
         disclaimer:
-          "Mirlow is an independent project and is not affiliated with or endorsed by Apple Inc.",
+          "Mirlow is an independent project and is not affiliated with or endorsed by Apple Inc. or Google LLC.",
       },
     },
     shortcuts: {

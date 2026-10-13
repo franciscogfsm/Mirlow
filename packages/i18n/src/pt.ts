@@ -4,7 +4,7 @@ import type { Dictionary } from "./en";
 export const pt: Dictionary = {
   brand: {
     name: "Mirlow",
-    tagline: "O seu iPhone. No seu PC. Sem mais nada.",
+    tagline: "O seu telemóvel. No seu PC. Sem mais nada.",
   },
 
   app: {
@@ -23,7 +23,7 @@ export const pt: Dictionary = {
       step1: "Abra a Central de controlo no iPhone",
       step2: "Toque em Projeção do ecrã",
       step3: "Escolha {name}",
-      hint: "O iPhone e este PC têm de estar na mesma rede Wi‑Fi.",
+      hint: "O iPhone tem de estar na mesma rede Wi‑Fi deste PC. No Android, abra antes Smart View ou Transmitir.",
     },
     starting: {
       headline: "A preparar",
@@ -66,7 +66,7 @@ export const pt: Dictionary = {
       copied: "Copiado",
     },
     help: {
-      toggle: "Não vê este PC no iPhone?",
+      toggle: "Não vê este PC no telemóvel?",
       title: "Se este PC não aparecer",
       sameNetwork: {
         title: "Use a mesma rede Wi‑Fi",
@@ -91,11 +91,11 @@ export const pt: Dictionary = {
       },
       vpn: {
         title: "Desligue qualquer VPN",
-        body: "Uma VPN no iPhone ou no PC pode impedir que se vejam um ao outro.",
+        body: "Uma VPN no telemóvel ou no PC pode impedir que se vejam um ao outro.",
       },
       restart: {
         title: "Continua sem aparecer?",
-        body: "Reinicie o recetor e volte a procurar no iPhone.",
+        body: "Reinicie o recetor e volte a procurar no telemóvel.",
         action: "Reiniciar o recetor",
       },
       network: "Rede: {name}",
@@ -106,13 +106,13 @@ export const pt: Dictionary = {
       close: "Fechar",
       name: {
         label: "Nome",
-        description: "Como este PC aparece no iPhone.",
+        description: "Como este PC aparece no telemóvel.",
         placeholder: "Mirlow",
         save: "Guardar",
       },
       sound: {
         label: "Reproduzir som",
-        description: "Ouça o áudio do iPhone neste PC.",
+        description: "Ouça o áudio do telemóvel neste PC.",
       },
       compatibility: {
         label: "Modo de compatibilidade",
@@ -134,9 +134,9 @@ export const pt: Dictionary = {
         licenses: "Licenças de código aberto",
         source: "Código‑fonte",
         website: "Website",
-        free: "Gratuito e de código aberto. O seu ecrã nunca sai da sua rede.",
+        free: "Gratuito e de código aberto. O seu ecrã vai diretamente para este PC e para mais lado nenhum.",
         disclaimer:
-          "O Mirlow é um projeto independente, sem qualquer afiliação ou aprovação da Apple Inc.",
+          "O Mirlow é um projeto independente, sem qualquer afiliação ou aprovação da Apple Inc. nem da Google LLC.",
       },
     },
     shortcuts: {
