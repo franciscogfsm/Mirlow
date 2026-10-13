@@ -72,17 +72,18 @@ export function GlassIconButton({
 export function ChromeButton({
   label,
   danger = false,
+  compact = false,
   children,
   ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & { label: string; danger?: boolean }) {
+}: ButtonHTMLAttributes<HTMLButtonElement> & { label: string; danger?: boolean; compact?: boolean }) {
   return (
     <button
       type="button"
       aria-label={label}
       title={label}
-      className={`flex h-8 w-8 items-center justify-center rounded-full text-soft transition-colors duration-200 hover:text-ink ${
-        danger ? "hover:bg-danger/15 hover:text-danger" : "hover:bg-ink/8"
-      }`}
+      className={`flex items-center justify-center rounded-full text-soft transition-colors duration-200 hover:text-ink ${
+        compact ? "h-[26px] w-[26px]" : "h-8 w-8"
+      } ${danger ? "hover:bg-danger/15 hover:text-danger" : "hover:bg-ink/8"}`}
       {...props}
     >
       {children}

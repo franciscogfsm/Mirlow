@@ -261,7 +261,7 @@ export const pt: Dictionary = {
         {
           title: "Código aberto",
           body: "Todas as linhas do Mirlow são públicas. Qualquer pessoa pode lê‑las, compilá‑las e confirmar que o download corresponde.",
-          action: "Ler o código",
+          action: "Como obter o código",
         },
         {
           title: "Analise‑o você mesmo",
@@ -335,6 +335,11 @@ export const pt: Dictionary = {
       ctaTitle: "Experimente no seu PC",
       ctaBody: "O Mirlow é gratuito e de código aberto, e não precisa de conta.",
     },
+    contact: {
+      label: "Fale connosco",
+      hint: "Um problema, ou uma ideia para uma nova funcionalidade? Envie-nos um email.",
+      subject: "Mirlow",
+    },
     footer: {
       guides: "Guias",
       privacy: "Privacidade",
@@ -383,11 +388,11 @@ export const pt: Dictionary = {
         },
         {
           title: "Bibliotecas incluídas",
-          body: "O instalador inclui o GStreamer, o FFmpeg, o OpenSSL, a libplist, a GLib e as respetivas dependências, sem modificações, tal como empacotadas pelo projeto MSYS2. A lista completa, com versões e licenças, é instalada com a aplicação e publicada com cada versão.",
+          body: "O instalador inclui o GStreamer, o OpenSSL, a libplist, a GLib e as respetivas dependências, sem modificações, tal como empacotadas pelo projeto MSYS2, e o FFmpeg, que compilamos a partir do código‑fonte oficial apenas com os descodificadores que o Mirlow usa. A lista completa, com versões e licenças, é instalada com a aplicação e publicada com cada versão.",
         },
         {
           title: "Obter o código‑fonte",
-          body: "O código‑fonte completo do Mirlow, a revisão do UxPlay utilizada, os patches e os scripts de compilação estão no repositório do Mirlow. O código‑fonte de todas as bibliotecas incluídas está disponível no projeto MSYS2, e fornecemo‑lo a pedido para qualquer versão que tenhamos distribuído.",
+          body: "O código‑fonte completo do Mirlow, a revisão do UxPlay utilizada, os patches e os scripts de compilação estão no repositório do Mirlow. O código‑fonte das bibliotecas incluídas está disponível no projeto MSYS2 e, no caso do FFmpeg, em ffmpeg.org, e fornecemo‑lo a pedido para qualquer versão que tenhamos distribuído.",
         },
       ],
       viewSource: "Ver o código‑fonte no GitHub",

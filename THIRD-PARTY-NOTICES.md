@@ -22,15 +22,19 @@ attributions.
 ## Libraries shipped with the engine
 
 The installer contains unmodified binaries of GStreamer and its plugins
-(LGPL-2.1-or-later), FFmpeg (as built by MSYS2: GPL-3.0-or-later), OpenSSL
-(Apache-2.0), libplist (LGPL-2.1-or-later), GLib (LGPL-2.1-or-later) and the
-libraries those depend on, all as packaged by the
+(LGPL-2.1-or-later), OpenSSL (Apache-2.0), libplist (LGPL-2.1-or-later), GLib
+(LGPL-2.1-or-later) and the libraries those depend on, all as packaged by the
 [MSYS2](https://www.msys2.org) project for its UCRT64 environment.
+
+**FFmpeg** — <https://ffmpeg.org> — LGPL-2.1-or-later. Mirlow builds FFmpeg
+itself, from the unmodified release archive, with only the decoders it uses
+(H.264, HEVC, AAC and ALAC) and no external libraries. The version and the
+exact configuration are in `scripts/engine/build-ffmpeg.sh`.
 
 The exact list for each build — package, version, licence and project URL — is
 generated at build time into `engine/THIRD-PARTY-RUNTIME.md`, which is
-installed with the app and attached to every release. The licence texts that
-MSYS2 ships for those packages are installed in `engine/licenses/`.
+installed with the app and attached to every release. The licence texts for
+those packages are installed in `engine/licenses/`.
 
 ## Desktop application
 
@@ -53,7 +57,8 @@ package everything — is in the Mirlow repository:
 Each release is tagged, so the source for any installer can be checked out by
 its version number. The sources of the MSYS2-packaged libraries are published
 by MSYS2 (<https://github.com/msys2/MINGW-packages>, with source archives at
-<https://repo.msys2.org/mingw/sources/>). If you cannot obtain any of them
+<https://repo.msys2.org/mingw/sources/>), and FFmpeg's by the FFmpeg project
+(<https://ffmpeg.org/releases/>). If you cannot obtain any of them
 there, open an issue on the Mirlow repository and we will provide the source
 for the versions we distributed, for at least three years after that release.
 

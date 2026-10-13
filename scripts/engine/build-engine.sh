@@ -23,7 +23,7 @@ log() { printf '\n== %s\n' "$*"; }
 # --- 1. dependencies -------------------------------------------------------
 if [ "${1:-}" = "--install-deps" ]; then
   log "Installing build and runtime dependencies"
-  pacman -S --needed --noconfirm patch \
+  pacman -S --needed --noconfirm patch make diffutils $PKG-nasm \
     $PKG-gcc $PKG-cmake $PKG-ninja $PKG-pkgconf $PKG-openssl $PKG-libplist \
     $PKG-gstreamer $PKG-gst-plugins-base $PKG-gst-plugins-good \
     $PKG-gst-plugins-bad $PKG-gst-libav $PKG-ntldd
@@ -54,6 +54,12 @@ cmake -S "$WORK/src" -B "$WORK/build" -G Ninja -DCMAKE_BUILD_TYPE=Release   -DCM
 cmake --build "$WORK/build"
 [ -f "$WORK/build/uxplay.exe" ] || { echo "build produced no uxplay.exe"; exit 1; }
 
+# FFmpeg with only the decoders the receiver uses, in place of MSYS2's build
+# and the hundred megabytes of codec libraries that one depends on.
+log "Building FFmpeg"
+bash "$REPO/scripts/engine/build-ffmpeg.sh"
+FFMPEG="$(dirname "$WORK")/ffmpeg/out"
+
 # --- 4. assemble runtime ---------------------------------------------------
 log "Assembling runtime in $OUT"
 rm -rf "$OUT"
@@ -81,11 +87,14 @@ for name in "${PLUGINS[@]}"; do
   fi
 done
 
+# Our FFmpeg goes in first, so the search below finds it before MSYS2's.
+cp "$FFMPEG"/bin/*.dll "$OUT/bin/"
+
 # Copy the transitive DLL closure of everything above (only DLLs that come
 # from MSYS2; Windows system DLLs are left alone).
 log "Resolving DLL dependencies"
 mapfile -t roots < <(find "$OUT/bin" "$OUT/lib" "$OUT/libexec" -type f \( -name '*.exe' -o -name '*.dll' \))
-ntldd -R "${roots[@]}" 2>/dev/null \
+PATH="$OUT/bin:$PATH" ntldd -R -D "$(cygpath -w "$OUT/bin")" "${roots[@]}" 2>/dev/null \
   | sed -n 's/.*=> \(.*\) (0x[0-9a-fA-F]*)$/\1/p' \
   | tr '\\' '/' \
   | while read -r dll; do cygpath -u "$dll"; done \
@@ -116,6 +125,13 @@ UXPLAY_COMMIT="$(cat "$REPO/engine/UXPLAY_COMMIT" 2>/dev/null || echo unknown)"
   echo "- Commit: \`$UXPLAY_COMMIT\`"
   echo "- Modifications: the patches in \`engine/patches/\` of the Mirlow repository"
   echo
+  echo "## FFmpeg (LGPL-2.1-or-later)"
+  echo
+  echo "Built from source by \`scripts/engine/build-ffmpeg.sh\`, with only the decoders Mirlow uses."
+  echo
+  echo "- Source: https://ffmpeg.org/releases/ffmpeg-$(cut -d' ' -f1 "$FFMPEG/.built").tar.xz"
+  echo "- Configured with: \`$(cut -d' ' -f2- "$FFMPEG/.built")\`"
+  echo
   echo "## Libraries redistributed unmodified from MSYS2 (UCRT64)"
   echo
   echo "Build recipes and exact sources for every package: https://github.com/msys2/MINGW-packages"
@@ -135,6 +151,10 @@ UXPLAY_COMMIT="$(cat "$REPO/engine/UXPLAY_COMMIT" 2>/dev/null || echo unknown)"
     fi
   done < "$WORK/packages.txt"
 } > "$MANIFEST"
+
+mkdir -p "$OUT/licenses/ffmpeg"
+FFMPEG_SRC="$(dirname "$FFMPEG")/ffmpeg-$(cut -d' ' -f1 "$FFMPEG/.built")"
+cp "$FFMPEG_SRC/COPYING.LGPLv2.1" "$FFMPEG_SRC/LICENSE.md" "$OUT/licenses/ffmpeg/"
 
 mkdir -p "$OUT/licenses/uxplay"
 cp "$SRC/LICENSE" "$OUT/licenses/uxplay/LICENSE"

@@ -368,4 +368,246 @@ export const en: Guides = {
       },
     ],
   },
+
+  audio: {
+    title: "How to play your iPhone's sound through your PC speakers",
+    short: "Play iPhone audio on a PC",
+    metaTitle: "Play iPhone audio through PC speakers with AirPlay, free",
+    description:
+      "Send music, podcasts or any sound from an iPhone or iPad to the speakers of a Windows PC over Wi-Fi with AirPlay. Free, with no cable and no Bluetooth pairing.",
+    lead: "A PC with good speakers makes a fine AirPlay speaker. With Mirlow open on Windows, your iPhone can send just its sound to the PC, without showing its screen, the same way it would to a wireless speaker.",
+    steps: [
+      {
+        title: "Open Mirlow on the PC",
+        body: "Install Mirlow for Windows 10 or 11 and open it. Check that Play sound is switched on in its settings; it is by default.",
+      },
+      {
+        title: "Start playing something on the iPhone",
+        body: "Music, a podcast, a video: anything with sound. The iPhone must be on the same network as the PC.",
+      },
+      {
+        title: "Open Control Centre and tap the AirPlay icon",
+        body: "It is the small icon of circles with a triangle in the corner of the playback controls. Many apps show the same icon on their own player screen.",
+      },
+      {
+        title: "Choose your PC",
+        body: "The sound moves to the PC's speakers and Mirlow shows that it is playing sound from your iPhone. To move it back, open the same list and choose iPhone.",
+      },
+    ],
+    sections: [
+      {
+        title: "Sound with the screen, or sound alone",
+        body: [
+          "When you mirror the screen, its sound comes along automatically. The steps above are for when you want the sound only, and would rather keep the phone's screen to yourself.",
+          "If you prefer the opposite, a mirrored picture with the sound staying on the phone, switch off Play sound in Mirlow's settings.",
+        ],
+      },
+      {
+        title: "Why not Bluetooth?",
+        body: [
+          "Bluetooth works when the PC supports receiving audio, which many do not without extra setup. AirPlay goes over your Wi-Fi network instead, so there is no pairing and the phone can be anywhere in the house that the network reaches.",
+        ],
+      },
+    ],
+    faq: [
+      {
+        q: "Can I use my PC as an AirPlay speaker?",
+        a: "Yes. While Mirlow is open, the PC appears among the AirPlay speakers on your iPhone, iPad or Mac.",
+      },
+      {
+        q: "Which sound comes out of the PC?",
+        a: "Whatever the iPhone would have played: music, videos, games. Phone calls stay on the phone.",
+      },
+      {
+        q: "There is no sound when I mirror. What should I check?",
+        a: "That Play sound is on in Mirlow's settings, that the PC's volume is up and the right output is selected in Windows, and that the iPhone's volume is not at zero.",
+      },
+      {
+        q: "Does it cost anything?",
+        a: "No. Mirlow is free and open source, with no account and no advertising.",
+      },
+    ],
+  },
+
+  lag: {
+    title: "Screen mirroring is laggy or choppy: how to make it smooth",
+    short: "Fix laggy screen mirroring",
+    metaTitle: "iPhone screen mirroring to PC is laggy or choppy? How to fix it",
+    description:
+      "Stutter, delay or a blocky picture while mirroring an iPhone or iPad to a Windows PC is nearly always the network. Six things to check, most effective first.",
+    lead: "Mirroring sends live video across your network many times a second, so anything that slows the network shows up at once as stutter, blocks or delay. The fixes are simple, and the first two solve most cases.",
+    steps: [
+      {
+        title: "Connect the PC to the router with a cable",
+        body: "This is the biggest single improvement. With the PC on Ethernet, only the phone's half of the journey is wireless.",
+      },
+      {
+        title: "Move closer to the router, and use the 5 GHz band",
+        body: "Walls and distance cut Wi-Fi speed sharply. If your router has separate 2.4 GHz and 5 GHz networks, put the iPhone, and the PC if it is wireless, on the 5 GHz one.",
+      },
+      {
+        title: "Pause heavy use of the network",
+        body: "Large downloads, cloud backups and video streaming on other devices compete with the mirrored picture.",
+      },
+      {
+        title: "Turn off any VPN",
+        body: "A VPN on the phone or the PC can send local traffic the long way round, or block it.",
+      },
+      {
+        title: "Check Compatibility mode",
+        body: "If Compatibility mode is on in Mirlow's settings and you do not need it, turn it off, so the graphics card does the decoding. If the picture freezes with it off, turn it on.",
+      },
+      {
+        title: "Give the PC room to work",
+        body: "On a laptop, plug in the charger and leave battery saver off. Close programs that keep the processor or the graphics card busy.",
+      },
+    ],
+    sections: [
+      {
+        title: "A little delay is normal",
+        body: [
+          "The phone has to capture, compress and send each frame, and the PC has to decode and show it. On a good network the delay is small enough for browsing, photos, video and presentations. Games that depend on split-second timing are better played looking at the phone.",
+        ],
+      },
+      {
+        title: "Blocks and smearing mean lost data",
+        body: [
+          "When the picture breaks into squares for a moment and then recovers, some of the video did not arrive in time. That points at the Wi-Fi signal rather than at the PC, so the first two steps are the ones to try.",
+        ],
+      },
+    ],
+    faq: [
+      {
+        q: "Does a faster internet connection help?",
+        a: "No. Mirroring never leaves your home network, so your internet speed does not matter. What matters is the Wi-Fi between the phone, the router and the PC.",
+      },
+      {
+        q: "Is a mesh network or a Wi-Fi extender a problem?",
+        a: "It can be, when the phone and the PC are connected to different units and the link between those units is weak. Try with both devices near the main router.",
+      },
+      {
+        q: "The sound and the picture are out of step. What can I do?",
+        a: "Stop mirroring and start it again, so that they line up afresh. If they keep drifting apart, the network is dropping data, so go through the steps above.",
+      },
+      {
+        q: "Does the picture quality depend on my monitor?",
+        a: "Mirlow asks the iPhone for a picture sized to your screen, and the iPhone decides what it sends. A sharper picture also needs more of the network, which is one more reason to prefer a cable for the PC.",
+      },
+    ],
+  },
+
+  "no-wifi": {
+    title: "Mirroring an iPhone to a PC without Wi-Fi, or with a USB cable",
+    short: "Mirror without Wi-Fi or with USB",
+    metaTitle: "Mirror an iPhone to a PC without Wi-Fi or with USB: what is possible",
+    description:
+      "Screen mirroring needs a local network, not the internet. What works without Wi-Fi or an internet connection, and why a USB cable or Bluetooth will not do it.",
+    lead: "Screen mirroring needs the iPhone and the PC to be on the same local network. It does not need the internet. That difference answers most questions about mirroring without Wi-Fi, and about cables.",
+    sections: [
+      {
+        title: "Without internet: yes",
+        body: [
+          "The picture goes straight from the phone to the PC through your router and never touches the internet. A router with no internet connection at all, such as an old one you have in a drawer or a small travel router, is enough. Connect both devices to it and mirror as usual.",
+        ],
+      },
+      {
+        title: "Without Wi-Fi on the PC: yes",
+        body: [
+          "The PC does not need Wi-Fi. Plugged into the router by Ethernet cable, it is on the same network as the phone's Wi-Fi, and mirroring is usually smoother that way.",
+        ],
+      },
+      {
+        title: "Without any network: no",
+        body: [
+          "The iPhone finds receivers by looking on the network it is connected to. With no network between the two devices, the PC cannot appear in the Screen Mirroring list.",
+          "Some people connect the PC to the iPhone's Personal Hotspot to make a network of two. Whether the phone then lists the PC depends on the phone and the version of iOS; we do not promise it works, and a router is the dependable choice.",
+        ],
+      },
+      {
+        title: "With a USB cable: not with Mirlow",
+        body: [
+          "Mirlow receives the screen wirelessly, the way an Apple TV does, and does not mirror over USB. Plugging the iPhone into the PC gives Windows access to its photos and lets it charge, nothing more.",
+        ],
+      },
+      {
+        title: "With Bluetooth: no",
+        body: [
+          "Bluetooth is far too slow for live video. Screen mirroring does not use it to carry the picture.",
+        ],
+      },
+    ],
+    faq: [
+      {
+        q: "Does screen mirroring use mobile data?",
+        a: "No. Mirroring to a PC on the same network stays on that network. Apps you use while mirroring use data as they normally would.",
+      },
+      {
+        q: "Can I mirror in a hotel, or on public Wi-Fi?",
+        a: "Often not. Hotel and public networks usually stop devices from seeing each other. A small travel router of your own gets round that.",
+      },
+      {
+        q: "Do the phone and the PC have to be on the same Wi-Fi name?",
+        a: "They have to be on the same network, which normally means the same router. Its 2.4 GHz and 5 GHz names are the same network; its guest network is not.",
+      },
+      {
+        q: "Is there a wired way to show an iPhone on a screen?",
+        a: "Apple sells adapters that connect an iPhone to a monitor or TV by HDMI. That goes to a display's HDMI input, not into Windows.",
+      },
+    ],
+  },
+
+  safe: {
+    title: "Is screen mirroring safe?",
+    short: "Is screen mirroring safe?",
+    metaTitle: "Is screen mirroring an iPhone to a PC safe and private?",
+    description:
+      "What screen mirroring shares and what it does not, who can connect to your PC, and five habits for mirroring an iPhone to a Windows PC privately.",
+    lead: "Mirroring shows your screen. It does not hand over your phone. Knowing exactly what is shared, and with whom, makes it easy to use without surprises.",
+    sections: [
+      {
+        title: "What the PC receives",
+        body: [
+          "The picture on your iPhone's screen and its sound, and nothing else. The PC gets no access to your photos, messages, passwords or files, and cannot control the phone. When you stop mirroring, it receives nothing.",
+          "Everything on the screen is shown, though, including notifications that pop up and anything you type in view. Turn on a Focus such as Do Not Disturb before mirroring in front of other people.",
+        ],
+      },
+      {
+        title: "Where the picture travels",
+        body: [
+          "From the phone to the PC across your local network. It does not go through the internet or through any server. Mirlow has no servers, no account and no analytics, and does not record or save what it shows.",
+        ],
+      },
+      {
+        title: "Who can connect to your PC",
+        body: [
+          "While Mirlow is open, your PC is listed as a receiver for devices on the same network, and someone on that network could send their screen to it. They would be showing you their screen; they would not gain access to your PC.",
+          "On a home network that means the people you live with. On a shared or public network, quit Mirlow from its icon in the notification area when you are not using it.",
+        ],
+      },
+      {
+        title: "Five good habits",
+        body: [
+          "Mirror on networks you trust. Turn on Do Not Disturb first. Stop mirroring before opening your banking app or your passwords. Quit Mirlow when you are finished on a shared network. Download Mirlow only from its own site or its GitHub page, and compare the checksum if in doubt.",
+        ],
+      },
+    ],
+    faq: [
+      {
+        q: "Can someone see my iPhone screen without my knowing?",
+        a: "Mirroring starts only when you choose a receiver in Control Centre on your own phone, and iOS shows an indicator at the top of the screen for as long as it lasts.",
+      },
+      {
+        q: "Is Mirlow itself safe to install?",
+        a: "Its source code is public, it makes no internet connections, and the checksum of each installer is published so you can confirm the file is the genuine one. The installer is not yet digitally signed, so Windows may show a caution when you open it.",
+      },
+      {
+        q: "Why does Mirlow need a firewall permission?",
+        a: "So that your iPhone can find and reach the PC on your local network. The permission covers the receiver only.",
+      },
+      {
+        q: "Does Mirlow collect any data?",
+        a: "No. There is nothing to send it to: no account, no telemetry, no advertising.",
+      },
+    ],
+  },
 };

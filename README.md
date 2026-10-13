@@ -108,7 +108,7 @@ when something does not work.
 | Engine integration | [`apps/desktop/src-tauri/src`](apps/desktop/src-tauri/src) | Runs and supervises the AirPlay engine, and places its video window inside the app. |
 | AirPlay engine | [`engine`](engine) | [UxPlay](https://github.com/FDH2/UxPlay) at a pinned commit, plus two small [patches](engine/patches). Mirlow does not reimplement the protocol. |
 | Website | [`apps/web`](apps/web) | Next.js, exported as static files. English and European Portuguese. |
-| Design system | [`packages/ui`](packages/ui) | Colour tokens, the logo, and the Liquid Glass material used by both the app and the site. |
+| Design system | [`packages/ui`](packages/ui) | Colour tokens, the logo, and the glass material used by both the app and the site. |
 | Translations | [`packages/i18n`](packages/i18n) | One set of strings for the app and the site. |
 | Build scripts | [`scripts`](scripts) | Build the engine, assemble its runtime, build the installer. |
 

@@ -18,7 +18,12 @@ const config: NextConfig = {
   output: "export",
   trailingSlash: true,
   basePath,
-  env: { NEXT_PUBLIC_SITE_URL: siteUrl },
+  env: {
+    NEXT_PUBLIC_SITE_URL: siteUrl,
+    // On Vercel the download goes through the site's own /download/ address,
+    // which vercel.json forwards to the newest installer.
+    NEXT_PUBLIC_DOWNLOAD_URL: process.env.VERCEL ? `${basePath}/download/` : "",
+  },
   images: { unoptimized: true },
   transpilePackages: ["@mirlow/ui", "@mirlow/i18n"],
   reactStrictMode: true,

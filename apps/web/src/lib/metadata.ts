@@ -5,6 +5,14 @@ import { asset, languageAlternates, pageUrl, siteUrl, type PageId } from "./site
 
 const openGraphLocales: Record<Locale, string> = { en: "en_GB", pt: "pt_PT" };
 
+// Proof of ownership for Google Search Console and Bing Webmaster Tools, taken
+// from GOOGLE_SITE_VERIFICATION and BING_SITE_VERIFICATION when they are set.
+const bing = process.env.BING_SITE_VERIFICATION;
+const verification: Metadata["verification"] = {
+  google: process.env.GOOGLE_SITE_VERIFICATION,
+  other: bing ? { "msvalidate.01": bing } : undefined,
+};
+
 /** What a page is called and how it is summarised, in search results and when shared. */
 export function describePage(locale: Locale, page: PageId): { title: string; description: string } {
   const site = getDictionary(locale).site;
@@ -37,6 +45,7 @@ export function buildMetadata(locale: Locale, page: PageId): Metadata {
     description,
     applicationName: "Mirlow",
     category: "technology",
+    verification: page === "home" ? verification : undefined,
     alternates: { canonical: url, languages: languageAlternates(page) },
     icons: { icon: asset("/favicon.svg"), apple: asset("/icon.png") },
     robots: {

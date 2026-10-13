@@ -1,4 +1,4 @@
-import { type Dictionary, type Locale, links, release } from "@mirlow/i18n";
+import { type Dictionary, type Locale, release } from "@mirlow/i18n";
 import {
   ArrowUpRight,
   Check,
@@ -82,15 +82,6 @@ export function HeroChapter({ t, how }: { t: Site["hero"]; how: Site["how"] }) {
 
           <div className="rise mt-9 flex flex-wrap items-center justify-center gap-3 pinned:justify-start" style={order(4)}>
             <DownloadButton label={t.cta} />
-            <a
-              href={links.repository}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex h-14 items-center gap-1.5 rounded-full border border-line-strong px-6 text-[15.5px] font-medium transition-colors duration-300 hover:bg-ink/5"
-            >
-              GitHub
-              <ArrowUpRight size={16} strokeWidth={1.8} aria-hidden="true" />
-            </a>
           </div>
           <ul
             className="rise mt-5 flex flex-wrap justify-center gap-x-5 gap-y-2 text-[13.5px] text-soft pinned:justify-start"
@@ -214,7 +205,7 @@ export function FeaturesChapter({ t }: { t: Site["features"] }) {
  */
 export function TrustChapter({ t, locale }: { t: Site["trust"]; locale: Locale }) {
   const targets = [
-    { href: links.repository, external: true },
+    { href: pagePath(locale, "licenses"), external: false },
     { href: `https://www.virustotal.com/gui/file/${release.sha256}`, external: true },
     { href: pagePath(locale, "privacy"), external: false },
   ];
@@ -326,7 +317,7 @@ export function FaqChapter({ t }: { t: Site["faq"] }) {
 }
 
 /** The close: the promise once more, and the download. */
-export function FinalChapter({ t, footer }: { t: Site["finalCta"]; footer: Site["footer"] }) {
+export function FinalChapter({ t }: { t: Site["finalCta"] }) {
   return (
     <Frame className="pb-32 pt-16">
       <div className="mx-auto flex max-w-[900px] flex-col items-center text-center">
@@ -346,16 +337,6 @@ export function FinalChapter({ t, footer }: { t: Site["finalCta"]; footer: Site[
         </div>
         <p className="rise mt-4 text-[13.5px] text-faint" style={order(4)}>
           {t.note}
-        </p>
-        <p className="rise mt-9 flex flex-wrap justify-center gap-x-8 gap-y-3" style={order(5)}>
-          <a href={links.repository} target="_blank" rel="noreferrer" className={textLink}>
-            {footer.source}
-            <ArrowUpRight size={15} strokeWidth={1.8} aria-hidden="true" />
-          </a>
-          <a href={links.releases} target="_blank" rel="noreferrer" className={textLink}>
-            {footer.releases}
-            <ArrowUpRight size={15} strokeWidth={1.8} aria-hidden="true" />
-          </a>
         </p>
       </div>
     </Frame>

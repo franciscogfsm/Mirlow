@@ -1,4 +1,4 @@
-import { defaultLocale, localeTags, locales, type Locale } from "@mirlow/i18n";
+import { defaultLocale, links, localeTags, locales, type Locale } from "@mirlow/i18n";
 import { guideIds, guideSlugs, guidesSegment, type GuideId } from "@/content/guides/slugs";
 
 /** Public address of the site, without a trailing slash. Used for absolute links in metadata. */
@@ -7,6 +7,13 @@ export const siteUrl = (
 ).replace(/\/$/, "");
 
 export const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+
+/**
+ * Where the download button points. On Vercel it is an address on the site
+ * itself, which `vercel.json` forwards to the installer of the newest release,
+ * so visitors never leave for another site. Elsewhere it is the file itself.
+ */
+export const downloadUrl = process.env.NEXT_PUBLIC_DOWNLOAD_URL || links.download;
 
 type FixedPage = "home" | "privacy" | "licenses";
 

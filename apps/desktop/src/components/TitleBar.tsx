@@ -3,6 +3,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Maximize, Minimize, Minus, Settings as SettingsIcon, Unplug, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
+import { MIRROR_BAR } from "../lib/frame";
 import { useI18n } from "../lib/i18n";
 import { ChromeButton, GlassButton, GlassIconButton } from "./controls";
 
@@ -49,21 +50,37 @@ export function TitleBar({
   const { t } = useI18n();
   const appWindow = getCurrentWindow();
   const compact = useCompact();
+  const slim = mirroring && !fullscreen;
   const text = compact && compactLabel ? compactLabel : label;
-  const dot = tone === "live" ? "bg-mint" : tone === "warn" ? "bg-warn" : "bg-faint";
+  const dot = slim
+    ? tone === "warn"
+      ? "bg-warn"
+      : tone === "live"
+        ? "bg-white"
+        : "bg-white/40"
+    : tone === "live"
+      ? "bg-mint"
+      : tone === "warn"
+        ? "bg-warn"
+        : "bg-faint";
 
   return (
     <header
       data-tauri-drag-region
-      className="relative z-30 flex h-12 shrink-0 items-center justify-between gap-3 pl-4 pr-2"
+      style={slim ? { height: MIRROR_BAR } : undefined}
+      className={`relative z-30 flex shrink-0 items-center justify-between ${
+        slim
+          ? "gap-2 bg-black pl-3 pr-1.5 text-white [--ink:#fafafa] [--ink-faint:rgba(250,250,250,0.4)] [--ink-soft:rgba(250,250,250,0.72)]"
+          : "h-12 gap-3 pl-4 pr-2"
+      }`}
     >
-      <div data-tauri-drag-region className="flex min-w-0 items-center gap-2.5">
-        <Mark size={20} gradient className="pointer-events-none shrink-0" />
+      <div data-tauri-drag-region className="flex min-w-0 items-center gap-2">
+        <Mark size={slim ? 16 : 20} gradient className="pointer-events-none shrink-0" />
         <AnimatePresence mode="wait" initial={false}>
           <motion.span
             key={text}
             data-tauri-drag-region
-            className="flex min-w-0 items-center gap-2 text-[12.5px] font-medium text-soft"
+            className={`flex min-w-0 items-center gap-2 font-medium text-soft ${slim ? "text-[12px]" : "text-[12.5px]"}`}
             initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
@@ -79,12 +96,12 @@ export function TitleBar({
         </AnimatePresence>
       </div>
 
-      <div className="flex shrink-0 items-center gap-1.5">
+      <div className={`flex shrink-0 items-center ${slim ? "gap-1" : "gap-1.5"}`}>
         {mirroring && (
           <>
-            {compact ? (
-              <GlassIconButton label={t.mirroring.disconnect} onClick={onDisconnect}>
-                <Unplug size={15} />
+            {compact || slim ? (
+              <GlassIconButton label={t.mirroring.disconnect} onClick={onDisconnect} size={slim ? 26 : 34}>
+                <Unplug size={slim ? 13 : 15} />
               </GlassIconButton>
             ) : (
               <GlassButton onClick={onDisconnect} className="mr-0.5">
@@ -95,21 +112,22 @@ export function TitleBar({
             <GlassIconButton
               label={fullscreen ? t.mirroring.exitFullscreen : t.mirroring.fullscreen}
               onClick={onToggleFullscreen}
+              size={slim ? 26 : 34}
             >
-              {fullscreen ? <Minimize size={15} /> : <Maximize size={15} />}
+              {fullscreen ? <Minimize size={slim ? 13 : 15} /> : <Maximize size={slim ? 13 : 15} />}
             </GlassIconButton>
           </>
         )}
-        <ChromeButton label={t.settings.open} onClick={onOpenSettings}>
-          <SettingsIcon size={16} strokeWidth={1.8} />
+        <ChromeButton label={t.settings.open} compact={slim} onClick={onOpenSettings}>
+          <SettingsIcon size={slim ? 14 : 16} strokeWidth={1.8} />
         </ChromeButton>
         {!fullscreen && (
           <>
-            <ChromeButton label={t.window.minimize} onClick={() => void appWindow.minimize()}>
-              <Minus size={16} strokeWidth={1.8} />
+            <ChromeButton label={t.window.minimize} compact={slim} onClick={() => void appWindow.minimize()}>
+              <Minus size={slim ? 14 : 16} strokeWidth={1.8} />
             </ChromeButton>
-            <ChromeButton label={t.window.close} danger onClick={() => void appWindow.close()}>
-              <X size={16} strokeWidth={1.8} />
+            <ChromeButton label={t.window.close} compact={slim} danger onClick={() => void appWindow.close()}>
+              <X size={slim ? 14 : 16} strokeWidth={1.8} />
             </ChromeButton>
           </>
         )}

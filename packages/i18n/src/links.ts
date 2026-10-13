@@ -11,5 +11,7 @@ export const links = {
   download: `${repository}/releases/latest/download/Mirlow-Setup-x64.exe`,
   licenses: `${repository}/blob/main/THIRD-PARTY-NOTICES.md`,
   issues: `${repository}/issues`,
+  /** Where people write to with problems and requests. Shown publicly on the site. */
+  email: "francisco.soares.martins@tecnico.ulisboa.pt",
   uxplay: "https://github.com/FDH2/UxPlay",
 } as const;

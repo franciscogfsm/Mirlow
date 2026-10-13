@@ -368,4 +368,246 @@ export const pt: Guides = {
       },
     ],
   },
+
+  audio: {
+    title: "Como ouvir o som do iPhone nas colunas do PC",
+    short: "Ouvir o som do iPhone no PC",
+    metaTitle: "Ouvir o som do iPhone nas colunas do PC por AirPlay, grátis",
+    description:
+      "Envie música, podcasts ou qualquer som do iPhone ou iPad para as colunas de um PC com Windows por Wi-Fi, com AirPlay. Grátis, sem cabo e sem emparelhar Bluetooth.",
+    lead: "Um PC com boas colunas dá uma ótima coluna AirPlay. Com o Mirlow aberto no Windows, o iPhone pode enviar só o som para o PC, sem mostrar o ecrã, tal como faria para uma coluna sem fios.",
+    steps: [
+      {
+        title: "Abra o Mirlow no PC",
+        body: "Instale o Mirlow para Windows 10 ou 11 e abra-o. Confirme que Reproduzir som está ativado nas definições; vem ativado de origem.",
+      },
+      {
+        title: "Ponha alguma coisa a tocar no iPhone",
+        body: "Música, um podcast, um vídeo: qualquer coisa com som. O iPhone tem de estar na mesma rede que o PC.",
+      },
+      {
+        title: "Abra a Central de controlo e toque no ícone AirPlay",
+        body: "É o pequeno ícone de círculos com um triângulo, no canto dos controlos de reprodução. Muitas aplicações mostram o mesmo ícone no seu próprio leitor.",
+      },
+      {
+        title: "Escolha o seu PC",
+        body: "O som passa para as colunas do PC e o Mirlow indica que está a reproduzir o som do iPhone. Para o trazer de volta, abra a mesma lista e escolha iPhone.",
+      },
+    ],
+    sections: [
+      {
+        title: "Som com o ecrã, ou só o som",
+        body: [
+          "Quando projeta o ecrã, o som vai junto automaticamente. Os passos acima servem para quando quer apenas o som e prefere guardar o ecrã do telemóvel para si.",
+          "Se preferir o contrário, a imagem projetada com o som a ficar no telemóvel, desative Reproduzir som nas definições do Mirlow.",
+        ],
+      },
+      {
+        title: "Porque não Bluetooth?",
+        body: [
+          "O Bluetooth funciona quando o PC consegue receber áudio, o que muitos não fazem sem configuração adicional. O AirPlay passa pela rede Wi-Fi, por isso não há emparelhamento e o telemóvel pode estar em qualquer ponto da casa a que a rede chegue.",
+        ],
+      },
+    ],
+    faq: [
+      {
+        q: "Posso usar o PC como coluna AirPlay?",
+        a: "Sim. Enquanto o Mirlow estiver aberto, o PC aparece entre as colunas AirPlay no iPhone, iPad ou Mac.",
+      },
+      {
+        q: "Que som sai pelo PC?",
+        a: "O que o iPhone iria reproduzir: música, vídeos, jogos. As chamadas telefónicas ficam no telemóvel.",
+      },
+      {
+        q: "Não há som quando projeto o ecrã. O que devo verificar?",
+        a: "Que Reproduzir som está ativado nas definições do Mirlow, que o volume do PC está alto e a saída certa está escolhida no Windows, e que o volume do iPhone não está a zero.",
+      },
+      {
+        q: "Custa alguma coisa?",
+        a: "Não. O Mirlow é gratuito e de código aberto, sem conta e sem publicidade.",
+      },
+    ],
+  },
+
+  lag: {
+    title: "A projeção do ecrã está lenta ou aos soluços: como a tornar fluida",
+    short: "Projeção lenta ou com atraso",
+    metaTitle: "Espelhar o iPhone no PC com atraso ou aos soluços? Como resolver",
+    description:
+      "Soluços, atraso ou imagem aos quadrados ao espelhar o iPhone ou o iPad num PC com Windows são quase sempre da rede. Seis coisas a verificar, da mais eficaz à menos.",
+    lead: "A projeção envia vídeo em direto pela rede muitas vezes por segundo, por isso tudo o que atrasa a rede nota-se logo em soluços, quadrados ou atraso. As soluções são simples, e as duas primeiras resolvem a maior parte dos casos.",
+    steps: [
+      {
+        title: "Ligue o PC ao router por cabo",
+        body: "É a melhoria mais importante. Com o PC por Ethernet, só a metade do percurso que cabe ao telemóvel é sem fios.",
+      },
+      {
+        title: "Aproxime-se do router e use a banda de 5 GHz",
+        body: "As paredes e a distância reduzem muito a velocidade do Wi-Fi. Se o router tiver redes separadas de 2,4 GHz e 5 GHz, ligue o iPhone, e o PC se estiver sem fios, à de 5 GHz.",
+      },
+      {
+        title: "Suspenda o uso pesado da rede",
+        body: "Transferências grandes, cópias de segurança na nuvem e streaming de vídeo noutros dispositivos competem com a imagem projetada.",
+      },
+      {
+        title: "Desligue qualquer VPN",
+        body: "Uma VPN no telemóvel ou no PC pode enviar o tráfego local pelo caminho mais longo, ou bloqueá-lo.",
+      },
+      {
+        title: "Verifique o Modo de compatibilidade",
+        body: "Se o Modo de compatibilidade estiver ativado nas definições do Mirlow e não precisar dele, desative-o, para que seja a placa gráfica a descodificar. Se a imagem bloquear com ele desativado, ative-o.",
+      },
+      {
+        title: "Dê folga ao PC",
+        body: "Num portátil, ligue o carregador e deixe a poupança de bateria desligada. Feche os programas que ocupam o processador ou a placa gráfica.",
+      },
+    ],
+    sections: [
+      {
+        title: "Um pequeno atraso é normal",
+        body: [
+          "O telemóvel tem de capturar, comprimir e enviar cada imagem, e o PC tem de a descodificar e mostrar. Numa boa rede o atraso é suficientemente pequeno para navegar, ver fotografias e vídeo e fazer apresentações. Os jogos que dependem de reações muito rápidas jogam-se melhor a olhar para o telemóvel.",
+        ],
+      },
+      {
+        title: "Quadrados e arrastamento são dados perdidos",
+        body: [
+          "Quando a imagem se desfaz em quadrados por um instante e depois recupera, parte do vídeo não chegou a tempo. Isso aponta para o sinal de Wi-Fi e não para o PC, por isso os dois primeiros passos são os que deve experimentar.",
+        ],
+      },
+    ],
+    faq: [
+      {
+        q: "Uma internet mais rápida ajuda?",
+        a: "Não. A projeção nunca sai da rede de casa, por isso a velocidade da internet não conta. O que conta é o Wi-Fi entre o telemóvel, o router e o PC.",
+      },
+      {
+        q: "Uma rede mesh ou um repetidor de Wi-Fi atrapalham?",
+        a: "Podem atrapalhar, quando o telemóvel e o PC estão ligados a unidades diferentes e a ligação entre elas é fraca. Experimente com os dois dispositivos perto do router principal.",
+      },
+      {
+        q: "O som e a imagem estão dessincronizados. O que faço?",
+        a: "Pare a projeção e volte a iniciá-la, para que se alinhem de novo. Se continuarem a afastar-se, a rede está a perder dados, por isso siga os passos acima.",
+      },
+      {
+        q: "A qualidade da imagem depende do meu monitor?",
+        a: "O Mirlow pede ao iPhone uma imagem à medida do seu ecrã, e o iPhone decide o que envia. Uma imagem mais nítida também exige mais da rede, o que é mais uma razão para preferir o cabo no PC.",
+      },
+    ],
+  },
+
+  "no-wifi": {
+    title: "Espelhar o iPhone no PC sem Wi-Fi, ou com cabo USB",
+    short: "Espelhar sem Wi-Fi ou por USB",
+    metaTitle: "Espelhar o iPhone no PC sem Wi-Fi ou por USB: o que é possível",
+    description:
+      "A projeção do ecrã precisa de uma rede local, não de internet. O que funciona sem Wi-Fi ou sem ligação à internet, e porque é que o cabo USB e o Bluetooth não servem.",
+    lead: "A projeção do ecrã precisa de que o iPhone e o PC estejam na mesma rede local. Não precisa de internet. Essa diferença responde à maior parte das dúvidas sobre espelhar sem Wi-Fi e sobre cabos.",
+    sections: [
+      {
+        title: "Sem internet: sim",
+        body: [
+          "A imagem vai diretamente do telemóvel para o PC através do router e nunca passa pela internet. Um router sem qualquer ligação à internet, como um antigo que tenha numa gaveta ou um pequeno router de viagem, é suficiente. Ligue os dois dispositivos a ele e projete como de costume.",
+        ],
+      },
+      {
+        title: "Sem Wi-Fi no PC: sim",
+        body: [
+          "O PC não precisa de Wi-Fi. Ligado ao router por cabo Ethernet, está na mesma rede que o Wi-Fi do telemóvel, e a projeção costuma até ficar mais fluida.",
+        ],
+      },
+      {
+        title: "Sem rede nenhuma: não",
+        body: [
+          "O iPhone encontra os recetores procurando na rede a que está ligado. Sem uma rede entre os dois dispositivos, o PC não pode aparecer na lista da Projeção do ecrã.",
+          "Há quem ligue o PC ao Hotspot pessoal do iPhone para criar uma rede só dos dois. Se o telemóvel mostra então o PC na lista depende do telemóvel e da versão do iOS; não garantimos que funcione, e um router é a escolha fiável.",
+        ],
+      },
+      {
+        title: "Com cabo USB: não com o Mirlow",
+        body: [
+          "O Mirlow recebe o ecrã sem fios, como uma Apple TV, e não projeta por USB. Ligar o iPhone ao PC dá ao Windows acesso às fotografias e carrega o telemóvel, nada mais.",
+        ],
+      },
+      {
+        title: "Com Bluetooth: não",
+        body: [
+          "O Bluetooth é demasiado lento para vídeo em direto. A projeção do ecrã não o usa para transportar a imagem.",
+        ],
+      },
+    ],
+    faq: [
+      {
+        q: "A projeção do ecrã gasta dados móveis?",
+        a: "Não. Projetar para um PC na mesma rede fica nessa rede. As aplicações que usar enquanto projeta gastam os dados que normalmente gastariam.",
+      },
+      {
+        q: "Posso projetar num hotel ou num Wi-Fi público?",
+        a: "Muitas vezes não. As redes de hotéis e as públicas costumam impedir que os dispositivos se vejam. Um pequeno router de viagem seu contorna isso.",
+      },
+      {
+        q: "O telemóvel e o PC têm de estar no Wi-Fi com o mesmo nome?",
+        a: "Têm de estar na mesma rede, o que normalmente quer dizer o mesmo router. Os nomes de 2,4 GHz e 5 GHz desse router são a mesma rede; a rede de convidados não é.",
+      },
+      {
+        q: "Há alguma forma com fios de mostrar o iPhone num ecrã?",
+        a: "A Apple vende adaptadores que ligam o iPhone a um monitor ou televisor por HDMI. Isso liga à entrada HDMI de um ecrã, não ao Windows.",
+      },
+    ],
+  },
+
+  safe: {
+    title: "Espelhar o ecrã é seguro?",
+    short: "Espelhar o ecrã é seguro?",
+    metaTitle: "Espelhar o ecrã do iPhone no PC é seguro e privado?",
+    description:
+      "O que a projeção do ecrã partilha e o que não partilha, quem se pode ligar ao seu PC, e cinco hábitos para espelhar o iPhone num PC com Windows em privado.",
+    lead: "Projetar mostra o seu ecrã. Não entrega o seu telemóvel. Saber exatamente o que é partilhado, e com quem, permite usá-lo sem surpresas.",
+    sections: [
+      {
+        title: "O que o PC recebe",
+        body: [
+          "A imagem que está no ecrã do iPhone e o som, e mais nada. O PC não tem acesso às suas fotografias, mensagens, palavras-passe ou ficheiros, e não consegue controlar o telemóvel. Quando pára a projeção, deixa de receber o que quer que seja.",
+          "Mas tudo o que está no ecrã é mostrado, incluindo as notificações que aparecem e o que escrever à vista. Ative um modo de Concentração, como Não incomodar, antes de projetar à frente de outras pessoas.",
+        ],
+      },
+      {
+        title: "Por onde passa a imagem",
+        body: [
+          "Do telemóvel para o PC pela sua rede local. Não passa pela internet nem por nenhum servidor. O Mirlow não tem servidores, conta nem estatísticas, e não grava nem guarda o que mostra.",
+        ],
+      },
+      {
+        title: "Quem se pode ligar ao seu PC",
+        body: [
+          "Enquanto o Mirlow está aberto, o seu PC aparece como recetor para os dispositivos da mesma rede, e alguém nessa rede pode enviar o seu ecrã para ele. Estaria a mostrar-lhe o ecrã dele; não ficaria com acesso ao seu PC.",
+          "Numa rede doméstica, isso são as pessoas com quem vive. Numa rede partilhada ou pública, saia do Mirlow pelo ícone na área de notificação quando não o estiver a usar.",
+        ],
+      },
+      {
+        title: "Cinco bons hábitos",
+        body: [
+          "Projete em redes em que confia. Ative primeiro o Não incomodar. Pare a projeção antes de abrir a aplicação do banco ou as palavras-passe. Saia do Mirlow quando terminar numa rede partilhada. Transfira o Mirlow apenas do seu site ou da página no GitHub, e compare o código de verificação se tiver dúvidas.",
+        ],
+      },
+    ],
+    faq: [
+      {
+        q: "Alguém pode ver o ecrã do meu iPhone sem eu saber?",
+        a: "A projeção só começa quando escolhe um recetor na Central de controlo do seu próprio telemóvel, e o iOS mostra um indicador no topo do ecrã enquanto durar.",
+      },
+      {
+        q: "O próprio Mirlow é seguro de instalar?",
+        a: "O código-fonte é público, a aplicação não faz ligações à internet, e o código de verificação de cada instalador é publicado para poder confirmar que o ficheiro é o genuíno. O instalador ainda não tem assinatura digital, por isso o Windows pode mostrar um aviso ao abri-lo.",
+      },
+      {
+        q: "Porque é que o Mirlow precisa de uma permissão na firewall?",
+        a: "Para que o iPhone consiga encontrar o PC e chegar até ele na rede local. A permissão abrange apenas o recetor.",
+      },
+      {
+        q: "O Mirlow recolhe algum dado?",
+        a: "Não. Não há para onde os enviar: sem conta, sem telemetria, sem publicidade.",
+      },
+    ],
+  },
 };

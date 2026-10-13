@@ -82,6 +82,25 @@ npm run build:web                                          # output: apps\web\ou
 
 If the repository or the site moves, update `packages/i18n/src/links.ts`.
 
+### Search engines
+
+The build writes `sitemap.xml`, `robots.txt` and `llms.txt` for whatever
+address the site is built for. After the first deploy, tell the search engines
+the site exists; nothing appears in results until they have crawled it:
+
+1. In [Google Search Console](https://search.google.com/search-console) add
+   the site as a **URL prefix** property and choose the **HTML tag** method.
+   Copy the tag's `content` value into an environment variable named
+   `GOOGLE_SITE_VERIFICATION` (in Vercel: **Settings → Environment
+   Variables**), redeploy, then press **Verify**.
+2. Submit `https://your-domain/sitemap.xml` under **Sitemaps**.
+3. Do the same in [Bing Webmaster Tools](https://www.bing.com/webmasters)
+   with `BING_SITE_VERIFICATION`, or import the site from Search Console.
+
+The guides live in `apps/web/src/content/guides/`. To add one, add its
+address to `slugs.ts` and its text to `en.ts` and `pt.ts`; the page, its
+metadata, the sitemap entry and the footer link follow from that.
+
 ## Code signing
 
 The installer is not signed. Windows SmartScreen will therefore warn people

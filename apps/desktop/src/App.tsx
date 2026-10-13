@@ -7,13 +7,13 @@ import { HelpSheet } from "./components/HelpSheet";
 import { SettingsSheet } from "./components/SettingsSheet";
 import { TitleBar } from "./components/TitleBar";
 import { api, type Settings, type Status, type VideoSize } from "./lib/api";
+import { HOME_MIN, HOME_SIZE, MIRROR_BAR, MIRROR_FRAME, MIRROR_MIN } from "./lib/frame";
 import { I18nProvider, resolveLocale, useI18n } from "./lib/i18n";
 import { useEngineStatus, useSettings } from "./lib/useEngine";
 import { ErrorView } from "./views/ErrorView";
 import { MirrorStage } from "./views/MirrorStage";
 import { WaitingView } from "./views/WaitingView";
 
-const HOME_SIZE = { width: 440, height: 640 };
 const RESIZE_MS = 420;
 
 const easeOutQuint = (t: number) => 1 - Math.pow(1 - t, 5);
@@ -68,8 +68,6 @@ async function animateWindowTo(target: { width: number; height: number }) {
     requestAnimationFrame(frame);
   });
 }
-const BAR_HEIGHT = 48;
-const STAGE_PADDING = 10;
 const CONTROLS_IDLE_MS = 2600;
 
 /** Sizes the window around a picture of the given proportions. */
@@ -83,15 +81,20 @@ async function fitWindowTo(video: VideoSize) {
   const maxHeight = (monitor ? monitor.size.height / scale : 900) * 0.84;
 
   const aspect = video.width / video.height;
-  let height = Math.min(maxHeight - BAR_HEIGHT - STAGE_PADDING, aspect < 1 ? 780 : 600);
+  const chrome = MIRROR_BAR + MIRROR_FRAME * 2;
+  let height = Math.min(maxHeight - chrome, aspect < 1 ? 780 : 600);
   let width = height * aspect;
-  if (width > maxWidth - STAGE_PADDING * 2) {
-    width = maxWidth - STAGE_PADDING * 2;
+  if (width > maxWidth - MIRROR_FRAME * 2) {
+    width = maxWidth - MIRROR_FRAME * 2;
     height = width / aspect;
   }
+
+  // Drop the standing minimum first, or a portrait phone is held at 380px
+  // wide and the picture gains thick bars on both sides.
+  await appWindow.setMinSize(new LogicalSize(MIRROR_MIN.width, MIRROR_MIN.height)).catch(() => {});
   await animateWindowTo({
-    width: Math.round(width + STAGE_PADDING * 2),
-    height: Math.round(height + BAR_HEIGHT + STAGE_PADDING),
+    width: Math.round(width + MIRROR_FRAME * 2),
+    height: Math.round(height + chrome),
   });
 }
 
@@ -134,6 +137,7 @@ function Shell({
           setFullscreen(false);
         }
         if (!(await appWindow.isMaximized())) await animateWindowTo(HOME_SIZE);
+        await appWindow.setMinSize(new LogicalSize(HOME_MIN.width, HOME_MIN.height)).catch(() => {});
       }
       wasMirroring.current = video !== null;
     })();

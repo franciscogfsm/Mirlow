@@ -1,4 +1,4 @@
-import { links } from "@mirlow/i18n";
+import { downloadUrl } from "@/lib/site";
 import { LiquidGlass } from "@mirlow/ui";
 import { ArrowDown } from "lucide-react";
 
@@ -17,7 +17,8 @@ export function DownloadButton({
   return (
     <LiquidGlass
       as="a"
-      href={links.download}
+      href={downloadUrl}
+      download
       radius={999}
       bezel={large ? 16 : 11}
       depth={large ? 22 : 14}

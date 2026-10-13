@@ -1,11 +1,11 @@
 import { motion } from "motion/react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { api, type Rect, type VideoSize } from "../lib/api";
+import { MIRROR_FRAME } from "../lib/frame";
 
 /** Space kept clear at the top of a full-screen stage while the controls show. */
 const CONTROLS_HEIGHT = 56;
-const WINDOWED_PADDING = 10;
-const WINDOWED_RADIUS = 16;
+const WINDOWED_RADIUS = 20;
 
 interface Box {
   left: number;
@@ -85,12 +85,12 @@ export function MirrorStage({
 
   let picture: Box | null = null;
   if (area && area.width > 0 && area.height > 0) {
-    const padding = fullscreen ? 0 : WINDOWED_PADDING;
+    const frame = fullscreen ? 0 : MIRROR_FRAME;
     const usable: Box = {
-      left: area.left + padding,
-      top: area.top,
-      width: area.width - padding * 2,
-      height: area.height - padding,
+      left: area.left + frame,
+      top: area.top + frame,
+      width: area.width - frame * 2,
+      height: area.height - frame * 2,
     };
     picture = fit(usable, aspect);
     if (fullscreen && controlsVisible && picture.top < CONTROLS_HEIGHT) {
@@ -131,7 +131,7 @@ export function MirrorStage({
     <div
       ref={containerRef}
       data-tauri-drag-region
-      className="relative h-full w-full"
+      className="relative h-full w-full bg-black"
       onDoubleClick={onToggleFullscreen}
     >
       {picture && area && (

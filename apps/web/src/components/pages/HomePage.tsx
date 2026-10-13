@@ -18,7 +18,7 @@ export function HomePage({ locale }: { locale: Locale }) {
           { id: "features", label: t.nav.features, node: <FeaturesChapter t={t.features} /> },
           { id: "trust", label: t.trust.eyebrow, node: <TrustChapter t={t.trust} locale={locale} /> },
           { id: "faq", label: t.nav.faq, node: <FaqChapter t={t.faq} /> },
-          { id: "download", label: t.nav.download, node: <FinalChapter t={t.finalCta} footer={t.footer} /> },
+          { id: "download", label: t.nav.download, node: <FinalChapter t={t.finalCta} /> },
         ]}
       />
     </SiteFrame>

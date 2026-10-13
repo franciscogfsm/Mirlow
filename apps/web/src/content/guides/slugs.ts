@@ -3,7 +3,7 @@ import type { Locale } from "@mirlow/i18n";
 // The guides' addresses, apart from their text: this file is small enough to
 // be imported anywhere, including the language switcher in the browser.
 
-export const guideIds = ["iphone", "airplay", "ipad", "not-showing", "black-screen", "built-in"] as const;
+export const guideIds = ["iphone", "airplay", "ipad", "not-showing", "black-screen", "built-in", "audio", "lag", "no-wifi", "safe"] as const;
 export type GuideId = (typeof guideIds)[number];
 
 /** The folder the guides live in, per language: `/guides/` and `/pt/guias/`. */
@@ -23,6 +23,13 @@ export const guideSlugs: Record<GuideId, Record<Locale, string>> = {
     pt: "ecra-preto-ao-espelhar-iphone",
   },
   "built-in": { en: "does-windows-support-airplay", pt: "o-windows-tem-airplay" },
+  audio: { en: "play-iphone-audio-on-pc", pt: "ouvir-som-do-iphone-no-pc" },
+  lag: { en: "screen-mirroring-lag-iphone-to-pc", pt: "projecao-do-ecra-lenta-iphone-pc" },
+  "no-wifi": {
+    en: "mirror-iphone-to-pc-without-wifi-or-usb",
+    pt: "espelhar-iphone-no-pc-sem-wifi-ou-usb",
+  },
+  safe: { en: "is-screen-mirroring-safe", pt: "espelhar-o-ecra-e-seguro" },
 };
 
 export function isGuideId(value: string): value is GuideId {

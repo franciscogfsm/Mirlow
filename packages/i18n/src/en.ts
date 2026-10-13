@@ -254,7 +254,7 @@ export const en = {
         {
           title: "Open source",
           body: "Every line of Mirlow is public. Anyone can read it, build it and confirm that the download matches.",
-          action: "Read the code",
+          action: "How to get the source",
         },
         {
           title: "Scan it yourself",
@@ -328,6 +328,11 @@ export const en = {
       ctaTitle: "Try it on your own PC",
       ctaBody: "Mirlow is free and open source, and needs no account.",
     },
+    contact: {
+      label: "Contact us",
+      hint: "A problem, or an idea for a new feature? Send us an email.",
+      subject: "Mirlow",
+    },
     footer: {
       guides: "Guides",
       privacy: "Privacy",
@@ -376,11 +381,11 @@ export const en = {
         },
         {
           title: "Bundled libraries",
-          body: "The installer includes GStreamer, FFmpeg, OpenSSL, libplist, GLib and their dependencies, unmodified, as packaged by the MSYS2 project. A full list with versions and licences is installed alongside the app and published with each release.",
+          body: "The installer includes GStreamer, OpenSSL, libplist, GLib and their dependencies, unmodified, as packaged by the MSYS2 project, and FFmpeg, which we build from its official source with only the decoders Mirlow uses. A full list with versions and licences is installed alongside the app and published with each release.",
         },
         {
           title: "Getting the source",
-          body: "The complete source for Mirlow, the UxPlay revision it uses, the patches and the build scripts are in the Mirlow repository. The sources for every bundled library are available from the MSYS2 project, and we will provide them on request for any release we have distributed.",
+          body: "The complete source for Mirlow, the UxPlay revision it uses, the patches and the build scripts are in the Mirlow repository. The sources for the bundled libraries are available from the MSYS2 project and, for FFmpeg, from ffmpeg.org, and we will provide them on request for any release we have distributed.",
         },
       ],
       viewSource: "View the source on GitHub",

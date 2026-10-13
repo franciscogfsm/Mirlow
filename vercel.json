@@ -5,6 +5,13 @@
   "buildCommand": "npm run build:web",
   "outputDirectory": "apps/web/out",
   "trailingSlash": true,
+  "redirects": [
+    {
+      "source": "/download/",
+      "destination": "https://github.com/franciscogfsm/mirlow/releases/latest/download/Mirlow-Setup-x64.exe",
+      "permanent": false
+    }
+  ],
   "headers": [
     {
       "source": "/_next/static/(.*)",

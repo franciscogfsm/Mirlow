@@ -1,5 +1,6 @@
 import { getDictionary, links, type Locale } from "@mirlow/i18n";
 import { Wordmark } from "@mirlow/ui";
+import { Mail } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { getGuide } from "@/content/guides";
@@ -68,11 +69,14 @@ export function SiteFrame({
             <Link className="transition-colors hover:text-ink" href={pagePath(locale, "licenses")}>
               {t.footer.licenses}
             </Link>
-            <a className="transition-colors hover:text-ink" href={links.repository}>
-              {t.footer.source}
-            </a>
-            <a className="transition-colors hover:text-ink" href={links.releases}>
-              {t.footer.releases}
+            <a
+              id="contact"
+              href={`mailto:${links.email}?subject=${encodeURIComponent(t.contact.subject)}`}
+              title={t.contact.hint}
+              className="-my-1.5 inline-flex items-center gap-2 rounded-full border border-line-strong px-3.5 py-1.5 text-ink transition-colors duration-300 hover:bg-ink/5"
+            >
+              <Mail size={14} strokeWidth={1.8} aria-hidden="true" />
+              {t.contact.label}
             </a>
           </nav>
         </div>

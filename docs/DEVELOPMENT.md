@@ -128,12 +128,15 @@ discovery bug in UxPlay's Windows build that is worth offering upstream.
 
 - **Dev server ports** are 5183 (app) and 5184 (site), deliberately above 5000:
   Windows with Hyper-V or WSL reserves blocks of lower ports.
-- **Refraction** in the Liquid Glass material uses an SVG filter as a
+- **Refraction** in the glass material uses an SVG filter as a
   `backdrop-filter`, which only Chromium-based engines render. That covers the
   app (WebView2) and Chrome/Edge on the site; Safari and Firefox get frosted
   glass.
 - **CSS layers.** Unlayered CSS beats every Tailwind utility. The shared glass
   styles and each app's base styles are therefore placed in the `components`
   layer.
-- **Installer size** is dominated by FFmpeg and the codecs MSYS2 links it
-  against. A leaner FFmpeg build would shrink it considerably.
+- **Installer size.** MSYS2's FFmpeg links every codec it knows, which would
+  be most of the installer. The engine build compiles its own FFmpeg with only
+  the four decoders the receiver uses (`scripts/engine/build-ffmpeg.sh`). It
+  has to be the version MSYS2's `gst-libav` was built against, so the script
+  stops and says so when MSYS2 moves to a newer one.
