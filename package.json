@@ -1,7 +1,7 @@
 {
   "name": "mirlow",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Mirror your iPhone to Windows. For free.",
   "license": "GPL-3.0-or-later",
   "workspaces": [
@@ -9,6 +9,7 @@
     "packages/*"
   ],
   "scripts": {
+    "dev": "npm run tauri -w @mirlow/desktop -- dev",
     "dev:desktop": "npm run tauri -w @mirlow/desktop -- dev",
     "build:desktop": "npm run tauri -w @mirlow/desktop -- build",
     "dev:web": "npm run dev -w @mirlow/web",
