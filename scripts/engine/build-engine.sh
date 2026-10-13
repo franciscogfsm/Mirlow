@@ -1,0 +1,148 @@
+#!/usr/bin/env bash
+# Builds the patched UxPlay engine and assembles a self-contained runtime
+# (engine + GStreamer plugins + every DLL they need + licence texts) under
+# apps/desktop/src-tauri/resources/engine.
+#
+# Run through scripts/build-engine.ps1, or directly from an MSYS2 UCRT64 shell.
+set -euo pipefail
+
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+SRC="$REPO/engine/uxplay"
+PATCHES="$REPO/engine/patches"
+OUT="$REPO/apps/desktop/src-tauri/resources/engine"
+# Build outside the repository: the source tree may live in a synced folder.
+WORK="${MIRLOW_BUILD_DIR:-$(cygpath -u "$LOCALAPPDATA")/MirlowBuild}/engine"
+PREFIX=/ucrt64
+PKG=mingw-w64-ucrt-x86_64
+
+log() { printf '\n== %s\n' "$*"; }
+
+[ -f "$SRC/CMakeLists.txt" ] || { echo "engine/uxplay is empty: run 'git submodule update --init'"; exit 1; }
+[ "${MSYSTEM:-}" = "UCRT64" ] || { echo "This script must run in the MSYS2 UCRT64 environment"; exit 1; }
+
+# --- 1. dependencies -------------------------------------------------------
+if [ "${1:-}" = "--install-deps" ]; then
+  log "Installing build and runtime dependencies"
+  pacman -S --needed --noconfirm patch \
+    $PKG-gcc $PKG-cmake $PKG-ninja $PKG-pkgconf $PKG-openssl $PKG-libplist \
+    $PKG-gstreamer $PKG-gst-plugins-base $PKG-gst-plugins-good \
+    $PKG-gst-plugins-bad $PKG-gst-libav $PKG-ntldd
+fi
+
+# --- 2. patched source -----------------------------------------------------
+log "Preparing patched source in $WORK"
+rm -rf "$WORK/src" "$WORK/build"
+mkdir -p "$WORK/src"
+(cd "$SRC" && tar --exclude=.git -cf - .) | tar -xf - -C "$WORK/src"
+for p in "$PATCHES"/*.patch; do
+  echo "applying $(basename "$p")"
+  patch -d "$WORK/src" -p1 --forward --no-backup-if-mismatch < "$p"
+done
+
+# --- 3. build --------------------------------------------------------------
+log "Configuring and building"
+# The engine carries Mirlow's name and icon in its version resource, so the
+# Windows firewall prompt and Task Manager say "Mirlow" rather than a file name.
+rm -rf "$WORK/branding"
+mkdir -p "$WORK/branding"
+cp "$REPO/engine/branding/engine.rc" "$WORK/branding/"
+cp "$REPO/apps/desktop/src-tauri/icons/icon.ico" "$WORK/branding/engine.ico"
+(cd "$WORK/branding" && windres engine.rc -O coff -o engine-res.o)
+BRANDING="$(cygpath -m "$WORK/branding/engine-res.o")"
+
+cmake -S "$WORK/src" -B "$WORK/build" -G Ninja -DCMAKE_BUILD_TYPE=Release   -DCMAKE_EXE_LINKER_FLAGS="$BRANDING"
+cmake --build "$WORK/build"
+[ -f "$WORK/build/uxplay.exe" ] || { echo "build produced no uxplay.exe"; exit 1; }
+
+# --- 4. assemble runtime ---------------------------------------------------
+log "Assembling runtime in $OUT"
+rm -rf "$OUT"
+mkdir -p "$OUT/bin" "$OUT/lib/gstreamer-1.0" "$OUT/libexec/gstreamer-1.0" "$OUT/licenses"
+
+cp "$WORK/build/uxplay.exe" "$OUT/bin/mirlow-engine.exe"
+cp "$PREFIX/libexec/gstreamer-1.0/gst-plugin-scanner.exe" "$OUT/libexec/gstreamer-1.0/"
+
+# Only the GStreamer plugins the receiver pipelines can actually use.
+PLUGINS=(
+  coreelements app playback typefindfunctions pbtypes   # pipeline plumbing, decodebin
+  videoparsersbad                                       # h264parse / h265parse
+  libav                                                 # avdec_aac, avdec_alac, avdec_h264 (software fallback)
+  d3d11                                                 # d3d11h264dec (hardware) + d3d11videosink
+  videoconvertscale videofilter                         # videoconvert, videoscale, videoflip
+  audioconvert audioresample volume level audioparsers  # audio chain
+  wasapi2 wasapi directsound autodetect                 # audio output
+)
+for name in "${PLUGINS[@]}"; do
+  f="$PREFIX/lib/gstreamer-1.0/libgst$name.dll"
+  if [ -f "$f" ]; then
+    cp "$f" "$OUT/lib/gstreamer-1.0/"
+  else
+    echo "!! plugin not found, skipped: libgst$name.dll"
+  fi
+done
+
+# Copy the transitive DLL closure of everything above (only DLLs that come
+# from MSYS2; Windows system DLLs are left alone).
+log "Resolving DLL dependencies"
+mapfile -t roots < <(find "$OUT/bin" "$OUT/lib" "$OUT/libexec" -type f \( -name '*.exe' -o -name '*.dll' \))
+ntldd -R "${roots[@]}" 2>/dev/null \
+  | sed -n 's/.*=> \(.*\) (0x[0-9a-fA-F]*)$/\1/p' \
+  | tr '\\' '/' \
+  | while read -r dll; do cygpath -u "$dll"; done \
+  | grep -i "^$PREFIX/bin/" | sort -u > "$WORK/dlls.txt"
+while read -r dll; do cp -n "$dll" "$OUT/bin/"; done < "$WORK/dlls.txt"
+
+# --- 5. licences and manifest ---------------------------------------------
+log "Collecting licences"
+: > "$WORK/packages.txt"
+{
+  cat "$WORK/dlls.txt"
+  for name in "${PLUGINS[@]}"; do echo "$PREFIX/lib/gstreamer-1.0/libgst$name.dll"; done
+  echo "$PREFIX/libexec/gstreamer-1.0/gst-plugin-scanner.exe"
+} | while read -r f; do
+  [ -f "$f" ] && pacman -Qoq "$f" 2>/dev/null || true
+done | sort -u > "$WORK/packages.txt"
+
+MANIFEST="$OUT/THIRD-PARTY-RUNTIME.md"
+UXPLAY_COMMIT="$(cat "$REPO/engine/UXPLAY_COMMIT" 2>/dev/null || echo unknown)"
+{
+  echo "# Mirlow engine runtime: bundled components"
+  echo
+  echo "Generated by \`scripts/engine/build-engine.sh\`. Do not edit by hand."
+  echo
+  echo "## UxPlay (GPL-3.0-or-later)"
+  echo
+  echo "- Upstream: https://github.com/FDH2/UxPlay"
+  echo "- Commit: \`$UXPLAY_COMMIT\`"
+  echo "- Modifications: the patches in \`engine/patches/\` of the Mirlow repository"
+  echo
+  echo "## Libraries redistributed unmodified from MSYS2 (UCRT64)"
+  echo
+  echo "Build recipes and exact sources for every package: https://github.com/msys2/MINGW-packages"
+  echo
+  echo "| Package | Version | Licence | Project |"
+  echo "| --- | --- | --- | --- |"
+  while read -r pkg; do
+    info="$(LC_ALL=C pacman -Qi "$pkg")"
+    ver="$(sed -n 's/^Version *: //p' <<<"$info")"
+    lic="$(sed -n 's/^Licenses *: //p' <<<"$info")"
+    url="$(sed -n 's/^URL *: //p' <<<"$info")"
+    echo "| ${pkg#$PKG-} | $ver | $lic | $url |"
+    short="${pkg#$PKG-}"
+    if [ -d "$PREFIX/share/licenses/$short" ]; then
+      mkdir -p "$OUT/licenses/$short"
+      cp -r "$PREFIX/share/licenses/$short/." "$OUT/licenses/$short/"
+    fi
+  done < "$WORK/packages.txt"
+} > "$MANIFEST"
+
+mkdir -p "$OUT/licenses/uxplay"
+cp "$SRC/LICENSE" "$OUT/licenses/uxplay/LICENSE"
+cp "$SRC/lib/llhttp/LICENSE-MIT" "$OUT/licenses/uxplay/llhttp-LICENSE-MIT"
+cp "$PATCHES"/*.patch "$OUT/licenses/uxplay/"
+
+log "Done"
+echo "packages : $(wc -l < "$WORK/packages.txt")"
+echo "dlls     : $(find "$OUT/bin" -name '*.dll' | wc -l)"
+echo "plugins  : $(find "$OUT/lib/gstreamer-1.0" -name '*.dll' | wc -l)"
+echo "size     : $(du -sh "$OUT" | cut -f1)"

@@ -1,0 +1,196 @@
+@import "tailwindcss";
+@import "@mirlow/ui/tokens.css";
+@import "@mirlow/ui/glass.css" layer(components);
+
+@source "../../../packages/ui/src";
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-raised: var(--paper-raised);
+  --color-ink: var(--ink);
+  --color-soft: var(--ink-soft);
+  --color-faint: var(--ink-faint);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-accent: var(--accent);
+  --color-mint: var(--mint);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
+  --font-sans: var(--font-sans);
+  --ease-fluid: var(--ease-out);
+}
+
+/* Unlayered CSS beats every Tailwind utility, whatever its specificity. These
+   rules are defaults, so they live in a layer the utilities come after. */
+@layer components {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    overflow: hidden;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-text);
+    font-size: 14px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    user-select: none;
+    cursor: default;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-sans);
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  button {
+    font: inherit;
+    color: inherit;
+  }
+
+  input {
+    user-select: text;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  /* The ambient light behind everything: three slow, soft fields of colour.
+     It is what the glass bends, so it is never perfectly flat. */
+  .ambient {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    background: var(--paper);
+  }
+
+  .ambient::before,
+  .ambient::after,
+  .ambient > i {
+    content: "";
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(64px);
+    will-change: transform;
+  }
+
+  .ambient::before {
+    width: 70%;
+    aspect-ratio: 1;
+    left: -22%;
+    top: -18%;
+    background: var(--glow-a);
+    animation: drift-a 26s var(--ease-in-out) infinite alternate;
+  }
+
+  .ambient::after {
+    width: 62%;
+    aspect-ratio: 1;
+    right: -24%;
+    top: 22%;
+    background: var(--glow-b);
+    animation: drift-b 31s var(--ease-in-out) infinite alternate;
+  }
+
+  .ambient > i {
+    width: 58%;
+    aspect-ratio: 1;
+    left: 14%;
+    bottom: -30%;
+    background: var(--glow-c);
+    animation: drift-c 23s var(--ease-in-out) infinite alternate;
+  }
+
+  /* While mirroring, the room goes dark so the picture is the only light. */
+  .ambient[data-dim="true"]::before,
+  .ambient[data-dim="true"]::after,
+  .ambient[data-dim="true"] > i {
+    opacity: 0.28;
+  }
+
+  .ambient::before,
+  .ambient::after,
+  .ambient > i {
+    transition: opacity 900ms var(--ease-out);
+  }
+
+  @keyframes drift-a {
+    to {
+      transform: translate3d(18%, 14%, 0) scale(1.12);
+    }
+  }
+
+  @keyframes drift-b {
+    to {
+      transform: translate3d(-16%, -12%, 0) scale(0.92);
+    }
+  }
+
+  @keyframes drift-c {
+    to {
+      transform: translate3d(12%, -16%, 0) scale(1.08);
+    }
+  }
+
+  /* Signal rings: the "ready to mirror" visual. */
+  .signal-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 1px solid var(--line-strong);
+  }
+
+  .signal-pulse {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 1.5px solid var(--accent);
+    opacity: 0;
+    animation: signal-pulse 3.6s var(--ease-out) infinite;
+  }
+
+  @keyframes signal-pulse {
+    0% {
+      transform: scale(0.34);
+      opacity: 0;
+    }
+    18% {
+      opacity: 0.55;
+    }
+    100% {
+      transform: scale(1);
+      opacity: 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ambient::before,
+    .ambient::after,
+    .ambient > i,
+    .signal-pulse {
+      animation: none;
+    }
+    .signal-pulse {
+      opacity: 0.25;
+      transform: scale(0.72);
+    }
+  }
+
+  .scroll-quiet {
+    scrollbar-width: thin;
+    scrollbar-color: var(--line-strong) transparent;
+  }
+}

@@ -1,0 +1,224 @@
+@import "tailwindcss";
+@import "@mirlow/ui/tokens.css";
+@import "@mirlow/ui/glass.css" layer(components);
+
+@source "../../../../packages/ui/src";
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-raised: var(--paper-raised);
+  --color-ink: var(--ink);
+  --color-soft: var(--ink-soft);
+  --color-faint: var(--ink-faint);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-accent: var(--accent);
+  --color-mint: var(--mint);
+  --font-sans: var(--font-geist), "Segoe UI Variable Display", system-ui, sans-serif;
+  --font-serif: var(--font-instrument), "Iowan Old Style", Georgia, serif;
+  --ease-fluid: var(--ease-out);
+}
+
+/* Unlayered CSS beats every Tailwind utility, whatever its specificity. These
+   rules are defaults, so they live in a layer the utilities come after. */
+@layer components {
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 96px;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--accent) 28%, transparent);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 6px;
+  }
+
+  /* A word set in the serif italic: the one flourish in the type system. */
+  .accent-word {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+    /* Room for the italic overhang. */
+    padding-right: 0.08em;
+  }
+
+  .eyebrow {
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  /* Page backdrop: soft fields of light and a faint grid, fixed behind the
+     content. Glass that passes over it has real detail to bend. */
+  .backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    background: var(--paper);
+    pointer-events: none;
+  }
+
+  .backdrop::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 72px 72px;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 0%, transparent 78%);
+    opacity: 0.7;
+  }
+
+  .glow {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(90px);
+    will-change: transform;
+  }
+
+  .glow-a {
+    width: 46vw;
+    height: 46vw;
+    left: -10vw;
+    top: -16vw;
+    background: var(--glow-a);
+    animation: glow-a 28s var(--ease-in-out) infinite alternate;
+  }
+
+  .glow-b {
+    width: 40vw;
+    height: 40vw;
+    right: -12vw;
+    top: 4vw;
+    background: var(--glow-b);
+    animation: glow-b 34s var(--ease-in-out) infinite alternate;
+  }
+
+  .glow-c {
+    width: 38vw;
+    height: 38vw;
+    left: 30vw;
+    top: 42vh;
+    background: var(--glow-c);
+    opacity: 0.6;
+    animation: glow-c 25s var(--ease-in-out) infinite alternate;
+  }
+
+  @keyframes glow-a {
+    to {
+      transform: translate3d(9vw, 7vw, 0) scale(1.12);
+    }
+  }
+
+  @keyframes glow-b {
+    to {
+      transform: translate3d(-8vw, 9vw, 0) scale(0.9);
+    }
+  }
+
+  @keyframes glow-c {
+    to {
+      transform: translate3d(6vw, -8vh, 0) scale(1.1);
+    }
+  }
+
+  /* Signal rings, shared with the desktop app's waiting screen. */
+  .signal-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 1px solid var(--line-strong);
+  }
+
+  .signal-pulse {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 1.5px solid var(--accent);
+    opacity: 0;
+    animation: signal-pulse 3.6s var(--ease-out) infinite;
+  }
+
+  @keyframes signal-pulse {
+    0% {
+      transform: scale(0.34);
+      opacity: 0;
+    }
+    18% {
+      opacity: 0.55;
+    }
+    100% {
+      transform: scale(1);
+      opacity: 0;
+    }
+  }
+
+  /* The beam of signal that travels from the phone to the PC in the hero. */
+  @keyframes beam-travel {
+    from {
+      stroke-dashoffset: 120;
+    }
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+
+  .prose-page h2 {
+    margin-top: 2.5rem;
+    font-size: 1.25rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+
+  .prose-page p {
+    margin-top: 0.75rem;
+    color: var(--ink-soft);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    .glow,
+    .signal-pulse {
+      animation: none;
+    }
+    .signal-pulse {
+      opacity: 0.25;
+      transform: scale(0.72);
+    }
+  }
+}

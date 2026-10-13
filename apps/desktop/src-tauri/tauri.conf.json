@@ -1,0 +1,65 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Mirlow",
+  "version": "0.1.0",
+  "identifier": "app.mirlow.desktop",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://127.0.0.1:5183",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Mirlow",
+        "width": 440,
+        "height": 640,
+        "minWidth": 380,
+        "minHeight": 540,
+        "center": true,
+        "decorations": false,
+        "shadow": true,
+        "visible": false
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "publisher": "Mirlow",
+    "copyright": "Copyright © 2026 the Mirlow contributors. GPL-3.0-or-later.",
+    "category": "Utility",
+    "shortDescription": "Mirror your iPhone to Windows. For free.",
+    "longDescription": "Mirlow turns your Windows PC into a wireless screen for your iPhone or iPad, using the Screen Mirroring built into the device.",
+    "homepage": "https://github.com/franciscogfsm/mirlow",
+    "licenseFile": "../../../LICENSE",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.ico"
+    ],
+    "resources": {
+      "resources/engine/": "engine/",
+      "../../../LICENSE": "licenses/LICENSE.txt",
+      "../../../THIRD-PARTY-NOTICES.md": "licenses/THIRD-PARTY-NOTICES.md"
+    },
+    "windows": {
+      "webviewInstallMode": {
+        "type": "embedBootstrapper"
+      },
+      "nsis": {
+        "installMode": "perMachine",
+        "installerHooks": "./windows/hooks.nsh",
+        "languages": ["English", "Portuguese"],
+        "displayLanguageSelector": false,
+        "compression": "lzma"
+      }
+    }
+  }
+}

@@ -1,0 +1,155 @@
+/*
+ * Liquid Glass material. Pairs with <LiquidGlass>, which supplies the SVG
+ * refraction filter; everything here is the light on and around the glass.
+ *
+ * Layers, back to front:
+ *   .lg-backdrop  bends (or, without refraction support, frosts) what is behind
+ *   .lg-tint      the body colour of the glass
+ *   .lg-sheen     soft light that follows the pointer across the surface
+ *   .lg-content   whatever sits on the glass
+ *   .lg-rim       a one-pixel edge that catches the light
+ */
+
+@property --lg-near {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+/* Layout defaults carry no specificity, so utility classes on the same
+   element (flex, inline-flex, hidden…) always win. */
+:where(.lg, .lg-content) {
+  display: block;
+}
+
+.lg {
+  position: relative;
+  z-index: 0;
+  box-shadow: var(--glass-shadow);
+  transition: --lg-near 500ms var(--ease-out);
+}
+
+.lg-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.lg-backdrop,
+.lg-tint,
+.lg-sheen,
+.lg-rim {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.lg-backdrop {
+  z-index: -3;
+  -webkit-backdrop-filter: var(--glass-frost);
+  backdrop-filter: var(--glass-frost);
+}
+
+.lg-tint {
+  z-index: -2;
+  background: var(--glass-tint);
+  /* Depth: light gathers under the top edge, shade under the bottom one. */
+  box-shadow:
+    inset 0 1px 0.5px rgba(255, 255, 255, 0.5),
+    inset 0 -1px 1px var(--glass-edge-shade),
+    inset 0 0 14px rgba(255, 255, 255, 0.05);
+}
+
+.lg-sheen {
+  z-index: -1;
+  background: radial-gradient(
+    220px circle at var(--lg-x, 50%) var(--lg-y, 0%),
+    rgba(var(--glass-sheen), calc(0.2 * var(--lg-near, 0))),
+    rgba(var(--glass-sheen), 0) 70%
+  );
+}
+
+.lg-rim {
+  z-index: 2;
+  padding: 1px;
+  /* Brightest where the rim faces the light, with a fainter glint on the
+     opposite side where light leaves the glass. */
+  background: conic-gradient(
+    from var(--lg-angle, -40deg),
+    var(--glass-rim) 0deg,
+    var(--glass-rim-dim) 60deg,
+    var(--glass-rim-dim) 130deg,
+    color-mix(in srgb, var(--glass-rim) 55%, transparent) 180deg,
+    var(--glass-rim-dim) 230deg,
+    var(--glass-rim-dim) 300deg,
+    var(--glass-rim) 360deg
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box exclude,
+    linear-gradient(#000 0 0);
+}
+
+.lg-content {
+  position: relative;
+  z-index: 1;
+  border-radius: inherit;
+}
+
+/* Interactive glass: buttons and other controls. */
+.lg-press {
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform 420ms var(--ease-out),
+    box-shadow 420ms var(--ease-out),
+    --lg-near 500ms var(--ease-out);
+}
+
+.lg-press:hover {
+  transform: translateY(-1px) scale(1.015);
+}
+
+.lg-press:active {
+  transform: scale(0.975);
+  transition-duration: 120ms;
+}
+
+.lg-press:hover > .lg-tint {
+  background: var(--glass-tint-strong);
+}
+
+.lg-press > .lg-tint {
+  transition: background 300ms var(--ease-out);
+}
+
+.lg-press:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lg,
+  .lg-press,
+  .lg-press > .lg-tint {
+    transition: none;
+  }
+  .lg-press:hover,
+  .lg-press:active {
+    transform: none;
+  }
+}
+
+/* Without pointer-following light, keep a fixed highlight from the top left. */
+@media (hover: none) {
+  .lg-sheen {
+    display: none;
+  }
+}

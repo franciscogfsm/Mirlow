@@ -1,0 +1,98 @@
+# Releasing Mirlow
+
+A release is a tagged commit, an installer attached to a GitHub Release, and
+the website pointing at it.
+
+## 1. Build
+
+```powershell
+# set the same version in apps\desktop\src-tauri\tauri.conf.json,
+# apps\desktop\src-tauri\Cargo.toml and the package.json files, then:
+.\scripts\build-installer.ps1 -Engine
+```
+
+This leaves three files in `.\release\`:
+
+- `Mirlow-Setup-x64.exe` — the installer
+- `THIRD-PARTY-RUNTIME.md` — the exact libraries bundled in this build
+- `SHA256SUMS.txt` — checksums
+
+## 2. Test
+
+Install it on a PC (ideally one that has never had development tools on it)
+and go through [`VALIDATION.md`](VALIDATION.md) with a real iPhone. Also check:
+
+- a desktop shortcut and a Start menu entry were created;
+- Windows did **not** show a firewall prompt on first launch (the installer
+  adds the rule);
+- uninstalling removes the app, the shortcut and the firewall rule.
+
+## 3. Publish
+
+```powershell
+git tag v0.1.0
+git push origin main --tags
+gh release create v0.1.0 `
+  .\release\Mirlow-Setup-x64.exe `
+  .\release\THIRD-PARTY-RUNTIME.md `
+  .\release\SHA256SUMS.txt `
+  --title "Mirlow 0.1.0" --notes "First release."
+```
+
+The website's download button links to
+`…/releases/latest/download/Mirlow-Setup-x64.exe`, so it follows the newest
+release automatically. Keep that file name.
+
+Publishing the tag together with the binaries is what satisfies the GPL's
+source requirement: the tag is the exact source of that installer, including
+the UxPlay commit (as a submodule) and the patches.
+
+## 4. Website
+
+The site is static. `.github/workflows/pages.yml` builds and publishes it to
+GitHub Pages on every push to `main` that touches it. One-time setup: in the
+repository's **Settings → Pages**, set **Source** to **GitHub Actions**.
+
+### Vercel
+
+`vercel.json` at the root of the repository holds the build settings, so
+there is nothing to configure: in Vercel choose **Add New → Project**, import
+the repository and press **Deploy** (or run `npx vercel --prod` from the
+repository root). Leave **Root Directory** empty. Canonical links follow the
+project's production domain; set `NEXT_PUBLIC_SITE_URL` in the project's
+environment variables to use a different address.
+
+### Anywhere else
+
+To host it elsewhere (Cloudflare Pages, Netlify, any static host):
+
+```powershell
+$env:NEXT_PUBLIC_SITE_URL = "https://your-domain.example"   # no trailing slash
+npm run build:web                                          # output: apps\web\out
+```
+
+If the repository or the site moves, update `packages/i18n/src/links.ts`.
+
+## Code signing
+
+The installer is not signed. Windows SmartScreen will therefore warn people
+who download it ("Windows protected your PC") until the file has built up
+reputation, and some antivirus products are suspicious of unsigned installers.
+Signing is the single most valuable thing to add before promoting Mirlow
+widely. Options:
+
+- [SignPath Foundation](https://signpath.org) signs open-source projects for
+  free;
+- Azure Trusted Signing, or a certificate from a certificate authority.
+
+Tauri signs during the build once `bundle.windows.signCommand` (or a
+certificate thumbprint) is set in `tauri.conf.json`.
+
+## About protecting the executable
+
+Mirlow is licensed under the GPL, as UxPlay requires, so its source is public
+by design and obfuscating the binary would achieve nothing. The release build
+is optimised, stripped of debug symbols and LZMA-compressed for size. What
+keeps users safe is different: a signed installer, an app that makes no
+internet connections, a firewall rule that covers only the engine, and source
+anyone can audit.

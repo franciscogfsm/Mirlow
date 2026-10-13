@@ -1,0 +1,41 @@
+// Version information and icon for the engine executable.
+//
+// Windows shows these, not the file name, wherever it has to name the
+// program to the user: the firewall prompt, Task Manager, the volume mixer.
+// Without them people are asked about an unfamiliar "uxplay.exe".
+//
+// Compiled by scripts/engine/build-engine.sh and linked into the engine.
+
+#include <winver.h>
+
+1 ICON "engine.ico"
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION     0, 1, 0, 0
+PRODUCTVERSION  0, 1, 0, 0
+FILEFLAGSMASK   VS_FFI_FILEFLAGSMASK
+FILEFLAGS       0
+FILEOS          VOS_NT_WINDOWS32
+FILETYPE        VFT_APP
+FILESUBTYPE     VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"
+        BEGIN
+            VALUE "CompanyName",      "Mirlow"
+            VALUE "FileDescription",  "Mirlow"
+            VALUE "ProductName",      "Mirlow"
+            VALUE "InternalName",     "mirlow-engine"
+            VALUE "OriginalFilename", "mirlow-engine.exe"
+            VALUE "FileVersion",      "0.1.0"
+            VALUE "ProductVersion",   "0.1.0"
+            VALUE "LegalCopyright",   "Based on UxPlay (GPL-3.0-or-later). Source: github.com/franciscogfsm/mirlow"
+            VALUE "Comments",         "AirPlay receiver engine for Mirlow, built from UxPlay with the patches in engine/patches."
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x0409, 1200
+    END
+END

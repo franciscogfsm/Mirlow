@@ -1,0 +1,22 @@
+{
+  "name": "mirlow",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Mirror your iPhone to Windows. For free.",
+  "license": "GPL-3.0-or-later",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:desktop": "npm run tauri -w @mirlow/desktop -- dev",
+    "build:desktop": "npm run tauri -w @mirlow/desktop -- build",
+    "dev:web": "npm run dev -w @mirlow/web",
+    "build:web": "npm run build -w @mirlow/web",
+    "build:engine": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-engine.ps1",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=20.19"
+  }
+}

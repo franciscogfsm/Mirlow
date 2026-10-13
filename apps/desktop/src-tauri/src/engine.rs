@@ -1,0 +1,689 @@
+//! Runs and supervises the AirPlay engine (a patched UxPlay) as a child process.
+//!
+//! The engine reports what it is doing as `@@mirlow <event>` lines on stdout
+//! (see `engine/patches`). This module turns those into a single [`Status`]
+//! the interface can render, restarts the engine if it dies, and makes sure it
+//! never outlives the app.
+
+use crate::settings::Settings;
+use crate::video;
+use serde::Serialize;
+use std::collections::VecDeque;
+use std::io::{BufRead, BufReader, Read};
+use std::path::{Path, PathBuf};
+use std::process::{Child, Command, Stdio};
+use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
+use std::sync::{Arc, Mutex};
+use std::thread;
+use std::time::{Duration, Instant};
+use tauri::{AppHandle, Emitter};
+
+pub const STATUS_EVENT: &str = "engine:status";
+
+/// How many unexpected exits within [`FAILURE_WINDOW`] before giving up.
+const MAX_FAILURES: usize = 4;
+const FAILURE_WINDOW: Duration = Duration::from_secs(60);
+const LOG_LINES: usize = 300;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum Phase {
+    /// The engine is launching.
+    Starting,
+    /// Advertised on the network and waiting for a device.
+    Ready,
+    /// A device has connected but has not sent a picture yet.
+    Connecting,
+    /// A screen is being mirrored.
+    Mirroring,
+    /// A device is playing audio only.
+    Audio,
+    /// The engine stopped unexpectedly and is being restarted.
+    Recovering,
+    /// The engine cannot run; see `error`.
+    Error,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ErrorKind {
+    /// The engine's files are not where they should be.
+    EngineMissing,
+    /// The engine could not announce itself on the network.
+    Discovery,
+    /// The engine keeps exiting.
+    Crashed,
+    Unknown,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Client {
+    pub name: String,
+    pub model: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VideoSize {
+    pub width: u32,
+    pub height: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Status {
+    pub phase: Phase,
+    /// The name being advertised.
+    pub name: String,
+    pub client: Option<Client>,
+    pub video: Option<VideoSize>,
+    pub error: Option<ErrorKind>,
+    /// True while video is decoded in software because the GPU path failed.
+    pub software_decoding: bool,
+}
+
+enum Message {
+    Line(String),
+    Restart,
+    Shutdown,
+}
+
+enum Outcome {
+    Restart,
+    Shutdown,
+    Exited,
+}
+
+struct Shared {
+    app: AppHandle,
+    engine_dir: PathBuf,
+    data_dir: PathBuf,
+    settings: Arc<Mutex<Settings>>,
+    status: Mutex<Status>,
+    log: Mutex<VecDeque<String>>,
+    pid: AtomicU32,
+    connections: AtomicU32,
+}
+
+#[derive(Clone)]
+pub struct Engine {
+    shared: Arc<Shared>,
+    tx: Sender<Message>,
+}
+
+impl Engine {
+    pub fn start(
+        app: AppHandle,
+        engine_dir: PathBuf,
+        data_dir: PathBuf,
+        settings: Arc<Mutex<Settings>>,
+    ) -> Self {
+        let name = settings.lock().unwrap().name.clone();
+        let shared = Arc::new(Shared {
+            app,
+            engine_dir,
+            data_dir,
+            settings,
+            status: Mutex::new(Status {
+                phase: Phase::Starting,
+                name,
+                client: None,
+                video: None,
+                error: None,
+                software_decoding: false,
+            }),
+            log: Mutex::new(VecDeque::with_capacity(LOG_LINES)),
+            pid: AtomicU32::new(0),
+            connections: AtomicU32::new(0),
+        });
+
+        let (tx, rx) = mpsc::channel();
+        let supervisor = Supervisor {
+            shared: shared.clone(),
+            tx: tx.clone(),
+            rx,
+            job: ProcessJob::new(),
+        };
+        thread::Builder::new()
+            .name("engine-supervisor".into())
+            .spawn(move || supervisor.run())
+            .expect("failed to start the engine supervisor thread");
+
+        Self { shared, tx }
+    }
+
+    pub fn status(&self) -> Status {
+        self.shared.status.lock().unwrap().clone()
+    }
+
+    /// Process id of the running engine, or 0.
+    pub fn pid(&self) -> u32 {
+        self.shared.pid.load(Ordering::Relaxed)
+    }
+
+    pub fn log(&self) -> String {
+        let log = self.shared.log.lock().unwrap();
+        log.iter().cloned().collect::<Vec<_>>().join("\n")
+    }
+
+    /// Stops the engine and starts it again with the current settings.
+    pub fn restart(&self) {
+        let _ = self.tx.send(Message::Restart);
+    }
+
+    /// Stops the engine for good. Returns once it has been asked to exit.
+    pub fn shutdown(&self) {
+        let _ = self.tx.send(Message::Shutdown);
+        // Give the supervisor a moment to close the engine cleanly, so its
+        // network announcement is withdrawn; the job object covers the rest.
+        let deadline = Instant::now() + Duration::from_millis(1500);
+        while self.pid() != 0 && Instant::now() < deadline {
+            thread::sleep(Duration::from_millis(20));
+        }
+    }
+}
+
+struct Supervisor {
+    shared: Arc<Shared>,
+    tx: Sender<Message>,
+    rx: Receiver<Message>,
+    job: ProcessJob,
+}
+
+impl Supervisor {
+    fn run(self) {
+        let mut failures: Vec<Instant> = Vec::new();
+        // Set when the GPU decoder fails mid-session; lasts until the app closes.
+        let mut software_fallback = false;
+
+        loop {
+            let settings = self.shared.settings.lock().unwrap().clone();
+            let software = settings.compatibility || software_fallback;
+            self.shared.connections.store(0, Ordering::Relaxed);
+            self.update(|status| {
+                status.phase = if failures.is_empty() { Phase::Starting } else { Phase::Recovering };
+                status.name = settings.name.clone();
+                status.client = None;
+                status.video = None;
+                status.error = None;
+                status.software_decoding = software && !settings.compatibility;
+            });
+
+            let mut child = match self.spawn(&settings, software) {
+                Ok(child) => child,
+                Err(error) => {
+                    self.log_line(format!("[mirlow] could not start the engine: {error}"));
+                    self.fail(if error.kind() == std::io::ErrorKind::NotFound {
+                        ErrorKind::EngineMissing
+                    } else {
+                        ErrorKind::Unknown
+                    });
+                    match self.wait_for_command() {
+                        Outcome::Shutdown => return,
+                        _ => {
+                            failures.clear();
+                            continue;
+                        }
+                    }
+                }
+            };
+
+            self.shared.pid.store(child.id(), Ordering::Relaxed);
+            self.job.assign(&child);
+            self.read_output(&mut child);
+
+            let started = Instant::now();
+            let mut hint: Option<ErrorKind> = None;
+            let mut video_failed = false;
+            let outcome = loop {
+                match self.rx.recv_timeout(Duration::from_millis(200)) {
+                    Ok(Message::Line(line)) => {
+                        self.handle_line(&line, &mut hint, &mut video_failed);
+                    }
+                    Ok(Message::Restart) => break Outcome::Restart,
+                    Ok(Message::Shutdown) => break Outcome::Shutdown,
+                    Err(RecvTimeoutError::Timeout) => {
+                        if matches!(child.try_wait(), Ok(Some(_)) | Err(_)) {
+                            break Outcome::Exited;
+                        }
+                    }
+                    Err(RecvTimeoutError::Disconnected) => break Outcome::Shutdown,
+                }
+            };
+
+            stop(&mut child);
+            self.shared.pid.store(0, Ordering::Relaxed);
+            video::detach(&self.shared.app);
+            // Lines the engine printed on its way out.
+            while let Ok(message) = self.rx.try_recv() {
+                match message {
+                    Message::Line(line) => self.handle_line(&line, &mut hint, &mut video_failed),
+                    Message::Shutdown => return,
+                    Message::Restart => {}
+                }
+            }
+
+            match outcome {
+                Outcome::Shutdown => return,
+                Outcome::Restart => {
+                    failures.clear();
+                    continue;
+                }
+                Outcome::Exited => {}
+            }
+
+            self.log_line("[mirlow] the engine exited unexpectedly".into());
+            if video_failed && !software {
+                self.log_line("[mirlow] switching to software video decoding".into());
+                software_fallback = true;
+            }
+
+            let now = Instant::now();
+            if now.duration_since(started) > FAILURE_WINDOW {
+                failures.clear();
+            }
+            failures.retain(|at| now.duration_since(*at) < FAILURE_WINDOW);
+            failures.push(now);
+
+            if failures.len() > MAX_FAILURES {
+                self.fail(hint.unwrap_or(ErrorKind::Crashed));
+                match self.wait_for_command() {
+                    Outcome::Shutdown => return,
+                    _ => {
+                        failures.clear();
+                        continue;
+                    }
+                }
+            }
+
+            self.update(|status| {
+                status.phase = Phase::Recovering;
+                status.client = None;
+                status.video = None;
+            });
+            let backoff = Duration::from_millis(400 * (1 << (failures.len() - 1).min(4)) as u64);
+            match self.rx.recv_timeout(backoff) {
+                Ok(Message::Shutdown) | Err(RecvTimeoutError::Disconnected) => return,
+                Ok(Message::Restart) => failures.clear(),
+                Ok(Message::Line(_)) | Err(RecvTimeoutError::Timeout) => {}
+            }
+        }
+    }
+
+    fn spawn(&self, settings: &Settings, software: bool) -> std::io::Result<Child> {
+        let dir = &self.shared.engine_dir;
+        let bin = dir.join("bin");
+        let exe = bin.join("mirlow-engine.exe");
+        if !exe.is_file() {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                format!("{} is missing", exe.display()),
+            ));
+        }
+        std::fs::create_dir_all(&self.shared.data_dir)?;
+
+        // Development builds can run a stand-in engine (scripts/dev/fake-engine.c)
+        // to exercise the interface without a phone. Release builds cannot.
+        #[cfg(debug_assertions)]
+        let exe = std::env::var_os("MIRLOW_DEV_ENGINE_EXE").map(PathBuf::from).unwrap_or(exe);
+
+        let mut command = Command::new(&exe);
+        command
+            // Run in the data folder, not the install folder: graphics drivers
+            // drop cache folders into the working directory.
+            .current_dir(&self.shared.data_dir)
+            .arg("-n")
+            .arg(&settings.name)
+            .arg("-nh") // advertise the name as given, without "@hostname"
+            .arg("-nohold") // a new device may take over from the current one
+            .args(["-fps", "60"])
+            .arg("-key")
+            .arg(self.shared.data_dir.join("receiver.pem"))
+            .arg("-m")
+            .arg(device_id(&self.shared.data_dir))
+            // Direct3D 11 output in the engine's own window, which `video`
+            // then places inside ours. No Alt+Enter handling of its own.
+            .args(["-vs", "d3d11videosink fullscreen-toggle-mode=none"]);
+        if software {
+            command.arg("-avdec");
+        } else {
+            // Ask the device for a picture as tall as this screen, so full
+            // screen is sharp. Software decoding keeps the engine's 1080p.
+            command.args(["-s", &requested_resolution()]);
+        }
+        if !settings.sound {
+            command.args(["-as", "0"]);
+        }
+
+        // The engine must find only the libraries and plugins shipped with it.
+        let system_root = std::env::var("SystemRoot").unwrap_or_else(|_| r"C:\Windows".into());
+        let path = format!(r"{};{}\System32;{}", bin.display(), system_root, system_root);
+        for (key, _) in std::env::vars() {
+            if key.starts_with("GST_") || key.starts_with("GSTREAMER_") {
+                command.env_remove(key);
+            }
+        }
+        command
+            .env("PATH", path)
+            .env("MIRLOW_SUPERVISED", "1")
+            .env("HOME", &self.shared.data_dir)
+            .env("GST_PLUGIN_SYSTEM_PATH_1_0", dir.join("lib").join("gstreamer-1.0"))
+            .env(
+                "GST_PLUGIN_SCANNER_1_0",
+                dir.join("libexec").join("gstreamer-1.0").join("gst-plugin-scanner.exe"),
+            )
+            .env("GST_REGISTRY_1_0", self.shared.data_dir.join("gstreamer-registry.bin"))
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+            command.creation_flags(CREATE_NO_WINDOW);
+        }
+
+        command.spawn()
+    }
+
+    fn read_output(&self, child: &mut Child) {
+        if let Some(stdout) = child.stdout.take() {
+            forward_lines(stdout, self.tx.clone());
+        }
+        if let Some(stderr) = child.stderr.take() {
+            forward_lines(stderr, self.tx.clone());
+        }
+    }
+
+    fn handle_line(&self, line: &str, hint: &mut Option<ErrorKind>, video_failed: &mut bool) {
+        let line = line.trim_end();
+        if line.is_empty() {
+            return;
+        }
+        self.log_line(line.to_string());
+
+        if let Some(event) = line.strip_prefix("@@mirlow ") {
+            self.handle_event(event);
+            return;
+        }
+
+        if line.contains("GStreamer error (video)") {
+            *video_failed = true;
+        }
+        let lower = line.to_ascii_lowercase();
+        if lower.contains("dnssd") && (lower.contains("fail") || lower.contains("could not")) {
+            *hint = Some(ErrorKind::Discovery);
+        }
+        // "ct=2" is Apple Lossless, which only audio-only AirPlay uses.
+        if line.starts_with("ct=2 ") {
+            self.update(|status| {
+                if status.video.is_none() && status.phase != Phase::Mirroring {
+                    status.phase = Phase::Audio;
+                }
+            });
+        }
+    }
+
+    fn handle_event(&self, event: &str) {
+        let (kind, rest) = event.split_once(' ').unwrap_or((event, ""));
+        match kind {
+            "ready" => self.update(|status| {
+                status.phase = Phase::Ready;
+                status.error = None;
+            }),
+            "client" => {
+                let (model, name) = rest.split_once('\t').unwrap_or(("", rest));
+                let client = Client { name: name.trim().to_string(), model: model.trim().to_string() };
+                // Mirlow may be tucked away in the notification area: come
+                // forward now, so the connection is seen from its first moment.
+                crate::tray::show_window(&self.shared.app);
+                self.update(|status| {
+                    status.client = Some(client);
+                    if status.phase == Phase::Ready {
+                        status.phase = Phase::Connecting;
+                    }
+                });
+            }
+            "connections" => {
+                let count: u32 = rest.trim().parse().unwrap_or(0);
+                self.shared.connections.store(count, Ordering::Relaxed);
+                if count == 0 {
+                    video::detach(&self.shared.app);
+                    self.update(|status| {
+                        if status.phase != Phase::Error {
+                            status.phase = Phase::Ready;
+                        }
+                        status.client = None;
+                        status.video = None;
+                    });
+                } else {
+                    self.update(|status| {
+                        if status.phase == Phase::Ready {
+                            status.phase = Phase::Connecting;
+                        }
+                    });
+                }
+            }
+            "video-size" => {
+                let mut numbers = rest.split_whitespace().filter_map(|n| n.parse::<u32>().ok());
+                if let (Some(width), Some(height)) = (numbers.next(), numbers.next()) {
+                    if width > 0 && height > 0 {
+                        self.update(|status| {
+                            status.phase = Phase::Mirroring;
+                            status.video = Some(VideoSize { width, height });
+                        });
+                        video::watch(&self.shared.app, self.shared.pid.load(Ordering::Relaxed));
+                    }
+                }
+            }
+            "video-reset" => {
+                // The picture stopped; the device may stay connected for audio.
+                video::detach(&self.shared.app);
+                let connected = self.shared.connections.load(Ordering::Relaxed) > 0;
+                self.update(|status| {
+                    status.video = None;
+                    if status.phase == Phase::Mirroring {
+                        status.phase = if connected { Phase::Connecting } else { Phase::Ready };
+                    }
+                });
+            }
+            _ => {}
+        }
+    }
+
+    fn fail(&self, kind: ErrorKind) {
+        self.update(|status| {
+            status.phase = Phase::Error;
+            status.error = Some(kind);
+            status.client = None;
+            status.video = None;
+        });
+    }
+
+    /// Blocks until the interface asks for a restart or the app closes.
+    fn wait_for_command(&self) -> Outcome {
+        loop {
+            match self.rx.recv() {
+                Ok(Message::Restart) => return Outcome::Restart,
+                Ok(Message::Shutdown) | Err(_) => return Outcome::Shutdown,
+                Ok(Message::Line(_)) => {}
+            }
+        }
+    }
+
+    fn update(&self, change: impl FnOnce(&mut Status)) {
+        let snapshot = {
+            let mut status = self.shared.status.lock().unwrap();
+            let before = status.clone();
+            change(&mut status);
+            if *status == before {
+                return;
+            }
+            status.clone()
+        };
+        let _ = self.shared.app.emit(STATUS_EVENT, snapshot);
+    }
+
+    fn log_line(&self, line: String) {
+        let mut log = self.shared.log.lock().unwrap();
+        if log.len() == LOG_LINES {
+            log.pop_front();
+        }
+        log.push_back(line);
+    }
+}
+
+fn forward_lines(stream: impl Read + Send + 'static, tx: Sender<Message>) {
+    thread::spawn(move || {
+        let mut reader = BufReader::new(stream);
+        let mut buffer = Vec::new();
+        loop {
+            buffer.clear();
+            match reader.read_until(b'\n', &mut buffer) {
+                Ok(0) | Err(_) => break,
+                Ok(_) => {
+                    // Device names are UTF-8, but nothing guarantees every byte
+                    // the engine prints is.
+                    let line = String::from_utf8_lossy(&buffer).into_owned();
+                    if tx.send(Message::Line(line)).is_err() {
+                        break;
+                    }
+                }
+            }
+        }
+    });
+}
+
+/// Asks the engine to exit by closing its stdin, then insists.
+fn stop(child: &mut Child) {
+    drop(child.stdin.take());
+    let deadline = Instant::now() + Duration::from_millis(1200);
+    while Instant::now() < deadline {
+        if matches!(child.try_wait(), Ok(Some(_)) | Err(_)) {
+            return;
+        }
+        thread::sleep(Duration::from_millis(20));
+    }
+    let _ = child.kill();
+    let _ = child.wait();
+}
+
+/// The receiver's identity on the network, in the form of a MAC address.
+///
+/// Left to itself the engine borrows the address of the first network adapter
+/// it finds, which on many PCs is a virtual adapter whose address is the same
+/// on every machine. Mirlow instead makes one up on first run and keeps it, so
+/// each installation is distinct and iPhones recognise this PC next time.
+fn device_id(data_dir: &Path) -> String {
+    let file = data_dir.join("device-id");
+    if let Ok(saved) = std::fs::read_to_string(&file) {
+        let saved = saved.trim();
+        let valid = saved.len() == 17
+            && saved.split(':').count() == 6
+            && saved.split(':').all(|part| part.len() == 2 && u8::from_str_radix(part, 16).is_ok());
+        if valid {
+            return saved.to_string();
+        }
+    }
+
+    use std::hash::{BuildHasher, Hasher};
+    let mut hasher = std::collections::hash_map::RandomState::new().build_hasher();
+    hasher.write_u32(std::process::id());
+    if let Ok(elapsed) = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
+        hasher.write_u128(elapsed.as_nanos());
+    }
+    let mut bytes = hasher.finish().to_be_bytes();
+    // Mark the address as locally administered and unicast, as made-up
+    // addresses must be.
+    bytes[0] = (bytes[0] | 0x02) & 0xfe;
+    let id = bytes[..6].iter().map(|byte| format!("{byte:02x}")).collect::<Vec<_>>().join(":");
+    let _ = std::fs::write(&file, &id);
+    id
+}
+
+/// The picture size to request from the device: the primary screen's, kept
+/// between 1080p and 4K. The device treats it as an upper limit and the
+/// height is what it goes by.
+fn requested_resolution() -> String {
+    #[cfg(windows)]
+    let (width, height) = {
+        use windows::Win32::UI::WindowsAndMessaging::{GetSystemMetrics, SM_CXSCREEN, SM_CYSCREEN};
+        // SAFETY: plain queries with no pointers involved.
+        unsafe { (GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN)) }
+    };
+    #[cfg(not(windows))]
+    let (width, height) = (1920, 1080);
+    // A screen turned on its side still wants a landscape request.
+    let (width, height) = (width.max(height), width.min(height));
+    format!("{}x{}", width.clamp(1920, 3840), height.clamp(1080, 2160))
+}
+
+/// Where the bundled engine lives.
+pub fn locate(resource_dir: Option<&Path>) -> PathBuf {
+    if let Some(dir) = resource_dir {
+        let bundled = dir.join("engine");
+        if bundled.join("bin").join("mirlow-engine.exe").is_file() {
+            return bundled;
+        }
+    }
+    // Running from the source tree.
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources").join("engine")
+}
+
+/// A Windows job object that kills the engine if the app dies without
+/// stopping it, so a crash never leaves a receiver advertised on the network.
+struct ProcessJob {
+    #[cfg(windows)]
+    handle: Option<windows::Win32::Foundation::HANDLE>,
+}
+
+// The handle is only ever used from the supervisor thread.
+unsafe impl Send for ProcessJob {}
+
+impl ProcessJob {
+    #[cfg(windows)]
+    fn new() -> Self {
+        use windows::Win32::System::JobObjects::{
+            CreateJobObjectW, JobObjectExtendedLimitInformation, SetInformationJobObject,
+            JOBOBJECT_EXTENDED_LIMIT_INFORMATION, JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
+        };
+        let handle = unsafe {
+            let Ok(handle) = CreateJobObjectW(None, None) else {
+                return Self { handle: None };
+            };
+            let mut info = JOBOBJECT_EXTENDED_LIMIT_INFORMATION::default();
+            info.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+            let _ = SetInformationJobObject(
+                handle,
+                JobObjectExtendedLimitInformation,
+                &info as *const _ as *const core::ffi::c_void,
+                std::mem::size_of::<JOBOBJECT_EXTENDED_LIMIT_INFORMATION>() as u32,
+            );
+            handle
+        };
+        Self { handle: Some(handle) }
+    }
+
+    #[cfg(windows)]
+    fn assign(&self, child: &Child) {
+        use std::os::windows::io::AsRawHandle;
+        use windows::Win32::Foundation::HANDLE;
+        use windows::Win32::System::JobObjects::AssignProcessToJobObject;
+        if let Some(job) = self.handle {
+            unsafe {
+                let _ = AssignProcessToJobObject(job, HANDLE(child.as_raw_handle() as _));
+            }
+        }
+    }
+
+    #[cfg(not(windows))]
+    fn new() -> Self {
+        Self {}
+    }
+
+    #[cfg(not(windows))]
+    fn assign(&self, _child: &Child) {}
+}

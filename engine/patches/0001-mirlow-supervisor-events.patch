@@ -1,0 +1,119 @@
+diff --git a/uxplay.cpp b/uxplay.cpp
+index be41031..419e7fe 100644
+--- a/uxplay.cpp
++++ b/uxplay.cpp
+@@ -295,6 +295,24 @@ static void log(int level, const char* format, ...) {
+ #define LOGW(...) log(LOGGER_WARNING, __VA_ARGS__)
+ #define LOGE(...) log(LOGGER_ERR, __VA_ARGS__)
+ 
++/* Mirlow: when run by a supervising application (MIRLOW_SUPERVISED is set in the
++ * environment), report state changes as single machine-readable stdout lines
++ * "@@mirlow <event> <args>", so the supervisor does not have to guess from log text. */
++static bool mirlow_supervised = false;
++
++static void mirlow_event(const char* format, ...) {
++    if (!mirlow_supervised) return;
++    char line[512];
++    int prefix = snprintf(line, sizeof(line), "@@mirlow ");
++    va_list vargs;
++    va_start(vargs, format);
++    vsnprintf(line + prefix, sizeof(line) - prefix - 1, format, vargs);
++    va_end(vargs);
++    strcat(line, "\n");
++    fputs(line, stdout);   /* one write per event, so lines from different threads do not interleave */
++    fflush(stdout);
++}
++
+ #ifdef DBUS
+ static void dbus_screensaver_inhibiter(bool inhibit) {
+     g_assert(inhibit != dbus_last_message);
+@@ -625,6 +643,22 @@ static gboolean handle_signal(gpointer data) {
+     return G_SOURCE_REMOVE;
+ }
+ 
++/* Mirlow: the supervisor holds the write end of our stdin. When it closes that pipe
++ * (or exits for any reason) stdin reaches EOF and UxPlay shuts down cleanly, which
++ * also withdraws the mDNS advertisement instead of leaving a stale receiver name. */
++static gpointer mirlow_stdin_watch(gpointer data) {
++    char buf[64];
++    while (fgets(buf, sizeof(buf), stdin)) {
++        if (strncmp(buf, "quit", 4) == 0) break;
++    }
++    if (gmainloop) {
++        g_idle_add(handle_signal, NULL);
++    } else {
++        exit(0);
++    }
++    return NULL;
++}
++
+ static BOOL WINAPI CtrlHandler(DWORD signal) {
+     switch (signal) {
+     case CTRL_C_EVENT:
+@@ -2515,6 +2549,7 @@ static bool check_blocked_client(char *deviceid) {
+ //to be simplified
+ 
+ extern "C" void video_reset(void *cls, reset_type_t type) {
++    mirlow_event("video-reset %d", (int) type);
+     switch (type) {
+     case RESET_TYPE_NOHOLD:
+         LOGD("video_reset: type = NoHold");
+@@ -2576,6 +2611,7 @@ extern "C" void video_reset(void *cls, reset_type_t type) {
+ 
+ extern "C" int video_set_codec(void *cls, video_codec_t codec) {
+     bool video_is_h265 = (codec == VIDEO_CODEC_H265);
++    mirlow_event("video-codec %s", video_is_h265 ? "h265" : "h264");
+     if (mux_to_file) {
+         mux_renderer_choose_video_codec(video_is_h265);
+     }
+@@ -2624,6 +2660,7 @@ extern "C" void export_dacp(void *cls, const char *active_remote, const char *da
+ extern "C" void conn_init (void *cls) {
+     open_connections++;
+     LOGD("Open connections: %i", open_connections);
++    mirlow_event("connections %d", open_connections);
+     //video_renderer_update_background(1);
+ }
+ 
+@@ -2631,6 +2668,7 @@ extern "C" void conn_destroy (void *cls) {
+     //video_renderer_update_background(-1);
+     open_connections--;
+     LOGD("Open connections: %i", open_connections);
++    mirlow_event("connections %d", open_connections);
+     if (open_connections == 0) {
+         remote_clock_offset = 0;
+         if (use_audio) {
+@@ -2672,6 +2710,7 @@ extern "C" void conn_reset (void *cls, int reason) {
+ 
+ extern "C" void report_client_request(void *cls, char *deviceid, char * model, char *name, bool * admit) {
+     LOGI("connection request from %s (%s) with deviceID = %s\n", name, model, deviceid);
++    mirlow_event("client %s\t%s", model, name);
+     if (restrict_clients) {
+         *admit = check_client(deviceid);
+         if (*admit == false) {
+@@ -2877,6 +2916,7 @@ extern "C" void audio_get_format (void *cls, unsigned char *ct, unsigned short *
+ }
+ 
+ extern "C" void video_report_size(void *cls, float *width_source, float *height_source, float *width, float *height) {
++    mirlow_event("video-size %d %d %d %d", (int) *width_source, (int) *height_source, (int) *width, (int) *height);
+     if (use_video) {
+         video_renderer_size(width_source, height_source, width, height);
+     }
+@@ -3295,6 +3335,10 @@ int main (int argc, char *argv[]) {
+         LOGE("Could not set control handler");
+         exit(1);
+     }
++    if (getenv("MIRLOW_SUPERVISED")) {
++        mirlow_supervised = true;
++        g_thread_unref(g_thread_new("mirlow-stdin", mirlow_stdin_watch, NULL));
++    }
+ #else
+     signal(SIGINT, CtrlHandler);
+     signal(SIGTERM, CtrlHandler);
+@@ -3669,6 +3713,7 @@ int main (int argc, char *argv[]) {
+         stop_dnssd();
+         cleanup();
+     }
++    mirlow_event("ready %s", server_name.c_str());
+     reconnect:
+     compression_type = 0;
+     close_window = new_window_closing_behavior;
