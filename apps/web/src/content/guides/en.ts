@@ -610,4 +610,75 @@ export const en: Guides = {
       },
     ],
   },
+  android: {
+    title: "How to mirror your Android phone to a Windows PC",
+    short: "Mirror an Android phone to a PC",
+    metaTitle: "How to mirror an Android phone to a Windows PC for free, wirelessly",
+    description:
+      "Show your Android screen on a Windows 10 or 11 PC with Smart View, Cast or Wireless display. Free, no cable, no app on the phone. Works with Samsung, Xiaomi, Huawei and more.",
+    lead: "Most Android phones can project their screen wirelessly with a feature the phone already has, called Smart View on Samsung and Cast or Wireless display on others. The PC needs a receiver for it. Mirlow is that receiver, it is free, and it is the same app that receives an iPhone.",
+    steps: [
+      {
+        title: "Install and open Mirlow on the PC",
+        body: "Download Mirlow for Windows 10 or 11, run the installer and open the app. It shows the name your PC will have on the phone.",
+      },
+      {
+        title: "Turn on Wi-Fi on both",
+        body: "The phone finds the PC over Wi-Fi and connects to it directly, so Wi-Fi has to be switched on on the PC and on the phone. They do not need to be on the same network.",
+      },
+      {
+        title: "Open the quick settings on the phone",
+        body: "Swipe down twice from the top of the screen and look for Smart View (Samsung), Cast, Screen Cast or Wireless display. On some phones it is under Settings, in Connection or Display.",
+      },
+      {
+        title: "Choose your PC",
+        body: "Tap the name Mirlow shows. After a few seconds the phone's screen appears in the Mirlow window.",
+      },
+    ],
+    sections: [
+      {
+        title: "Which Android phones work",
+        body: [
+          "Mirlow receives Android phones over Miracast, the wireless display standard. Samsung Galaxy phones and tablets have it as Smart View. Xiaomi, Redmi and Poco, Huawei and Honor, Oppo, Realme, OnePlus, Motorola and many others have it as Cast, Screen Cast or Wireless display.",
+          "Google Pixel phones are the main exception: they only project to Chromecast devices and do not have Miracast, so they cannot connect to Mirlow.",
+        ],
+      },
+      {
+        title: "What the PC needs",
+        body: [
+          "A Wi-Fi adapter that supports Miracast. Most laptops made in the last several years have one. A desktop PC connected only by cable, with no Wi-Fi adapter, cannot receive an Android phone, although it can still receive an iPhone.",
+          "To check, open a terminal on the PC and run: netsh wlan show drivers. Look for the line \"Wireless Display Supported: Yes\".",
+        ],
+      },
+      {
+        title: "If the PC does not appear on the phone",
+        body: [
+          "Make sure Mirlow is open and that Wi-Fi is on on the PC, then close and reopen the list on the phone. Moving the phone closer to the PC helps, since the two connect directly.",
+          "If your phone's list only ever shows Chromecast devices and televisions, the phone probably does not have Miracast.",
+        ],
+      },
+    ],
+    faq: [
+      {
+        q: "Do I need to install an app on my Android phone?",
+        a: "No. Mirlow uses the screen projection the phone already has.",
+      },
+      {
+        q: "Does it work with a Google Pixel?",
+        a: "No. Pixel phones do not support Miracast, which is what Mirlow receives from Android.",
+      },
+      {
+        q: "Do the phone and the PC need to be on the same Wi-Fi?",
+        a: "No. An Android phone connects to the PC directly over Wi-Fi. Both only need Wi-Fi switched on.",
+      },
+      {
+        q: "Can I control the phone from the PC?",
+        a: "No. Mirroring is one-way: the PC shows the phone's screen and you keep using the phone by touch.",
+      },
+      {
+        q: "Is it free?",
+        a: "Yes. Mirlow has no paid version, no account and no adverts, and its code is open.",
+      },
+    ],
+  },
 };

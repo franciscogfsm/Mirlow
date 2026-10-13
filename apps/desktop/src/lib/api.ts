@@ -71,4 +71,5 @@ export const api = {
     invoke<void>("set_tray_text", text),
   layoutVideo: (rect: Rect, visible: boolean, radius: number) =>
     invoke<void>("layout_video", { rect, visible, radius }),
+  shapeWindow: (radius: number) => invoke<void>("shape_window", { radius }),
 };

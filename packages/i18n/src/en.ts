@@ -152,10 +152,10 @@ export const en = {
 
   site: {
     meta: {
-      title: "Mirror your iPhone to a Windows PC, free — AirPlay receiver | Mirlow",
+      title: "Mirror your iPhone or Android to a Windows PC, free | Mirlow",
       description:
-        "Free AirPlay receiver for Windows 10 and 11. Mirror your iPhone or iPad screen to your PC over Wi‑Fi, with sound. No app on your phone, no account, no cable.",
-      ogAlt: "An iPhone screen appearing on a Windows PC with Mirlow",
+        "Free screen mirroring for Windows 10 and 11. Mirror your iPhone, iPad or Android phone to your PC over Wi‑Fi: an AirPlay and Miracast receiver in one. No app on your phone, no account, no cable.",
+      ogAlt: "A phone screen appearing on a Windows PC with Mirlow",
     },
     nav: {
       how: "How it works",
@@ -167,19 +167,19 @@ export const en = {
       skip: "Skip to content",
     },
     hero: {
-      eyebrow: "Free · Windows · Open source",
-      titleLine1: "Mirror your iPhone",
+      eyebrow: "Free · iPhone and Android · Open source",
+      titleLine1: "Mirror any phone",
       titleLine2: "to Windows.",
       titleAccent: "For free.",
-      body: "Open Mirlow, tap Screen Mirroring on your iPhone, and your screen is on your PC. Nothing to install on your phone.",
+      body: "Open Mirlow, tap Screen Mirroring on your iPhone or Smart View on your Android, and your screen is on your PC. Nothing to install on your phone.",
       cta: "Download for Windows — Free",
       ctaShort: "Download — Free",
-      promises: ["100% free", "No app on your iPhone", "No cables", "No account"],
-      worksWith: "Works over AirPlay with",
-      devices: ["iPhone", "iPad", "Mac"],
+      promises: ["100% free", "No app on your phone", "No cables", "No account"],
+      worksWith: "Works with",
+      devices: ["iPhone", "iPad", "Mac", "Android"],
       requires: "Windows 10 and 11 · 12 MB download",
       sceneLabel:
-        "Animation: an iPhone sends its screen wirelessly to a Windows PC, where it appears in the Mirlow window.",
+        "Animation: a phone sends its screen wirelessly to a Windows PC, where it appears in the Mirlow window.",
       sceneReady: "Ready to mirror",
       sceneMirroring: "Mirroring",
       sceneSheet: "Screen Mirroring",
@@ -197,7 +197,7 @@ export const en = {
         },
         {
           title: "Tap Screen Mirroring",
-          body: "Swipe down to Control Centre on your iPhone or iPad and choose your PC from the list.",
+          body: "On an iPhone or iPad it is in Control Centre. On Android it is called Smart View, Cast or Wireless display. Choose your PC from the list.",
         },
         {
           title: "See it on your PC",
@@ -226,7 +226,7 @@ export const en = {
       items: [
         {
           title: "Wireless mirroring",
-          body: "Uses the Screen Mirroring built into your iPhone and iPad. No app, no cable.",
+          body: "Uses the screen mirroring already built into your iPhone, iPad or Android phone. No app, no cable.",
         },
         {
           title: "Sound included",
@@ -278,11 +278,15 @@ export const en = {
       items: [
         {
           q: "What do I need?",
-          a: "A PC with Windows 10 or 11 (64‑bit) and an iPhone or iPad. Both need to be on the same Wi‑Fi or wired network.",
+          a: "A PC with Windows 10 or 11 (64‑bit) and an iPhone, iPad or Android phone. An iPhone or iPad needs to be on the same Wi‑Fi or wired network as the PC. An Android phone connects to the PC directly, so the PC needs Wi‑Fi.",
         },
         {
           q: "Do I need to install anything on my iPhone?",
           a: "No. Mirlow works with the Screen Mirroring button that's already in Control Centre.",
+        },
+        {
+          q: "Does it work with Android?",
+          a: "Yes, with Android phones that can project their screen over Miracast: Samsung (Smart View), Xiaomi, Huawei, Oppo, OnePlus and many others. Google Pixel phones do not have Miracast, so they cannot connect. The PC's Wi‑Fi adapter has to support Miracast too, which most laptops from the last several years do.",
         },
         {
           q: "Is it really free?",
@@ -298,20 +302,20 @@ export const en = {
         },
         {
           q: "Does my screen go through the internet?",
-          a: "No. Your iPhone sends its screen straight to your PC over your local network. Mirlow has no servers and collects nothing.",
+          a: "No. Your phone sends its screen straight to your PC, over your local network or a direct Wi‑Fi link. Mirlow has no servers and collects nothing.",
         },
         {
           q: "Does it work with a Mac, or on Mac and Linux?",
           a: "A Mac can mirror to Mirlow the same way an iPhone does. The Mirlow app itself is for Windows only.",
         },
         {
-          q: "Is Mirlow made by Apple?",
-          a: "No. Mirlow is an independent open‑source project built on UxPlay. It isn't affiliated with, endorsed by or certified by Apple.",
+          q: "Is Mirlow made by Apple or Google?",
+          a: "No. Mirlow is an independent open‑source project built on UxPlay. It isn't affiliated with, endorsed by or certified by Apple, nor by Google.",
         },
       ],
     },
     finalCta: {
-      title: "Your iPhone. On your PC.",
+      title: "Your phone. On your PC.",
       accent: "Just like that.",
       body: "Free, private, and ready in under a minute.",
       cta: "Download for Windows — Free",
@@ -319,8 +323,8 @@ export const en = {
     },
     guides: {
       title: "Guides",
-      metaTitle: "Guides: mirror an iPhone or iPad to a Windows PC | Mirlow",
-      intro: "Short, practical answers about getting an iPhone or iPad screen onto a Windows PC.",
+      metaTitle: "Guides: mirror an iPhone, iPad or Android to a Windows PC | Mirlow",
+      intro: "Short, practical answers about getting an iPhone, iPad or Android screen onto a Windows PC.",
       steps: "Step by step",
       questions: "Common questions",
       more: "More guides",
@@ -341,7 +345,7 @@ export const en = {
       releases: "All downloads",
       rights: "Free software, released under GPL‑3.0.",
       disclaimer:
-        "Mirlow is an independent project. It is not affiliated with, endorsed by or certified by Apple Inc. iPhone, iPad, Mac and AirPlay are trademarks of Apple Inc. Windows is a trademark of the Microsoft group of companies.",
+        "Mirlow is an independent project. It is not affiliated with, endorsed by or certified by Apple Inc. or Google LLC. iPhone, iPad, Mac and AirPlay are trademarks of Apple Inc. Android is a trademark of Google LLC. Windows is a trademark of the Microsoft group of companies.",
     },
     privacy: {
       title: "Privacy",
@@ -350,7 +354,7 @@ export const en = {
       sections: [
         {
           title: "The app",
-          body: "Mirlow receives your iPhone's screen and sound directly over your local network and shows them on your PC. Nothing is recorded, stored or sent anywhere else. The app has no accounts, no analytics and no advertising, and it doesn't need the internet to work.",
+          body: "Mirlow receives your phone's screen and sound directly, over your local network or a direct Wi‑Fi link, and shows them on your PC. Nothing is recorded, stored or sent anywhere else. The app has no accounts, no analytics and no advertising, and it doesn't need the internet to work.",
         },
         {
           title: "What stays on your PC",

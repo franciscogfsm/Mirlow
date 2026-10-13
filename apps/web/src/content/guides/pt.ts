@@ -610,4 +610,75 @@ export const pt: Guides = {
       },
     ],
   },
+  android: {
+    title: "Como espelhar o telemóvel Android no PC com Windows",
+    short: "Espelhar um Android no PC",
+    metaTitle: "Como espelhar um telemóvel Android no PC com Windows, grátis e sem fios",
+    description:
+      "Mostre o ecrã do Android num PC com Windows 10 ou 11 com Smart View, Transmitir ou Projeção sem fios. Grátis, sem cabo, sem aplicação no telemóvel. Funciona com Samsung, Xiaomi, Huawei e outros.",
+    lead: "A maioria dos telemóveis Android consegue projetar o ecrã sem fios com uma função que já vem no telemóvel: Smart View nos Samsung, Transmitir ou Projeção sem fios nos outros. O PC precisa de um recetor. O Mirlow é esse recetor, é gratuito, e é a mesma aplicação que recebe um iPhone.",
+    steps: [
+      {
+        title: "Instale e abra o Mirlow no PC",
+        body: "Transfira o Mirlow para Windows 10 ou 11, execute o instalador e abra a aplicação. Ela mostra o nome com que o PC aparece no telemóvel.",
+      },
+      {
+        title: "Ligue o Wi-Fi nos dois",
+        body: "O telemóvel encontra o PC por Wi-Fi e liga-se diretamente a ele, por isso o Wi-Fi tem de estar ligado no PC e no telemóvel. Não precisam de estar na mesma rede.",
+      },
+      {
+        title: "Abra as definições rápidas no telemóvel",
+        body: "Deslize duas vezes a partir do topo do ecrã e procure Smart View (Samsung), Transmitir, Transmitir ecrã ou Projeção sem fios. Em alguns telemóveis está nas Definições, em Ligações ou em Ecrã.",
+      },
+      {
+        title: "Escolha o seu PC",
+        body: "Toque no nome que o Mirlow mostra. Passados uns segundos, o ecrã do telemóvel aparece na janela do Mirlow.",
+      },
+    ],
+    sections: [
+      {
+        title: "Que telemóveis Android funcionam",
+        body: [
+          "O Mirlow recebe telemóveis Android por Miracast, a norma de ecrã sem fios. Os telemóveis e tablets Samsung Galaxy têm-na com o nome Smart View. Xiaomi, Redmi e Poco, Huawei e Honor, Oppo, Realme, OnePlus, Motorola e muitos outros têm-na como Transmitir, Transmitir ecrã ou Projeção sem fios.",
+          "Os Google Pixel são a principal exceção: só projetam para dispositivos Chromecast e não têm Miracast, por isso não se conseguem ligar ao Mirlow.",
+        ],
+      },
+      {
+        title: "O que o PC precisa",
+        body: [
+          "De uma placa Wi-Fi que suporte Miracast. A maioria dos portáteis dos últimos anos tem. Um PC de secretária ligado só por cabo, sem placa Wi-Fi, não consegue receber um telemóvel Android, embora continue a receber um iPhone.",
+          "Para confirmar, abra um terminal no PC e execute: netsh wlan show drivers. Procure a linha \"Wireless Display Supported: Yes\".",
+        ],
+      },
+      {
+        title: "Se o PC não aparecer no telemóvel",
+        body: [
+          "Confirme que o Mirlow está aberto e que o Wi-Fi está ligado no PC, e depois feche e volte a abrir a lista no telemóvel. Aproximar o telemóvel do PC ajuda, porque os dois ligam-se diretamente.",
+          "Se a lista do seu telemóvel só mostra dispositivos Chromecast e televisões, o telemóvel provavelmente não tem Miracast.",
+        ],
+      },
+    ],
+    faq: [
+      {
+        q: "Tenho de instalar alguma aplicação no telemóvel Android?",
+        a: "Não. O Mirlow usa a projeção do ecrã que o telemóvel já tem.",
+      },
+      {
+        q: "Funciona com um Google Pixel?",
+        a: "Não. Os Pixel não suportam Miracast, que é o que o Mirlow recebe do Android.",
+      },
+      {
+        q: "O telemóvel e o PC têm de estar no mesmo Wi-Fi?",
+        a: "Não. Um telemóvel Android liga-se diretamente ao PC por Wi-Fi. Basta que os dois tenham o Wi-Fi ligado.",
+      },
+      {
+        q: "Posso controlar o telemóvel a partir do PC?",
+        a: "Não. A projeção tem um só sentido: o PC mostra o ecrã do telemóvel e continua a usar o telemóvel pelo toque.",
+      },
+      {
+        q: "É grátis?",
+        a: "Sim. O Mirlow não tem versão paga, nem conta, nem anúncios, e o código é aberto.",
+      },
+    ],
+  },
 };

@@ -93,6 +93,12 @@ fn layout_video(app: AppHandle, rect: video::Rect, visible: bool, radius: i32) {
     video::layout(&app, rect, radius, visible);
 }
 
+/// Rounds the window's bottom corners while a picture fills it (0 to undo).
+#[tauri::command]
+fn shape_window(app: AppHandle, radius: i32) {
+    video::shape_window(&app, radius);
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let app = tauri::Builder::default()
@@ -121,6 +127,7 @@ pub fn run() {
             allow_firewall,
             open_network_settings,
             layout_video,
+            shape_window,
             tray::set_tray_text,
         ])
         .setup(|app| {

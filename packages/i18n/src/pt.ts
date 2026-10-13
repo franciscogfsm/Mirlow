@@ -158,10 +158,10 @@ export const pt: Dictionary = {
 
   site: {
     meta: {
-      title: "Espelhar o iPhone no PC com Windows, grátis — recetor AirPlay | Mirlow",
+      title: "Espelhar o iPhone ou o Android no PC com Windows, grátis | Mirlow",
       description:
-        "Recetor AirPlay gratuito para Windows 10 e 11. Projete o ecrã do iPhone ou iPad no PC por Wi‑Fi, com som. Sem aplicação no telemóvel, sem conta, sem cabos.",
-      ogAlt: "O ecrã de um iPhone a aparecer num PC com Windows através do Mirlow",
+        "Projeção do ecrã gratuita para Windows 10 e 11. Espelhe o iPhone, o iPad ou um telemóvel Android no PC por Wi‑Fi: recetor AirPlay e Miracast num só. Sem aplicação no telemóvel, sem conta, sem cabos.",
+      ogAlt: "O ecrã de um telemóvel a aparecer num PC com Windows através do Mirlow",
     },
     nav: {
       how: "Como funciona",
@@ -173,19 +173,19 @@ export const pt: Dictionary = {
       skip: "Saltar para o conteúdo",
     },
     hero: {
-      eyebrow: "Grátis · Windows · Código aberto",
-      titleLine1: "Projete o iPhone",
+      eyebrow: "Grátis · iPhone e Android · Código aberto",
+      titleLine1: "Qualquer telemóvel",
       titleLine2: "no Windows.",
       titleAccent: "Grátis.",
-      body: "Abra o Mirlow, toque em Projeção do ecrã no iPhone e o seu ecrã aparece no PC. Não precisa de instalar nada no telemóvel.",
+      body: "Abra o Mirlow, toque em Projeção do ecrã no iPhone ou em Smart View no Android, e o seu ecrã aparece no PC. Não precisa de instalar nada no telemóvel.",
       cta: "Transferir para Windows — Grátis",
       ctaShort: "Transferir — Grátis",
-      promises: ["100% grátis", "Sem app no iPhone", "Sem cabos", "Sem conta"],
-      worksWith: "Funciona por AirPlay com",
-      devices: ["iPhone", "iPad", "Mac"],
+      promises: ["100% grátis", "Sem app no telemóvel", "Sem cabos", "Sem conta"],
+      worksWith: "Funciona com",
+      devices: ["iPhone", "iPad", "Mac", "Android"],
       requires: "Windows 10 e 11 · Download de 12 MB",
       sceneLabel:
-        "Animação: um iPhone envia o seu ecrã, sem fios, para um PC com Windows, onde aparece na janela do Mirlow.",
+        "Animação: um telemóvel envia o seu ecrã, sem fios, para um PC com Windows, onde aparece na janela do Mirlow.",
       sceneReady: "Pronto para projetar",
       sceneMirroring: "A projetar",
       sceneSheet: "Projeção do ecrã",
@@ -203,7 +203,7 @@ export const pt: Dictionary = {
         },
         {
           title: "Toque em Projeção do ecrã",
-          body: "Deslize para abrir a Central de controlo no iPhone ou iPad e escolha o seu PC na lista.",
+          body: "No iPhone ou iPad está na Central de controlo. No Android chama‑se Smart View, Transmitir ou Projeção sem fios. Escolha o seu PC na lista.",
         },
         {
           title: "Veja no PC",
@@ -233,7 +233,7 @@ export const pt: Dictionary = {
       items: [
         {
           title: "Projeção sem fios",
-          body: "Usa a Projeção do ecrã que já vem no iPhone e no iPad. Sem aplicação, sem cabo.",
+          body: "Usa a projeção do ecrã que já vem no iPhone, no iPad ou no telemóvel Android. Sem aplicação, sem cabo.",
         },
         {
           title: "Com som",
@@ -285,11 +285,15 @@ export const pt: Dictionary = {
       items: [
         {
           q: "De que preciso?",
-          a: "De um PC com Windows 10 ou 11 (64 bits) e de um iPhone ou iPad. Os dois têm de estar na mesma rede, por Wi‑Fi ou por cabo.",
+          a: "De um PC com Windows 10 ou 11 (64 bits) e de um iPhone, iPad ou telemóvel Android. O iPhone ou iPad tem de estar na mesma rede do PC, por Wi‑Fi ou por cabo. O telemóvel Android liga‑se diretamente ao PC, por isso o PC precisa de Wi‑Fi.",
         },
         {
           q: "Tenho de instalar alguma coisa no iPhone?",
           a: "Não. O Mirlow funciona com o botão Projeção do ecrã que já existe na Central de controlo.",
+        },
+        {
+          q: "Funciona com Android?",
+          a: "Sim, com telemóveis Android que projetam o ecrã por Miracast: Samsung (Smart View), Xiaomi, Huawei, Oppo, OnePlus e muitos outros. Os Google Pixel não têm Miracast, por isso não conseguem ligar‑se. A placa Wi‑Fi do PC também tem de suportar Miracast, o que acontece na maioria dos portáteis dos últimos anos.",
         },
         {
           q: "É mesmo grátis?",
@@ -305,20 +309,20 @@ export const pt: Dictionary = {
         },
         {
           q: "O meu ecrã passa pela internet?",
-          a: "Não. O iPhone envia o ecrã diretamente para o PC através da sua rede local. O Mirlow não tem servidores e não recolhe nada.",
+          a: "Não. O telemóvel envia o ecrã diretamente para o PC, pela sua rede local ou por uma ligação Wi‑Fi direta. O Mirlow não tem servidores e não recolhe nada.",
         },
         {
           q: "Funciona com um Mac? E em Mac ou Linux?",
           a: "Um Mac pode projetar para o Mirlow tal como um iPhone. A aplicação Mirlow em si existe apenas para Windows.",
         },
         {
-          q: "O Mirlow é da Apple?",
-          a: "Não. O Mirlow é um projeto independente de código aberto, construído sobre o UxPlay. Não tem afiliação, aprovação nem certificação da Apple.",
+          q: "O Mirlow é da Apple ou da Google?",
+          a: "Não. O Mirlow é um projeto independente de código aberto, construído sobre o UxPlay. Não tem afiliação, aprovação nem certificação da Apple nem da Google.",
         },
       ],
     },
     finalCta: {
-      title: "O seu iPhone. No seu PC.",
+      title: "O seu telemóvel. No seu PC.",
       accent: "Sem mais nada.",
       body: "Gratuito, privado e pronto em menos de um minuto.",
       cta: "Transferir para Windows — Grátis",
@@ -326,8 +330,8 @@ export const pt: Dictionary = {
     },
     guides: {
       title: "Guias",
-      metaTitle: "Guias: espelhar o iPhone ou o iPad no PC com Windows | Mirlow",
-      intro: "Respostas curtas e práticas sobre como pôr o ecrã de um iPhone ou iPad num PC com Windows.",
+      metaTitle: "Guias: espelhar o iPhone, o iPad ou o Android no PC com Windows | Mirlow",
+      intro: "Respostas curtas e práticas sobre como pôr o ecrã de um iPhone, iPad ou Android num PC com Windows.",
       steps: "Passo a passo",
       questions: "Perguntas frequentes",
       more: "Mais guias",
@@ -348,7 +352,7 @@ export const pt: Dictionary = {
       releases: "Todas as transferências",
       rights: "Software livre, distribuído sob a licença GPL‑3.0.",
       disclaimer:
-        "O Mirlow é um projeto independente. Não tem afiliação, aprovação nem certificação da Apple Inc. iPhone, iPad, Mac e AirPlay são marcas comerciais da Apple Inc. Windows é uma marca comercial do grupo de empresas Microsoft.",
+        "O Mirlow é um projeto independente. Não tem afiliação, aprovação nem certificação da Apple Inc. nem da Google LLC. iPhone, iPad, Mac e AirPlay são marcas comerciais da Apple Inc. Android é uma marca comercial da Google LLC. Windows é uma marca comercial do grupo de empresas Microsoft.",
     },
     privacy: {
       title: "Privacidade",
@@ -357,7 +361,7 @@ export const pt: Dictionary = {
       sections: [
         {
           title: "A aplicação",
-          body: "O Mirlow recebe o ecrã e o som do iPhone diretamente pela sua rede local e mostra‑os no PC. Nada é gravado, guardado ou enviado para outro sítio. A aplicação não tem contas, análises de utilização nem publicidade, e não precisa de internet para funcionar.",
+          body: "O Mirlow recebe o ecrã e o som do telemóvel diretamente, pela sua rede local ou por uma ligação Wi‑Fi direta, e mostra‑os no PC. Nada é gravado, guardado ou enviado para outro sítio. A aplicação não tem contas, análises de utilização nem publicidade, e não precisa de internet para funcionar.",
         },
         {
           title: "O que fica no seu PC",

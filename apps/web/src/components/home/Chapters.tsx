@@ -51,7 +51,7 @@ function Split({ lead, children }: { lead: ReactNode; children: ReactNode }) {
 }
 
 /** Generic device outlines, in the order of the dictionary's `devices`. */
-const deviceIcons: LucideIcon[] = [Smartphone, Tablet, Laptop];
+const deviceIcons: LucideIcon[] = [Smartphone, Tablet, Laptop, Smartphone];
 
 /** The opening: what it is, the download, and the film that shows the rest. */
 export function HeroChapter({ t, how }: { t: Site["hero"]; how: Site["how"] }) {
