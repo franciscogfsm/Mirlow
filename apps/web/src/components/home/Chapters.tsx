@@ -108,7 +108,7 @@ export function HeroChapter({ t, how }: { t: Site["hero"]; how: Site["how"] }) {
             className="rise mt-6 flex flex-wrap items-center justify-center gap-x-3 gap-y-2.5 border-t border-line pt-5 pinned:justify-start"
             style={order(6)}
           >
-            <span className="text-[13px] text-faint">{t.worksWith}</span>
+            <span className="w-full text-[13px] text-faint sm:w-auto">{t.worksWith}</span>
             <ul className="flex flex-wrap items-center justify-center gap-2">
               {t.devices.map((device, index) => {
                 const Icon = deviceIcons[index] ?? Smartphone;
@@ -123,7 +123,7 @@ export function HeroChapter({ t, how }: { t: Site["hero"]; how: Site["how"] }) {
                 );
               })}
             </ul>
-            <span className="text-[13px] text-faint">· {t.requires}</span>
+            <span className="w-full text-[13px] text-faint sm:w-auto">{t.requires}</span>
           </div>
         </div>
 

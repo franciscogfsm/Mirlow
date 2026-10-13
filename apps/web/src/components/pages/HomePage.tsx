@@ -1,6 +1,8 @@
 import { getDictionary, type Locale } from "@mirlow/i18n";
 import { FaqChapter, FeaturesChapter, FinalChapter, HeroChapter, TrustChapter } from "../home/Chapters";
+import { homeSchema } from "@/lib/schema";
 import { Stage } from "../home/Stage";
+import { JsonLd } from "../site/JsonLd";
 import { SiteFrame } from "../site/SiteFrame";
 
 export function HomePage({ locale }: { locale: Locale }) {
@@ -8,6 +10,7 @@ export function HomePage({ locale }: { locale: Locale }) {
 
   return (
     <SiteFrame locale={locale} page="home">
+      <JsonLd data={homeSchema(locale)} />
       <Stage
         cue={t.hero.scroll}
         chapters={[

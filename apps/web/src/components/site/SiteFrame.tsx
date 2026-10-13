@@ -2,6 +2,8 @@ import { getDictionary, links, type Locale } from "@mirlow/i18n";
 import { Wordmark } from "@mirlow/ui";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { getGuide } from "@/content/guides";
+import { guideIds } from "@/content/guides/slugs";
 import { pagePath, type PageId } from "@/lib/site";
 import { Nav } from "./Nav";
 
@@ -36,12 +38,30 @@ export function SiteFrame({
       <main id="main">{children}</main>
 
       <footer className="border-t border-line">
+        <nav
+          aria-label={t.guides.title}
+          className="mx-auto max-w-[1120px] border-b border-line px-6 py-10"
+        >
+          <p className="eyebrow">{t.guides.title}</p>
+          <ul className="mt-5 grid gap-x-10 gap-y-3 text-[14px] text-soft sm:grid-cols-2 lg:grid-cols-3">
+            {guideIds.map((id) => (
+              <li key={id}>
+                <Link className="transition-colors hover:text-ink" href={pagePath(locale, id)}>
+                  {getGuide(locale, id).short}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
         <div className="mx-auto flex max-w-[1120px] flex-col gap-8 px-6 py-12 md:flex-row md:items-start md:justify-between">
           <div className="max-w-[440px]">
             <Wordmark size={18} gradient={false} />
             <p className="mt-4 text-[13px] leading-relaxed text-faint">{t.footer.disclaimer}</p>
           </div>
           <nav className="flex flex-wrap gap-x-7 gap-y-3 text-[14px] text-soft">
+            <Link className="transition-colors hover:text-ink" href={pagePath(locale, "guides")}>
+              {t.footer.guides}
+            </Link>
             <Link className="transition-colors hover:text-ink" href={pagePath(locale, "privacy")}>
               {t.footer.privacy}
             </Link>

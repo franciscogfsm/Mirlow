@@ -152,9 +152,9 @@ export const en = {
 
   site: {
     meta: {
-      title: "Mirlow — Mirror your iPhone to Windows. For free.",
+      title: "Mirror your iPhone to a Windows PC, free — AirPlay receiver | Mirlow",
       description:
-        "Mirlow turns your Windows PC into a wireless screen for your iPhone or iPad. No app on your phone, no account, no cables. Free and open source.",
+        "Free AirPlay receiver for Windows 10 and 11. Mirror your iPhone or iPad screen to your PC over Wi‑Fi, with sound. No app on your phone, no account, no cable.",
       ogAlt: "An iPhone screen appearing on a Windows PC with Mirlow",
     },
     nav: {
@@ -174,8 +174,8 @@ export const en = {
       body: "Open Mirlow, tap Screen Mirroring on your iPhone, and your screen is on your PC. Nothing to install on your phone.",
       cta: "Download for Windows — Free",
       ctaShort: "Download — Free",
-      promises: ["100% free", "No ads", "No account"],
-      worksWith: "Works with",
+      promises: ["100% free", "No app on your iPhone", "No cables", "No account"],
+      worksWith: "Works over AirPlay with",
       devices: ["iPhone", "iPad", "Mac"],
       requires: "Windows 10 and 11",
       sceneLabel:
@@ -317,7 +317,19 @@ export const en = {
       cta: "Download for Windows — Free",
       note: "Windows 10 and 11 · 64‑bit",
     },
+    guides: {
+      title: "Guides",
+      metaTitle: "Guides: mirror an iPhone or iPad to a Windows PC | Mirlow",
+      intro: "Short, practical answers about getting an iPhone or iPad screen onto a Windows PC.",
+      steps: "Step by step",
+      questions: "Common questions",
+      more: "More guides",
+      all: "All guides",
+      ctaTitle: "Try it on your own PC",
+      ctaBody: "Mirlow is free and open source, and needs no account.",
+    },
     footer: {
+      guides: "Guides",
       privacy: "Privacy",
       licenses: "Licences",
       source: "Source code",

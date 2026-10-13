@@ -158,9 +158,9 @@ export const pt: Dictionary = {
 
   site: {
     meta: {
-      title: "Mirlow — Projete o iPhone no Windows. Grátis.",
+      title: "Espelhar o iPhone no PC com Windows, grátis — recetor AirPlay | Mirlow",
       description:
-        "O Mirlow transforma o seu PC com Windows num ecrã sem fios para o iPhone ou iPad. Sem aplicação no telemóvel, sem conta, sem cabos. Gratuito e de código aberto.",
+        "Recetor AirPlay gratuito para Windows 10 e 11. Projete o ecrã do iPhone ou iPad no PC por Wi‑Fi, com som. Sem aplicação no telemóvel, sem conta, sem cabos.",
       ogAlt: "O ecrã de um iPhone a aparecer num PC com Windows através do Mirlow",
     },
     nav: {
@@ -180,8 +180,8 @@ export const pt: Dictionary = {
       body: "Abra o Mirlow, toque em Projeção do ecrã no iPhone e o seu ecrã aparece no PC. Não precisa de instalar nada no telemóvel.",
       cta: "Transferir para Windows — Grátis",
       ctaShort: "Transferir — Grátis",
-      promises: ["100% grátis", "Sem anúncios", "Sem conta"],
-      worksWith: "Funciona com",
+      promises: ["100% grátis", "Sem app no iPhone", "Sem cabos", "Sem conta"],
+      worksWith: "Funciona por AirPlay com",
       devices: ["iPhone", "iPad", "Mac"],
       requires: "Windows 10 e 11",
       sceneLabel:
@@ -324,7 +324,19 @@ export const pt: Dictionary = {
       cta: "Transferir para Windows — Grátis",
       note: "Windows 10 e 11 · 64 bits",
     },
+    guides: {
+      title: "Guias",
+      metaTitle: "Guias: espelhar o iPhone ou o iPad no PC com Windows | Mirlow",
+      intro: "Respostas curtas e práticas sobre como pôr o ecrã de um iPhone ou iPad num PC com Windows.",
+      steps: "Passo a passo",
+      questions: "Perguntas frequentes",
+      more: "Mais guias",
+      all: "Todos os guias",
+      ctaTitle: "Experimente no seu PC",
+      ctaBody: "O Mirlow é gratuito e de código aberto, e não precisa de conta.",
+    },
     footer: {
+      guides: "Guias",
       privacy: "Privacidade",
       licenses: "Licenças",
       source: "Código‑fonte",

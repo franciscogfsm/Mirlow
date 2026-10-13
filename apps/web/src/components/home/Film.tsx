@@ -386,7 +386,7 @@ export function Film({
         )}
       </div>
 
-      <ol className="mt-2 grid grid-cols-3 gap-4 md:gap-6">
+      <ol className="mt-4 grid gap-5 sm:mt-2 sm:grid-cols-3 sm:gap-4 md:gap-6">
         {steps.map((step, at) => {
           const current = !reduce && at === beat.step;
           const state = reduce || at < beat.step ? "done" : current ? "run" : "idle";
@@ -414,7 +414,7 @@ export function Film({
                   <span className="font-serif text-[1.15rem] italic leading-none text-faint">{at + 1}</span>
                   <span className="text-[15px] font-semibold leading-tight tracking-[-0.015em]">{step.title}</span>
                 </span>
-                <span className="mt-1.5 hidden text-[13.5px] leading-snug text-soft sm:block">{step.body}</span>
+                <span className="mt-1.5 block text-[13.5px] leading-snug text-soft">{step.body}</span>
               </button>
             </li>
           );

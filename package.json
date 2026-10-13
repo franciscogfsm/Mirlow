@@ -14,6 +14,7 @@
     "dev:web": "npm run dev -w @mirlow/web",
     "build:web": "npm run build -w @mirlow/web",
     "build:engine": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-engine.ps1",
+    "release": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release.ps1",
     "typecheck": "npm run typecheck --workspaces --if-present"
   },
   "engines": {

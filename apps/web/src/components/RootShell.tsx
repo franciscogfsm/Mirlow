@@ -1,7 +1,8 @@
 import { defaultLocale, localeTags, type Locale } from "@mirlow/i18n";
 import { Geist, Instrument_Serif } from "next/font/google";
 import type { ReactNode } from "react";
-import { basePath } from "@/lib/site";
+import { guideIds } from "@/content/guides/slugs";
+import { basePath, pagePath } from "@/lib/site";
 import "@/app/globals.css";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist", display: "swap" });
@@ -12,6 +13,11 @@ const instrument = Instrument_Serif({
   variable: "--font-instrument",
   display: "swap",
 });
+
+/** The pages whose Portuguese address is more than the English one under `/pt`. */
+const translatedPaths = Object.fromEntries(
+  (["guides", ...guideIds] as const).map((page) => [pagePath("en", page), pagePath("pt", page)]),
+);
 
 /**
  * Sends a first-time visitor whose browser prefers Portuguese to the
@@ -27,7 +33,8 @@ if(wanted!=="pt"||sessionStorage.getItem("mirlow-detected"))return;
 sessionStorage.setItem("mirlow-detected","1");
 var base=${JSON.stringify(basePath)};
 var path=location.pathname.slice(base.length)||"/";
-location.replace(base+"/pt"+path+location.search+location.hash);
+var translated=${JSON.stringify(translatedPaths)};
+location.replace(base+(translated[path]||"/pt"+path)+location.search+location.hash);
 }catch(e){}})();`;
 
 /** The document shared by every page; each language has its own root layout that renders it. */
