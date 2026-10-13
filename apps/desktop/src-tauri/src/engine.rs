@@ -416,6 +416,9 @@ impl Supervisor {
             // Ask the device for a picture as tall as this screen, so full
             // screen is sharp. Software decoding keeps the engine's 1080p.
             command.args(["-s", &requested_resolution()]);
+            // Above 1080p an iPhone sends HEVC rather than H.264, and drops
+            // the connection if the receiver has not said it accepts that.
+            command.arg("-h265");
         }
         if !settings.sound {
             command.args(["-as", "0"]);

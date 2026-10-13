@@ -37,7 +37,6 @@
     "shortDescription": "Mirror your iPhone to Windows. For free.",
     "longDescription": "Mirlow turns your Windows PC into a wireless screen for your iPhone or iPad, using the Screen Mirroring built into the device.",
     "homepage": "https://github.com/franciscogfsm/mirlow",
-    "licenseFile": "../../../LICENSE",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -56,6 +55,9 @@
       "nsis": {
         "installMode": "perMachine",
         "installerHooks": "./windows/hooks.nsh",
+        "installerIcon": "icons/icon.ico",
+        "sidebarImage": "windows/installer-sidebar.bmp",
+        "headerImage": "windows/installer-header.bmp",
         "languages": ["English", "Portuguese"],
         "displayLanguageSelector": false,
         "compression": "lzma"
