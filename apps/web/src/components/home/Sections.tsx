@@ -1,5 +1,7 @@
-import type { Dictionary } from "@mirlow/i18n";
-import { Expand, Gift, Lock, Volume2, Wifi, type LucideIcon } from "lucide-react";
+import { type Dictionary, type Locale, links, release } from "@mirlow/i18n";
+import { ArrowUpRight, Expand, Gift, Lock, Volume2, Wifi, type LucideIcon } from "lucide-react";
+import Link from "next/link";
+import { pagePath } from "../../lib/site";
 import { DownloadButton } from "../site/DownloadButton";
 import { Reveal } from "../site/Reveal";
 
@@ -38,6 +40,72 @@ export function Features({ t }: { t: Dictionary["site"]["features"] }) {
           );
         })}
       </ul>
+    </section>
+  );
+}
+
+/**
+ * Why the download can be trusted, in terms a visitor can check for
+ * themselves: the source, an independent scan of this exact file, and its
+ * checksum. Nothing here is a claim about a scan result.
+ */
+export function Trust({ t, locale }: { t: Dictionary["site"]["trust"]; locale: Locale }) {
+  const targets = [
+    { href: links.repository, external: true },
+    { href: `https://www.virustotal.com/gui/file/${release.sha256}`, external: true },
+    { href: pagePath(locale, "privacy"), external: false },
+  ];
+  const action =
+    "mt-5 inline-flex items-center gap-1.5 text-[15px] font-medium text-ink underline decoration-line-strong underline-offset-[6px] transition-colors duration-300 hover:decoration-ink";
+
+  return (
+    <section id="trust" className="mx-auto max-w-[1120px] px-6 py-28 md:py-40">
+      <Reveal className="max-w-[720px]">
+        <p className="eyebrow">{t.eyebrow}</p>
+        <h2 className="mt-4 text-[clamp(2rem,4.6vw,3.5rem)] font-semibold leading-[1.04] tracking-[-0.04em]">
+          {t.title}
+        </h2>
+        <p className="mt-6 max-w-[600px] text-[17px] leading-relaxed text-soft">{t.body}</p>
+      </Reveal>
+
+      <ul className="mt-16 grid border-t border-line-strong md:grid-cols-3">
+        {t.items.map((item, index) => {
+          const target = targets[index];
+          return (
+            <Reveal
+              as="li"
+              key={item.title}
+              delay={index * 0.08}
+              className="flex flex-col items-start border-b border-line py-9 md:border-b-0 md:border-l md:px-8 md:first:border-l-0 md:first:pl-0 md:last:pr-0"
+            >
+              <span className="font-mono text-[12px] text-faint" aria-hidden="true">
+                0{index + 1}
+              </span>
+              <h3 className="mt-4 text-[1.5rem] font-semibold tracking-[-0.03em]">{item.title}</h3>
+              <p className="mt-3 text-[16px] leading-relaxed text-soft">{item.body}</p>
+              {target &&
+                (target.external ? (
+                  <a href={target.href} target="_blank" rel="noreferrer" className={action}>
+                    {item.action}
+                    <ArrowUpRight size={15} strokeWidth={1.8} aria-hidden="true" />
+                  </a>
+                ) : (
+                  <Link href={target.href} className={action}>
+                    {item.action}
+                  </Link>
+                ))}
+            </Reveal>
+          );
+        })}
+      </ul>
+
+      <Reveal delay={0.1} className="border-y border-line py-7 md:border-t-line-strong">
+        <p className="text-[13.5px] text-faint">{t.checksumLabel.replace("{version}", release.version)}</p>
+        <code className="mt-2 block select-all break-all font-mono text-[14px] leading-relaxed text-ink">
+          {release.sha256}
+        </code>
+        <p className="mt-2 text-[13.5px] text-faint">{t.checksumHint}</p>
+      </Reveal>
     </section>
   );
 }

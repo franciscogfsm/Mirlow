@@ -39,6 +39,15 @@ gh release create v0.1.0 `
   --title "Mirlow 0.1.0" --notes "First release."
 ```
 
+Then upload `Mirlow-Setup-x64.exe` to <https://www.virustotal.com>. The
+website's "Open the VirusTotal report" link is built from the installer's
+checksum (the build wrote it to `packages/i18n/src/release.ts`), so the link
+shows "not found" until that exact file has been uploaded once. Read the
+report before promoting the release: unsigned installers sometimes get a few
+false positives, which is one more reason to sign (see below). Commit
+`release.ts` and deploy the site together with the release, so the checksum
+on the site is the one people download.
+
 The website's download button links to
 `…/releases/latest/download/Mirlow-Setup-x64.exe`, so it follows the newest
 release automatically. Keep that file name.

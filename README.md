@@ -78,3 +78,7 @@ Mirlow is free software under the [GNU General Public License v3.0 or
 later](LICENSE), the licence of the UxPlay engine it is built on. The software
 shipped with it, and how to get all the source, are listed in
 [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md).
+
+The licence covers the code. It does not cover the name "Mirlow" or the
+Mirlow logo: a modified version has to be distributed under a different name
+and its own branding, and must not suggest that it is the original.

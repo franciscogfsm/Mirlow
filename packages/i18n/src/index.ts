@@ -39,3 +39,4 @@ export function format(template: string, values: Record<string, string | number>
     key in values ? String(values[key]) : match,
   );
 }
+export { release } from "./release";

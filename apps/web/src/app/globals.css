@@ -4,6 +4,10 @@
 
 @source "../../../../packages/ui/src";
 
+/* The home page pins itself to the viewport when there is room for it and the
+   visitor has not asked for less motion. The same query is in Stage.tsx. */
+@custom-variant pinned (@media (min-width: 1024px) and (min-height: 700px) and (prefers-reduced-motion: no-preference));
+
 @theme inline {
   --color-paper: var(--paper);
   --color-raised: var(--paper-raised);
@@ -98,6 +102,10 @@
       linear-gradient(var(--line) 1px, transparent 1px),
       linear-gradient(90deg, var(--line) 1px, transparent 1px);
     background-size: 72px 72px;
+    /* The grid slides by one cell per chapter, so changing chapter reads as
+       moving through one space, not as swapping pages. */
+    background-position: 0 calc(var(--chapter, 0) * -72px);
+    transition: background-position 1400ms var(--ease-out);
     mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 0%, transparent 78%);
     opacity: 0.7;
   }
@@ -196,6 +204,342 @@
     }
   }
 
+  /* ---- The stage: a fixed camera that the chapters pass in front of ---- */
+
+  .stage-snap {
+    display: none;
+  }
+
+  .chapter {
+    position: relative;
+  }
+
+  @media (min-width: 1024px) and (min-height: 700px) and (prefers-reduced-motion: no-preference) {
+    html:has(.stage) {
+      scroll-snap-type: y proximity;
+      scroll-padding-top: 0;
+    }
+
+    .stage {
+      position: relative;
+      height: calc(100svh + (var(--chapters) - 1) * 90svh);
+    }
+
+    .stage-snap {
+      display: block;
+      position: absolute;
+      left: 0;
+      top: calc(var(--at) * 90svh);
+      width: 1px;
+      height: 1px;
+      scroll-snap-align: start;
+    }
+
+    .stage-view {
+      position: sticky;
+      top: 0;
+      height: 100svh;
+      overflow: hidden;
+    }
+
+    .chapter {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .chapter[data-state="active"] {
+      pointer-events: auto;
+    }
+
+    /* Leaving is quick and together; arriving is slower and staggered. */
+    .chapter .rise {
+      opacity: 0;
+      filter: blur(12px);
+      transform: translate3d(0, 56px, 0) scale(0.985);
+      transition:
+        opacity 420ms ease,
+        filter 420ms ease,
+        transform 600ms var(--ease-in-out);
+    }
+
+    .chapter[data-state="past"] .rise {
+      transform: translate3d(0, -56px, 0) scale(0.985);
+    }
+
+    .chapter[data-state="active"] .rise {
+      opacity: 1;
+      filter: none;
+      transform: none;
+      transition:
+        opacity 900ms var(--ease-out),
+        filter 900ms var(--ease-out),
+        transform 1100ms var(--ease-out);
+      transition-delay: calc(200ms + var(--i, 0) * 65ms);
+    }
+  }
+
+  /* Without the pinned stage the chapters are ordinary sections; where the
+     browser can tie an animation to scrolling, they still ease into view. */
+  @media (prefers-reduced-motion: no-preference) {
+    @media (max-width: 1023.98px), (max-height: 699.98px) {
+      @supports (animation-timeline: view()) {
+        .chapter .rise {
+          animation: rise-in linear both;
+          animation-timeline: view();
+          animation-range: entry 0% entry 45%;
+        }
+      }
+    }
+  }
+
+  @keyframes rise-in {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 32px, 0);
+    }
+  }
+
+  .cue-line {
+    position: relative;
+    display: block;
+    width: 1px;
+    height: 28px;
+    overflow: hidden;
+    background: var(--line-strong);
+  }
+
+  .cue-line::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: var(--ink);
+    animation: cue 2.2s var(--ease-in-out) infinite;
+  }
+
+  @keyframes cue {
+    from {
+      transform: translateY(-100%);
+    }
+    to {
+      transform: translateY(100%);
+    }
+  }
+
+  /* ---- The film ---- */
+
+  /* No frame: the picture dissolves into the page at its edges. */
+  .film-view {
+    mask-image:
+      linear-gradient(to right, transparent, #000 7%, #000 93%, transparent),
+      linear-gradient(to bottom, transparent, #000 6%, #000 94%, transparent);
+    mask-composite: intersect;
+  }
+
+  .film-fill {
+    position: absolute;
+    inset: 0;
+    background: var(--ink);
+    transform: scaleX(0);
+    transform-origin: left;
+  }
+
+  .film-fill[data-state="done"] {
+    transform: scaleX(1);
+  }
+
+  .film-fill[data-state="run"] {
+    animation: film-fill linear forwards;
+  }
+
+  @keyframes film-fill {
+    to {
+      transform: scaleX(1);
+    }
+  }
+
+  /* ---- Surfaces and small effects ---- */
+
+  /* A card lit by the pointer: a soft pool of light inside, and a brighter
+     stretch of border wherever the pointer is nearest. */
+  .spot {
+    position: relative;
+    overflow: hidden;
+    border-radius: 22px;
+    border: 1px solid var(--line);
+    background: color-mix(in srgb, var(--paper-raised) 55%, transparent);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+    transition:
+      border-color 400ms var(--ease-out),
+      transform 600ms var(--ease-out);
+  }
+
+  .spot::before,
+  .spot::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 500ms var(--ease-out);
+  }
+
+  .spot::before {
+    background: radial-gradient(
+      360px circle at var(--mx, 50%) var(--my, 0%),
+      color-mix(in srgb, var(--ink) 8%, transparent),
+      transparent 70%
+    );
+  }
+
+  .spot::after {
+    padding: 1px;
+    background: radial-gradient(
+      240px circle at var(--mx, 50%) var(--my, 0%),
+      var(--ink-soft),
+      transparent 70%
+    );
+    mask:
+      linear-gradient(#000 0 0) content-box exclude,
+      linear-gradient(#000 0 0);
+  }
+
+  @media (hover: hover) {
+    .spot:hover {
+      transform: translateY(-2px);
+    }
+
+    .spot:hover::before,
+    .spot:hover::after {
+      opacity: 1;
+    }
+  }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 14px 5px 5px;
+    border-radius: 999px;
+    border: 1px solid var(--line-strong);
+    background: color-mix(in srgb, var(--paper-raised) 60%, transparent);
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .pill-tag {
+    padding: 2px 9px;
+    border-radius: 999px;
+    background: var(--ink);
+    color: var(--paper);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  /* Text with a band of light passing through it. */
+  .shiny {
+    color: transparent;
+    background: linear-gradient(
+        100deg,
+        var(--ink-soft) 0%,
+        var(--ink-soft) 40%,
+        var(--ink) 50%,
+        var(--ink-soft) 60%,
+        var(--ink-soft) 100%
+      )
+      0 0 / 250% 100%;
+    background-clip: text;
+    -webkit-background-clip: text;
+    animation: shiny 5s linear infinite;
+  }
+
+  @keyframes shiny {
+    from {
+      background-position: 125% 0;
+    }
+    to {
+      background-position: -125% 0;
+    }
+  }
+
+  /* A reflection that crosses the download button every few seconds. */
+  .cta-shine {
+    overflow: hidden;
+  }
+
+  .cta-shine::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      105deg,
+      transparent 35%,
+      color-mix(in srgb, var(--paper) 28%, transparent) 50%,
+      transparent 65%
+    );
+    transform: translateX(-120%);
+    animation: cta-shine 5.5s var(--ease-in-out) infinite;
+    pointer-events: none;
+  }
+
+  @keyframes cta-shine {
+    0%,
+    55% {
+      transform: translateX(-120%);
+    }
+    100% {
+      transform: translateX(120%);
+    }
+  }
+
+  .eq {
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    height: 34px;
+  }
+
+  .eq i {
+    display: block;
+    width: 4px;
+    height: 100%;
+    border-radius: 2px;
+    background: var(--ink);
+    transform-origin: bottom;
+    animation: eq 1.3s var(--ease-in-out) infinite alternate;
+  }
+
+  @keyframes eq {
+    from {
+      transform: scaleY(0.2);
+    }
+    to {
+      transform: scaleY(1);
+    }
+  }
+
+  /* Answers open and close smoothly where the browser can animate to an
+     intrinsic height; elsewhere they simply appear. */
+  .faq {
+    interpolate-size: allow-keywords;
+  }
+
+  .faq details::details-content {
+    block-size: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition:
+      block-size 500ms var(--ease-out),
+      opacity 400ms ease,
+      content-visibility 500ms allow-discrete;
+  }
+
+  .faq details[open]::details-content {
+    block-size: auto;
+    opacity: 1;
+  }
+
   .prose-page h2 {
     margin-top: 2.5rem;
     font-size: 1.25rem;
@@ -213,8 +557,17 @@
       scroll-behavior: auto;
     }
     .glow,
-    .signal-pulse {
+    .signal-pulse,
+    .shiny,
+    .cta-shine::after,
+    .eq i,
+    .cue-line::after {
       animation: none;
+    }
+    .backdrop::before,
+    .spot,
+    .faq details::details-content {
+      transition: none;
     }
     .signal-pulse {
       opacity: 0.25;

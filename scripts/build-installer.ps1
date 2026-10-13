@@ -3,6 +3,8 @@
 #   Mirlow-Setup-x64.exe        the installer (the name the website links to)
 #   THIRD-PARTY-RUNTIME.md      the exact list of bundled libraries for this build
 #   SHA256SUMS.txt              checksums of the above
+# It also records the installer's version and checksum in
+# packages\i18n\src\release.ts, which the website reads.
 #
 #   .\scripts\build-installer.ps1               build the installer
 #   .\scripts\build-installer.ps1 -Engine       rebuild the AirPlay engine first
@@ -54,5 +56,22 @@ $sums = Get-ChildItem $release -File | Where-Object { $_.Name -ne 'SHA256SUMS.tx
     '{0}  {1}' -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower(), $_.Name
 }
 Set-Content (Join-Path $release 'SHA256SUMS.txt') $sums -Encoding ascii
+
+# What the website says about this build: its version and the installer's
+# checksum (which is also what its VirusTotal link is made from).
+$version = (Get-Content (Join-Path $repo 'apps\desktop\src-tauri\tauri.conf.json') -Raw | ConvertFrom-Json).version
+$hash = (Get-FileHash $installer -Algorithm SHA256).Hash.ToLower()
+$releaseInfo = @(
+    '// Written by scripts/build-installer.ps1. Do not edit by hand.'
+    '//'
+    '// Describes the installer of the current release. The website shows the'
+    '// checksum and links to the VirusTotal report for it, so publish the site'
+    '// together with the installer this was generated from.'
+    'export const release = {'
+    "  version: `"$version`","
+    "  sha256: `"$hash`","
+    '} as const;'
+)
+Set-Content (Join-Path $repo 'packages\i18n\src\release.ts') $releaseInfo -Encoding ascii
 
 'Installer: {0} ({1:N1} MB)' -f $installer, ((Get-Item $installer).Length / 1MB)

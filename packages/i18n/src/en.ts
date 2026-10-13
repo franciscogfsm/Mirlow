@@ -240,6 +240,30 @@ export const en = {
         },
       ],
     },
+    trust: {
+      eyebrow: "Safe to install",
+      title: "Don't take our word for it.",
+      body: "Mirlow is free because it is open, not because it is selling something. Everything below can be checked by you, or by anyone you trust.",
+      items: [
+        {
+          title: "Open source",
+          body: "Every line of Mirlow is public. Anyone can read it, build it and confirm that the download matches.",
+          action: "Read the code",
+        },
+        {
+          title: "Scan it yourself",
+          body: "Look up this exact installer on VirusTotal, where dozens of independent antivirus engines examine it.",
+          action: "Open the VirusTotal report",
+        },
+        {
+          title: "Nothing leaves your network",
+          body: "Mirlow makes no internet connections. No account, no analytics, no updates fetched behind your back.",
+          action: "Read the privacy note",
+        },
+      ],
+      checksumLabel: "SHA-256 of Mirlow {version} for Windows",
+      checksumHint: "Compare it with the file you downloaded: in PowerShell, run Get-FileHash on the installer.",
+    },
     faq: {
       eyebrow: "Questions",
       title: "Good to know",

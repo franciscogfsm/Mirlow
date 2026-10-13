@@ -247,6 +247,30 @@ export const pt: Dictionary = {
         },
       ],
     },
+    trust: {
+      eyebrow: "Seguro de instalar",
+      title: "Não acredite só na nossa palavra.",
+      body: "O Mirlow é gratuito por ser aberto, não por estar a vender alguma coisa. Tudo o que se segue pode ser verificado por si, ou por alguém em quem confie.",
+      items: [
+        {
+          title: "Código aberto",
+          body: "Todas as linhas do Mirlow são públicas. Qualquer pessoa pode lê‑las, compilá‑las e confirmar que o download corresponde.",
+          action: "Ler o código",
+        },
+        {
+          title: "Analise‑o você mesmo",
+          body: "Procure este instalador exato no VirusTotal, onde dezenas de motores antivírus independentes o examinam.",
+          action: "Abrir o relatório do VirusTotal",
+        },
+        {
+          title: "Nada sai da sua rede",
+          body: "O Mirlow não faz ligações à internet. Sem conta, sem estatísticas, sem atualizações descarregadas às escondidas.",
+          action: "Ler a nota de privacidade",
+        },
+      ],
+      checksumLabel: "SHA-256 do Mirlow {version} para Windows",
+      checksumHint: "Compare‑o com o ficheiro que descarregou: no PowerShell, execute Get-FileHash sobre o instalador.",
+    },
     faq: {
       eyebrow: "Perguntas",
       title: "Convém saber",
