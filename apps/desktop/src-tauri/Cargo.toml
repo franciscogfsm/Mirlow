@@ -1,6 +1,6 @@
 [package]
 name = "mirlow"
-version = "1.0.0"
+version = "0.3.0"
 description = "Mirror your iPhone to Windows. For free."
 authors = ["Mirlow contributors"]
 license = "GPL-3.0-or-later"
@@ -25,14 +25,27 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
 [target.'cfg(windows)'.dependencies]
+windows-numerics = "0.2"
 windows = { version = "0.61", features = [
+  "ApplicationModel_Core",
+  "Foundation",
+  "Foundation_Numerics",
+  "Media_Core",
+  "Media_Miracast",
+  "Media_Playback",
+  "System",
+  "UI_Composition",
+  "UI_Composition_Desktop",
   "Win32_Foundation",
   "Win32_Graphics_Gdi",
   "Win32_Security",
   "Win32_System_JobObjects",
+  "Win32_System_LibraryLoader",
   "Win32_System_Registry",
   "Win32_System_Threading",
   "Win32_System_SystemInformation",
+  "Win32_System_WinRT",
+  "Win32_System_WinRT_Composition",
   "Win32_UI_Shell",
   "Win32_UI_WindowsAndMessaging",
 ] }

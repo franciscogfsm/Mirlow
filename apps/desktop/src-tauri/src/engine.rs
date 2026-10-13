@@ -84,6 +84,16 @@ pub struct Status {
     pub software_decoding: bool,
 }
 
+/// A device mirroring through something other than the AirPlay engine (an
+/// Android phone over Miracast). While there is one, it is what the interface
+/// shows.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Guest {
+    pub client: Client,
+    /// Unknown until the first picture arrives.
+    pub video: Option<VideoSize>,
+}
+
 enum Message {
     Line(String),
     Restart,
@@ -101,7 +111,11 @@ struct Shared {
     engine_dir: PathBuf,
     data_dir: PathBuf,
     settings: Arc<Mutex<Settings>>,
+    /// What the engine itself is doing.
     status: Mutex<Status>,
+    guest: Mutex<Option<Guest>>,
+    /// The status the interface was last told about.
+    shown: Mutex<Option<Status>>,
     log: Mutex<VecDeque<String>>,
     pid: AtomicU32,
     connections: AtomicU32,
@@ -134,6 +148,8 @@ impl Engine {
                 error: None,
                 software_decoding: false,
             }),
+            guest: Mutex::new(None),
+            shown: Mutex::new(None),
             log: Mutex::new(VecDeque::with_capacity(LOG_LINES)),
             pid: AtomicU32::new(0),
             connections: AtomicU32::new(0),
@@ -155,7 +171,23 @@ impl Engine {
     }
 
     pub fn status(&self) -> Status {
-        self.shared.status.lock().unwrap().clone()
+        self.shared.current()
+    }
+
+    /// Sets or clears the device mirroring outside the engine.
+    pub fn set_guest(&self, guest: Option<Guest>) {
+        *self.shared.guest.lock().unwrap() = guest;
+        self.shared.publish();
+    }
+
+    /// True while a device is connected to the engine itself.
+    pub fn has_client(&self) -> bool {
+        self.shared.connections.load(Ordering::Relaxed) > 0
+    }
+
+    /// Adds a line to the log shown in the help sheet.
+    pub fn note(&self, line: String) {
+        self.shared.log_line(line);
     }
 
     /// Process id of the running engine, or 0.
@@ -182,6 +214,38 @@ impl Engine {
         while self.pid() != 0 && Instant::now() < deadline {
             thread::sleep(Duration::from_millis(20));
         }
+    }
+}
+
+impl Shared {
+    /// The engine's status, with the guest device laid over it if there is one.
+    fn current(&self) -> Status {
+        let mut status = self.status.lock().unwrap().clone();
+        if let Some(guest) = self.guest.lock().unwrap().clone() {
+            status.phase = if guest.video.is_some() { Phase::Mirroring } else { Phase::Connecting };
+            status.client = Some(guest.client);
+            status.video = guest.video;
+            status.error = None;
+        }
+        status
+    }
+
+    /// Tells the interface about the status, if it changed.
+    fn publish(&self) {
+        let mut shown = self.shown.lock().unwrap();
+        let status = self.current();
+        if shown.as_ref() != Some(&status) {
+            *shown = Some(status.clone());
+            let _ = self.app.emit(STATUS_EVENT, status);
+        }
+    }
+
+    fn log_line(&self, line: String) {
+        let mut log = self.log.lock().unwrap();
+        if log.len() == LOG_LINES {
+            log.pop_front();
+        }
+        log.push_back(line);
     }
 }
 
@@ -440,6 +504,8 @@ impl Supervisor {
                 // Mirlow may be tucked away in the notification area: come
                 // forward now, so the connection is seen from its first moment.
                 crate::tray::show_window(&self.shared.app);
+                // The newest device takes over, whichever way it connects.
+                crate::miracast::disconnect(&self.shared.app);
                 self.update(|status| {
                     status.client = Some(client);
                     if status.phase == Phase::Ready {
@@ -515,24 +581,12 @@ impl Supervisor {
     }
 
     fn update(&self, change: impl FnOnce(&mut Status)) {
-        let snapshot = {
-            let mut status = self.shared.status.lock().unwrap();
-            let before = status.clone();
-            change(&mut status);
-            if *status == before {
-                return;
-            }
-            status.clone()
-        };
-        let _ = self.shared.app.emit(STATUS_EVENT, snapshot);
+        change(&mut self.shared.status.lock().unwrap());
+        self.shared.publish();
     }
 
     fn log_line(&self, line: String) {
-        let mut log = self.shared.log.lock().unwrap();
-        if log.len() == LOG_LINES {
-            log.pop_front();
-        }
-        log.push_back(line);
+        self.shared.log_line(line);
     }
 }
 

@@ -28,6 +28,8 @@ pub struct Rect {
 struct Inner {
     /// The adopted window, or 0.
     hwnd: isize,
+    /// True when the window is one of Mirlow's own rather than the engine's.
+    own: bool,
     rect: Rect,
     /// Corner radius of the picture, in physical pixels.
     radius: i32,
@@ -65,6 +67,7 @@ pub fn watch(app: &AppHandle, pid: u32) {
                 let mut inner = video.inner.lock().unwrap();
                 platform::adopt(hwnd, parent);
                 inner.hwnd = hwnd;
+                inner.own = false;
                 platform::place(hwnd, inner.rect, inner.radius, inner.visible);
                 return;
             }
@@ -73,16 +76,51 @@ pub fn watch(app: &AppHandle, pid: u32) {
     });
 }
 
-/// Forgets the video window. The engine closes it itself when mirroring ends;
-/// if it is still around it is hidden so no stale frame lingers.
+/// Forgets the engine's video window. The engine closes it itself when
+/// mirroring ends; if it is still around it is hidden so no stale frame lingers.
 pub fn detach(app: &AppHandle) {
     let video = app.state::<Video>();
     video.generation.fetch_add(1, Ordering::SeqCst);
     let mut inner = video.inner.lock().unwrap();
+    if inner.own {
+        return;
+    }
     if inner.hwnd != 0 && platform::is_window(inner.hwnd) {
         platform::place(inner.hwnd, inner.rect, inner.radius, false);
     }
     inner.hwnd = 0;
+}
+
+/// Puts a window Mirlow made itself (already a child of the main window) where
+/// the picture goes, in place of the engine's.
+pub fn attach(app: &AppHandle, hwnd: isize) {
+    let video = app.state::<Video>();
+    video.generation.fetch_add(1, Ordering::SeqCst);
+    let mut inner = video.inner.lock().unwrap();
+    if inner.hwnd != 0 && inner.hwnd != hwnd && platform::is_window(inner.hwnd) {
+        platform::place(inner.hwnd, inner.rect, inner.radius, false);
+    }
+    inner.hwnd = hwnd;
+    inner.own = true;
+    platform::place(hwnd, inner.rect, inner.radius, inner.visible);
+}
+
+/// Hides a window given to [`attach`] and forgets it.
+pub fn release(app: &AppHandle, hwnd: isize) {
+    let video = app.state::<Video>();
+    let mut inner = video.inner.lock().unwrap();
+    if platform::is_window(hwnd) {
+        platform::place(hwnd, inner.rect, inner.radius, false);
+    }
+    if inner.hwnd == hwnd {
+        inner.hwnd = 0;
+        inner.own = false;
+    }
+}
+
+/// The main window's handle, once it exists.
+pub fn main_window(app: &AppHandle) -> Option<isize> {
+    main_hwnd(app)
 }
 
 /// Sets where the picture goes, how round its corners are, and whether it is shown.

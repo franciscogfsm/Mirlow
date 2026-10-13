@@ -1,10 +1,12 @@
 mod diagnostics;
 mod engine;
+mod miracast;
 mod settings;
 mod tray;
 mod video;
 
 use engine::{Engine, Status};
+use miracast::Miracast;
 use settings::Settings;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
@@ -33,6 +35,7 @@ fn update_settings(
     settings: Settings,
     state: State<'_, AppState>,
     engine: State<'_, Engine>,
+    miracast: State<'_, Miracast>,
 ) -> Result<Settings, String> {
     let next = settings.normalized();
     let restart = {
@@ -46,12 +49,14 @@ fn update_settings(
     next.save(&state.config_dir).map_err(|error| error.to_string())?;
     if restart {
         engine.restart();
+        miracast.refresh();
     }
     Ok(next)
 }
 
 #[tauri::command]
-fn restart_engine(engine: State<'_, Engine>) {
+fn restart_engine(app: AppHandle, engine: State<'_, Engine>) {
+    miracast::disconnect(&app);
     engine.restart();
 }
 
@@ -131,7 +136,9 @@ pub fn run() {
                 config_dir,
                 engine_dir: engine_dir.clone(),
             });
-            app.manage(Engine::start(handle, engine_dir, data_dir, settings));
+            let engine = Engine::start(handle.clone(), engine_dir, data_dir, settings.clone());
+            app.manage(Miracast::start(handle, settings, engine.clone()));
+            app.manage(engine);
             tray::create(app.handle())?;
             Ok(())
         })
@@ -140,6 +147,7 @@ pub fn run() {
 
     app.run(|app, event| {
         if let RunEvent::Exit = event {
+            app.state::<Miracast>().shutdown();
             app.state::<Engine>().shutdown();
         }
     });
