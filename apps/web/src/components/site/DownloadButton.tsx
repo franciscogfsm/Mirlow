@@ -24,7 +24,7 @@ export function DownloadButton({
       frost={1}
       className="lg-press inline-block"
       style={{ ["--glass-tint" as string]: "var(--ink)" }}
-      contentClassName={`flex items-center gap-2.5 font-medium text-paper ${
+      contentClassName={`cta-shine flex items-center gap-2.5 font-medium text-paper ${
         large ? "h-14 px-7 text-[16.5px]" : "h-10 px-4.5 text-[14px]"
       }`}
     >

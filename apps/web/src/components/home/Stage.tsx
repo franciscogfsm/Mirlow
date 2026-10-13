@@ -103,8 +103,13 @@ export function Stage({ chapters, cue }: { chapters: Chapter[]; cue: string }) {
         window.history.replaceState(null, "", url.hash);
       }
     };
+    const onHashChange = () => go(window.location.hash, "instant");
     document.addEventListener("click", onClick, true);
-    return () => document.removeEventListener("click", onClick, true);
+    window.addEventListener("hashchange", onHashChange);
+    return () => {
+      document.removeEventListener("click", onClick, true);
+      window.removeEventListener("hashchange", onHashChange);
+    };
   }, [chapters, scrollToChapter]);
 
   useEffect(() => {

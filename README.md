@@ -1,14 +1,104 @@
+<div align="center">
+
+<img src="apps/web/public/icon.png" width="96" alt="Mirlow logo">
+
 # Mirlow
 
-**Your iPhone. On your PC. Just like that.**
+**Mirror your iPhone to Windows. For free.**
 
-Mirlow turns a Windows PC into a wireless screen for an iPhone, iPad or Mac,
-using the Screen Mirroring that is already built into those devices. Open
-Mirlow, pick the PC on the phone, and the phone's screen and sound are on the
-PC. No app on the phone, no account, no cable. Free and open source.
+Open Mirlow, tap Screen Mirroring on your iPhone, and your screen is on your PC.<br>
+No app on the phone, no account, no cable.
 
-Mirlow is an independent project. It is not affiliated with, endorsed by, or
-certified by Apple Inc.
+[![Downloads](https://img.shields.io/github/downloads/franciscogfsm/Mirlow/total?style=flat-square&label=downloads&color=111111)](https://github.com/franciscogfsm/Mirlow/releases)
+[![Latest release](https://img.shields.io/github/v/release/franciscogfsm/Mirlow?style=flat-square&label=release&color=111111)](https://github.com/franciscogfsm/Mirlow/releases/latest)
+[![Stars](https://img.shields.io/github/stars/franciscogfsm/Mirlow?style=flat-square&color=111111)](https://github.com/franciscogfsm/Mirlow/stargazers)
+[![Licence](https://img.shields.io/badge/licence-GPL--3.0-111111?style=flat-square)](LICENSE)
+[![Platform](https://img.shields.io/badge/Windows-10%20%C2%B7%2011-111111?style=flat-square)](#install)
+
+### [Download for Windows](https://github.com/franciscogfsm/Mirlow/releases/latest/download/Mirlow-Setup-x64.exe)
+
+<sub>Windows 10 and 11, 64-bit · No account · No signup</sub>
+
+<br>
+
+<img src="apps/web/public/og.png" width="820" alt="Mirror your iPhone to Windows. For free.">
+
+</div>
+
+## How it works
+
+| 1. Open Mirlow | 2. Tap Screen Mirroring | 3. See it on your PC |
+| --- | --- | --- |
+| Your PC becomes discoverable the moment the app opens. There is nothing to set up. | Swipe down to Control Centre on your iPhone or iPad and choose your PC from the list. | Your screen appears with its sound, and follows along as you rotate your phone. |
+
+## What you get
+
+- **Wireless mirroring.** Uses the Screen Mirroring built into your iPhone, iPad and Mac. No app, no cable.
+- **Sound included.** Hear your phone's audio through your PC speakers, in step with the picture.
+- **Full screen.** One key takes your phone edge to edge. Portrait and landscape both fit.
+- **Private by design.** Everything stays on your own network. No servers, no account, no tracking.
+- **Free, for real.** No trial, no watermark, no subscription. The code is here for anyone to read.
+
+## Install
+
+1. [Download the installer](https://github.com/franciscogfsm/Mirlow/releases/latest/download/Mirlow-Setup-x64.exe) and run it.
+2. Open Mirlow.
+3. On your iPhone, open Control Centre, tap **Screen Mirroring** and choose your PC.
+
+Both devices need to be on the same Wi-Fi or wired network.
+
+The installer is not code-signed yet, so Windows may say "Windows protected
+your PC" the first time. Choose **More info**, then **Run anyway**. You do not
+have to take that on trust: every release lists the installer's SHA-256 in
+`SHA256SUMS.txt`, and you can compare it with your download by running
+`Get-FileHash .\Mirlow-Setup-x64.exe` in PowerShell.
+
+## Questions
+
+<details>
+<summary><b>Do I need to install anything on my iPhone?</b></summary>
+
+No. Mirlow works with the Screen Mirroring button that is already in Control Centre.
+</details>
+
+<details>
+<summary><b>My PC doesn't appear on my iPhone. What now?</b></summary>
+
+Check that both devices are on the same network, then use the "Can't see this
+PC?" link inside Mirlow. It can allow the app through the Windows firewall for
+you, which is the usual cause.
+</details>
+
+<details>
+<summary><b>Can it play films from streaming apps?</b></summary>
+
+Mirlow mirrors your screen. Apps that protect their video, such as most film
+and TV services, show a black picture when mirrored. That is decided by those
+apps, not by Mirlow.
+</details>
+
+<details>
+<summary><b>Does my screen go through the internet?</b></summary>
+
+No. Your iPhone sends its screen straight to your PC over your local network.
+Mirlow has no servers and collects nothing.
+</details>
+
+<details>
+<summary><b>Is Mirlow made by Apple?</b></summary>
+
+No. Mirlow is an independent open-source project built on
+[UxPlay](https://github.com/FDH2/UxPlay). It is not affiliated with, endorsed
+by, or certified by Apple Inc.
+</details>
+
+## Support the project
+
+If Mirlow is useful to you, [star the repository](https://github.com/franciscogfsm/Mirlow/stargazers)
+so other people can find it, and [open an issue](https://github.com/franciscogfsm/Mirlow/issues)
+when something does not work.
+
+---
 
 ## How it is built
 
@@ -57,7 +147,7 @@ iPhone, an actual mirroring session, sound, and input passing through the
 picture to the window. Run [`docs/VALIDATION.md`](docs/VALIDATION.md) before
 relying on it or publishing a release.
 
-## Quick start
+## Build it yourself
 
 ```powershell
 git clone --recurse-submodules https://github.com/franciscogfsm/mirlow

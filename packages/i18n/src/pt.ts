@@ -180,12 +180,18 @@ export const pt: Dictionary = {
       body: "Abra o Mirlow, toque em Projeção do ecrã no iPhone e o seu ecrã aparece no PC. Não precisa de instalar nada no telemóvel.",
       cta: "Transferir para Windows — Grátis",
       ctaShort: "Transferir — Grátis",
-      note: "Windows 10 e 11 · Sem conta · Sem registo",
+      promises: ["100% grátis", "Sem anúncios", "Sem conta"],
+      worksWith: "Funciona com",
+      devices: ["iPhone", "iPad", "Mac"],
+      requires: "Windows 10 e 11",
       sceneLabel:
         "Animação: um iPhone envia o seu ecrã, sem fios, para um PC com Windows, onde aparece na janela do Mirlow.",
       sceneReady: "Pronto para projetar",
       sceneMirroring: "A projetar",
       sceneSheet: "Projeção do ecrã",
+      pause: "Pausar a animação",
+      play: "Reproduzir a animação",
+      scroll: "Deslize",
     },
     how: {
       eyebrow: "Como funciona",
@@ -270,6 +276,8 @@ export const pt: Dictionary = {
       ],
       checksumLabel: "SHA-256 do Mirlow {version} para Windows",
       checksumHint: "Compare‑o com o ficheiro que descarregou: no PowerShell, execute Get-FileHash sobre o instalador.",
+      copy: "Copiar",
+      copied: "Copiado",
     },
     faq: {
       eyebrow: "Perguntas",

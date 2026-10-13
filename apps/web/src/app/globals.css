@@ -331,8 +331,8 @@
   /* No frame: the picture dissolves into the page at its edges. */
   .film-view {
     mask-image:
-      linear-gradient(to right, transparent, #000 7%, #000 93%, transparent),
-      linear-gradient(to bottom, transparent, #000 6%, #000 94%, transparent);
+      linear-gradient(to right, transparent, #000 5%, #000 95%, transparent),
+      linear-gradient(to bottom, transparent, #000 5%, #000 95%, transparent);
     mask-composite: intersect;
   }
 

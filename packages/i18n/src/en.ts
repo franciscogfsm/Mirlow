@@ -174,12 +174,18 @@ export const en = {
       body: "Open Mirlow, tap Screen Mirroring on your iPhone, and your screen is on your PC. Nothing to install on your phone.",
       cta: "Download for Windows — Free",
       ctaShort: "Download — Free",
-      note: "Windows 10 and 11 · No account · No signup",
+      promises: ["100% free", "No ads", "No account"],
+      worksWith: "Works with",
+      devices: ["iPhone", "iPad", "Mac"],
+      requires: "Windows 10 and 11",
       sceneLabel:
         "Animation: an iPhone sends its screen wirelessly to a Windows PC, where it appears in the Mirlow window.",
       sceneReady: "Ready to mirror",
       sceneMirroring: "Mirroring",
       sceneSheet: "Screen Mirroring",
+      pause: "Pause the animation",
+      play: "Play the animation",
+      scroll: "Scroll",
     },
     how: {
       eyebrow: "How it works",
@@ -263,6 +269,8 @@ export const en = {
       ],
       checksumLabel: "SHA-256 of Mirlow {version} for Windows",
       checksumHint: "Compare it with the file you downloaded: in PowerShell, run Get-FileHash on the installer.",
+      copy: "Copy",
+      copied: "Copied",
     },
     faq: {
       eyebrow: "Questions",

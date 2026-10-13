@@ -1,23 +1,23 @@
 import { getDictionary, type Locale } from "@mirlow/i18n";
-import { Hero } from "../home/Hero";
-import { HowItWorks } from "../home/HowItWorks";
-import { Faq, Features, FinalCta, Trust } from "../home/Sections";
-import { Showcase } from "../home/Showcase";
+import { FaqChapter, FeaturesChapter, FinalChapter, HeroChapter, TrustChapter } from "../home/Chapters";
+import { Stage } from "../home/Stage";
 import { SiteFrame } from "../site/SiteFrame";
 
 export function HomePage({ locale }: { locale: Locale }) {
-  const dictionary = getDictionary(locale);
-  const t = dictionary.site;
+  const t = getDictionary(locale).site;
 
   return (
     <SiteFrame locale={locale} page="home">
-      <Hero t={t.hero} />
-      <HowItWorks t={t.how} sheetLabel={t.hero.sceneSheet} />
-      <Showcase t={t.showcase} app={dictionary.app} />
-      <Features t={t.features} />
-      <Trust t={t.trust} locale={locale} />
-      <Faq t={t.faq} />
-      <FinalCta t={t.finalCta} />
+      <Stage
+        cue={t.hero.scroll}
+        chapters={[
+          { id: "how", label: t.nav.how, node: <HeroChapter t={t.hero} how={t.how} /> },
+          { id: "features", label: t.nav.features, node: <FeaturesChapter t={t.features} /> },
+          { id: "trust", label: t.trust.eyebrow, node: <TrustChapter t={t.trust} locale={locale} /> },
+          { id: "faq", label: t.nav.faq, node: <FaqChapter t={t.faq} /> },
+          { id: "download", label: t.nav.download, node: <FinalChapter t={t.finalCta} footer={t.footer} /> },
+        ]}
+      />
     </SiteFrame>
   );
 }
