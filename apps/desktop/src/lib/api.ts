@@ -55,6 +55,8 @@ export type AndroidStatus =
 export interface Diagnostics {
   firewallAllowed: boolean;
   network: { name: string; category: "public" | "private" | "domain" } | null;
+  /** The PC has Wi-Fi and it is switched off. */
+  wifiOff: boolean;
   android: AndroidStatus;
 }
 
@@ -75,8 +77,7 @@ export const api = {
   restartEngine: () => invoke<void>("restart_engine"),
   getEngineLog: () => invoke<string>("get_engine_log"),
   getDiagnostics: () => invoke<Diagnostics>("get_diagnostics"),
-  allowFirewall: () => invoke<boolean>("allow_firewall"),
-  installWirelessDisplay: () => invoke<AndroidStatus>("install_wireless_display"),
+  fixAll: () => invoke<Diagnostics>("fix_all"),
   openNetworkSettings: () => invoke<void>("open_network_settings"),
   openWindowsSettings: (page: "ms-settings:optionalfeatures" | "ms-settings:project") =>
     invoke<void>("open_windows_settings", { page }),

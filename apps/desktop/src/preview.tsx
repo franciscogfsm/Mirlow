@@ -43,7 +43,12 @@ const status: Status = {
 
 const diagnostics: Diagnostics = {
   firewallAllowed: params.get("firewall") === "ok",
-  network: { name: "Home Wi-Fi", category: params.get("network") === "public" ? "public" : "private" },
+  // preview.html?wifi=off shows a PC with its Wi-Fi switched off, and so no network.
+  network:
+    params.get("wifi") === "off"
+      ? null
+      : { name: "Home Wi-Fi", category: params.get("network") === "public" ? "public" : "private" },
+  wifiOff: params.get("wifi") === "off",
   android: (params.get("android") as AndroidStatus | null) ?? "listening",
 };
 
@@ -61,10 +66,18 @@ mockIPC((command, payload) => {
       return diagnostics;
     case "get_engine_log":
       return "UxPlay 1.74: An Open-Source AirPlay mirroring and audio-streaming server.\n[mirlow] the engine exited unexpectedly";
-    case "allow_firewall":
-      return true;
-    case "install_wireless_display":
-      return new Promise((resolve) => setTimeout(() => resolve("listening"), 1500));
+    case "fix_all":
+      return new Promise((resolve) =>
+        setTimeout(() => {
+          diagnostics.firewallAllowed = true;
+          diagnostics.wifiOff = false;
+          diagnostics.network = { name: "Home Wi-Fi", category: "private" };
+          if (diagnostics.android === "needsFeature" || diagnostics.android === "wifiOff") {
+            diagnostics.android = "listening";
+          }
+          resolve(diagnostics);
+        }, 1500),
+      );
     case "plugin:app|version":
       return "0.1.0";
     case "plugin:window|is_fullscreen":

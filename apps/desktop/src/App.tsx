@@ -9,6 +9,7 @@ import { TitleBar } from "./components/TitleBar";
 import { api, type Settings, type Status, type VideoSize } from "./lib/api";
 import { HOME_MIN, HOME_SIZE, MIRROR_BAR, MIRROR_FRAME, MIRROR_MIN } from "./lib/frame";
 import { I18nProvider, resolveLocale, useI18n } from "./lib/i18n";
+import { useDiagnostics } from "./lib/useDiagnostics";
 import { useEngineStatus, useSettings } from "./lib/useEngine";
 import { ErrorView } from "./views/ErrorView";
 import { MirrorStage } from "./views/MirrorStage";
@@ -113,6 +114,8 @@ function Shell({
   const [helpOpen, setHelpOpen] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const [controlsVisible, setControlsVisible] = useState(true);
+  // Checked while the PC waits for a phone, so problems show before anyone looks for help.
+  const diagnostics = useDiagnostics(status.phase === "ready" || helpOpen);
 
   const video = status.phase === "mirroring" ? status.video : null;
   const mirroring = video !== null;
@@ -273,6 +276,7 @@ function Shell({
                 status={status}
                 onRename={() => setSettingsOpen(true)}
                 onOpenHelp={() => setHelpOpen(true)}
+                diagnostics={diagnostics}
               />
             )}
           </motion.div>
@@ -285,7 +289,7 @@ function Shell({
         settings={settings}
         onChange={onSettingsChange}
       />
-      <HelpSheet open={helpOpen} onOpenChange={setHelpOpen} />
+      <HelpSheet open={helpOpen} onOpenChange={setHelpOpen} state={diagnostics} />
     </div>
   );
 }

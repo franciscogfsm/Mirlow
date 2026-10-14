@@ -65,43 +65,51 @@ fn get_engine_log(engine: State<'_, Engine>) -> String {
     engine.log()
 }
 
+/// The programs that receive a phone, and so must get through the firewall:
+/// the engine for AirPlay, and the app itself for Miracast.
+fn receivers(app: &AppHandle) -> Vec<PathBuf> {
+    let mut programs = vec![app.state::<AppState>().engine_dir.join("bin").join("mirlow-engine.exe")];
+    programs.extend(std::env::current_exe().ok());
+    programs
+}
+
 #[tauri::command]
 async fn get_diagnostics(app: AppHandle) -> diagnostics::Diagnostics {
-    diagnostics::collect(app.state::<Miracast>().status())
+    diagnostics::collect(app.state::<Miracast>().status(), &receivers(&app))
 }
 
-/// Asks Windows (with its permission prompt) to let the engine and the app
-/// through the firewall, then restarts both receivers so they announce
-/// themselves again.
+/// Puts right everything that stops a phone from finding this PC: switches
+/// the Wi-Fi on, then, behind one Windows permission prompt, lets Mirlow
+/// through the firewall, makes a public network private and installs
+/// Wireless Display for Android. Returns what things look like afterwards.
 #[tauri::command]
-async fn allow_firewall(app: AppHandle) -> bool {
-    let engine_exe = app.state::<AppState>().engine_dir.join("bin").join("mirlow-engine.exe");
-    let app_exe = std::env::current_exe().ok();
-    let mut programs = vec![engine_exe.as_path()];
-    programs.extend(app_exe.as_deref());
-    let allowed = diagnostics::allow_firewall(&programs);
-    if allowed {
-        app.state::<Engine>().restart();
-        app.state::<Miracast>().retry();
-    }
-    allowed
-}
-
-/// Installs Windows' Wireless Display feature (with its permission prompt),
-/// then listens for Android phones again and reports how that went.
-#[tauri::command]
-async fn install_wireless_display(app: AppHandle) -> miracast::AndroidStatus {
-    diagnostics::install_wireless_display();
+async fn fix_all(app: AppHandle) -> diagnostics::Diagnostics {
+    use miracast::AndroidStatus;
+    let programs = receivers(&app);
     let miracast = app.state::<Miracast>();
+    let before = diagnostics::collect(miracast.status(), &programs);
+
+    if before.wifi_off || before.android == AndroidStatus::WifiOff {
+        diagnostics::turn_on_wifi();
+    }
+    let fixes = diagnostics::Fixes {
+        firewall: if before.firewall_allowed { &[] } else { &programs },
+        private_network: before.network.as_ref().is_some_and(|network| network.category == "public"),
+        wireless_display: before.android == AndroidStatus::NeedsFeature,
+    };
+    if fixes.any() && diagnostics::fix(&fixes) && !fixes.firewall.is_empty() {
+        app.state::<Engine>().restart();
+    }
+
     miracast.retry();
     // Listening again takes a moment; wait for the answer, within reason.
     for _ in 0..50 {
-        if miracast.status() != miracast::AndroidStatus::Starting {
+        if miracast.status() != AndroidStatus::Starting {
             break;
         }
         std::thread::sleep(std::time::Duration::from_millis(100));
     }
-    miracast.status()
+    diagnostics::collect(miracast.status(), &programs)
 }
 
 #[tauri::command]
@@ -149,8 +157,7 @@ pub fn run() {
             restart_engine,
             get_engine_log,
             get_diagnostics,
-            allow_firewall,
-            install_wireless_display,
+            fix_all,
             open_network_settings,
             open_windows_settings,
             layout_video,

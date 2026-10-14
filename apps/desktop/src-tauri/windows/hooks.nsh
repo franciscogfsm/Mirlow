@@ -4,7 +4,8 @@
 ; receive connections. Without a rule, Windows shows a prompt the first time
 ; the engine runs, and dismissing that prompt silently blocks it for good. The
 ; installer already runs with administrator rights, so it adds the rule itself
-; and the app works on first launch.
+; and the app works on first launch. For the same reason it also sets up what
+; Android phones need.
 
 !macro NSIS_HOOK_POSTINSTALL
   ; Clear any earlier rules for this path first: a leftover "block" rule would
@@ -19,6 +20,17 @@
   Pop $0
   nsExec::Exec 'netsh advfirewall firewall add rule name="Mirlow" dir=in action=allow program="$INSTDIR\${MAINBINARYNAME}.exe" enable=yes profile=any description="Lets your Android phone mirror to this PC with Mirlow."'
   Pop $0
+  ; Android phones need Windows' Wireless Display feature, which is not
+  ; installed by default. It comes from Windows Update and can take minutes,
+  ; so it installs in the background and the installer does not wait. Mirlow
+  ; notices when it is done; if it fails, Mirlow offers to try again.
+  ; The installer is 32-bit, and a 32-bit DISM cannot service 64-bit Windows.
+  ${If} ${FileExists} "$WINDIR\Sysnative\dism.exe"
+    StrCpy $0 "$WINDIR\Sysnative\dism.exe"
+  ${Else}
+    StrCpy $0 "$SYSDIR\dism.exe"
+  ${EndIf}
+  ExecShell "open" "$0" "/Online /Add-Capability /CapabilityName:App.WirelessDisplay.Connect~~~~0.0.1.0 /NoRestart /Quiet" SW_HIDE
 !macroend
 
 !macro NSIS_HOOK_PREUNINSTALL

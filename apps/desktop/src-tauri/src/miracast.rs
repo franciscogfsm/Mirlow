@@ -132,7 +132,7 @@ mod receiver {
     use tauri::AppHandle;
     use windows::core::{w, Error, IInspectable, Interface, Ref, Result, HSTRING};
     use windows_numerics::Vector2;
-    use windows::Foundation::{Size, TypedEventHandler};
+    use windows::Foundation::{Size, TimeSpan, TypedEventHandler};
     use windows::Media::Core::MediaSource;
     use windows::Media::Miracast::{
         MiracastReceiver, MiracastReceiverApplySettingsStatus, MiracastReceiverAuthorizationMethod,
@@ -258,7 +258,15 @@ mod receiver {
         player: Option<MediaPlayer>,
         surface: Option<MediaPlayerSurface>,
         stage: Option<Stage>,
+        /// Set while checking again in the background, so a check that
+        /// changes nothing leaves nothing in the log.
+        quiet: bool,
     }
+
+    /// How often to look again when phones cannot find this PC: the Wi-Fi may
+    /// have come on, Wireless Display may have finished installing, the PC may
+    /// have woken from sleep.
+    const RECHECK_SECONDS: i64 = 10;
 
     pub fn run(
         app: AppHandle,
@@ -293,12 +301,22 @@ mod receiver {
             player: None,
             surface: None,
             stage: None,
+            quiet: false,
         };
         state.listen();
         #[cfg(debug_assertions)]
         state.rehearse();
         STATE.with(|cell| *cell.borrow_mut() = Some(state));
-        *slot.lock().unwrap() = Some(queue);
+        *slot.lock().unwrap() = Some(queue.clone());
+
+        let timer = queue.CreateTimer()?;
+        timer.SetInterval(TimeSpan { Duration: RECHECK_SECONDS * 10_000_000 })?;
+        let recheck = queue.clone();
+        timer.Tick(&TypedEventHandler::new(move |_, _| {
+            post(&recheck, |state| state.recheck());
+            Ok(())
+        }))?;
+        timer.Start()?;
 
         let mut message = MSG::default();
         unsafe {
@@ -313,7 +331,41 @@ mod receiver {
 
     impl State {
         fn note(&self, text: impl AsRef<str>) {
-            self.engine.note(format!("[mirlow] android: {}", text.as_ref()));
+            if !self.quiet {
+                self.engine.note(format!("[mirlow] android: {}", text.as_ref()));
+            }
+        }
+
+        /// Starts over if phones cannot find this PC, in case whatever stood
+        /// in the way has gone. Says nothing unless the outcome changes.
+        fn recheck(&mut self) {
+            let before = *self.status.lock().unwrap();
+            let stopped = match before {
+                AndroidStatus::Starting => false,
+                // Listening, as far as we know; Windows may have stopped after
+                // sleep or a change of adapter without saying so.
+                AndroidStatus::Listening => {
+                    self.client.is_none()
+                        && self
+                            .receiver
+                            .as_ref()
+                            .and_then(|receiver| receiver.GetStatus().ok())
+                            .and_then(|status| status.ListeningStatus().ok())
+                            .is_some_and(|listening| listening == MiracastReceiverListeningStatus::NotListening)
+                }
+                _ => true,
+            };
+            if !stopped {
+                return;
+            }
+            self.quiet = true;
+            self.close();
+            self.listen();
+            self.quiet = false;
+            let after = *self.status.lock().unwrap();
+            if after != before {
+                self.note(format!("now {after:?} (was {before:?})"));
+            }
         }
 
         fn set_status(&self, status: AndroidStatus) {
