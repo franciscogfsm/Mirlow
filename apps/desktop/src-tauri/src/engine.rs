@@ -62,6 +62,8 @@ pub enum ErrorKind {
 pub struct Client {
     pub name: String,
     pub model: String,
+    /// A code to type on the device to let it connect, while it waits for one.
+    pub pin: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -503,7 +505,7 @@ impl Supervisor {
             }),
             "client" => {
                 let (model, name) = rest.split_once('\t').unwrap_or(("", rest));
-                let client = Client { name: name.trim().to_string(), model: model.trim().to_string() };
+                let client = Client { name: name.trim().to_string(), model: model.trim().to_string(), pin: None };
                 // Mirlow may be tucked away in the notification area: come
                 // forward now, so the connection is seen from its first moment.
                 crate::tray::show_window(&self.shared.app);

@@ -8,8 +8,11 @@
 //! as an iPhone's picture.
 //!
 //! Windows does the networking and the decoding. What is left to do here is to
-//! play the stream it hands over into a child window of the main window, which
-//! [`crate::video`] then lays out exactly as it does the engine's.
+//! draw the frames it hands over into a child window of the main window, which
+//! [`crate::video`] then lays out exactly as it does the engine's. Each frame
+//! passes through here rather than straight to the screen so that the black
+//! bars many phones add around an upright picture can be cut away
+//! ([`crate::letterbox`]).
 //!
 //! Everything runs on one thread of its own. Windows reports events on other
 //! threads; they are passed to that thread before anything is touched.
@@ -125,14 +128,18 @@ pub fn disconnect(app: &AppHandle) {
 mod receiver {
     use super::AndroidStatus;
     use crate::engine::{Client, Engine, Guest, VideoSize};
+    use crate::letterbox::{self, Framing, Rect};
     use crate::settings::Settings;
     use crate::video;
     use std::cell::RefCell;
     use std::sync::{Arc, Mutex};
+    use std::time::{Duration, Instant};
     use tauri::AppHandle;
     use windows::core::{w, Error, IInspectable, Interface, Ref, Result, HSTRING};
     use windows_numerics::Vector2;
     use windows::Foundation::{Size, TimeSpan, TypedEventHandler};
+    use windows::Graphics::DirectX::Direct3D11::IDirect3DSurface;
+    use windows::Graphics::DirectX::{DirectXAlphaMode, DirectXPixelFormat};
     use windows::Media::Core::MediaSource;
     use windows::Media::Miracast::{
         MiracastReceiver, MiracastReceiverApplySettingsStatus, MiracastReceiverAuthorizationMethod,
@@ -141,12 +148,24 @@ mod receiver {
         MiracastReceiverListeningStatus, MiracastReceiverMediaSourceCreatedEventArgs,
         MiracastReceiverSession, MiracastReceiverSessionStartStatus, MiracastReceiverWiFiStatus,
     };
-    use windows::Media::Playback::{MediaPlaybackSession, MediaPlayer, MediaPlayerSurface};
+    use windows::Media::Playback::MediaPlayer;
     use windows::System::{DispatcherQueue, DispatcherQueueHandler};
-    use windows::Win32::Foundation::{E_FAIL, HWND, LPARAM, LRESULT, WPARAM};
+    use windows::Win32::Foundation::{E_FAIL, HMODULE, HWND, LPARAM, LRESULT, POINT, SIZE, WPARAM};
+    use windows::Win32::Graphics::Direct3D::D3D_DRIVER_TYPE_HARDWARE;
+    use windows::Win32::Graphics::Direct3D11::{
+        D3D11CreateDevice, ID3D11Device, ID3D11DeviceContext, ID3D11Multithread, ID3D11Texture2D,
+        D3D11_BIND_RENDER_TARGET, D3D11_BIND_SHADER_RESOURCE, D3D11_BOX, D3D11_CPU_ACCESS_READ,
+        D3D11_CREATE_DEVICE_BGRA_SUPPORT, D3D11_MAPPED_SUBRESOURCE, D3D11_MAP_READ, D3D11_SDK_VERSION,
+        D3D11_TEXTURE2D_DESC, D3D11_USAGE_DEFAULT, D3D11_USAGE_STAGING,
+    };
+    use windows::Win32::Graphics::Dxgi::Common::{DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_SAMPLE_DESC};
+    use windows::Win32::Graphics::Dxgi::IDXGISurface;
     use windows::Win32::Graphics::Gdi::{GetStockObject, BLACK_BRUSH, HBRUSH};
     use windows::Win32::System::LibraryLoader::GetModuleHandleW;
-    use windows::Win32::System::WinRT::Composition::ICompositorDesktopInterop;
+    use windows::Win32::System::WinRT::Composition::{
+        ICompositionDrawingSurfaceInterop, ICompositorDesktopInterop, ICompositorInterop,
+    };
+    use windows::Win32::System::WinRT::Direct3D11::CreateDirect3D11SurfaceFromDXGISurface;
     use windows::Win32::System::WinRT::{
         CreateDispatcherQueueController, DispatcherQueueOptions, RoInitialize, DQTAT_COM_NONE,
         DQTYPE_THREAD_CURRENT, RO_INIT_MULTITHREADED,
@@ -157,7 +176,9 @@ mod receiver {
         WS_CLIPSIBLINGS, WS_DISABLED, WS_EX_NOACTIVATE,
     };
     use windows::UI::Composition::Desktop::DesktopWindowTarget;
-    use windows::UI::Composition::{CompositionStretch, Compositor, SpriteVisual};
+    use windows::UI::Composition::{
+        CompositionDrawingSurface, CompositionStretch, Compositor, ICompositionSurface, SpriteVisual,
+    };
 
     thread_local! {
         static STATE: RefCell<Option<State>> = const { RefCell::new(None) };
@@ -244,6 +265,199 @@ mod receiver {
         DefWindowProcW(hwnd, message, wparam, lparam)
     }
 
+    /// How often a small copy of the frame is looked at for black bars.
+    const MEASURE_EVERY: Duration = Duration::from_millis(250);
+    /// Width of that copy: enough to place the bars within a few pixels.
+    const SAMPLE_WIDTH: u32 = 480;
+
+    /// A texture, and the same texture as Windows' media classes see it.
+    struct Texture {
+        texture: ID3D11Texture2D,
+        surface: IDirect3DSurface,
+        width: u32,
+        height: u32,
+    }
+
+    impl Texture {
+        fn new(device: &ID3D11Device, width: u32, height: u32) -> Result<Self> {
+            let texture = create_texture(device, width, height, false)?;
+            let dxgi: IDXGISurface = texture.cast()?;
+            let surface = unsafe { CreateDirect3D11SurfaceFromDXGISurface(&dxgi)? }.cast()?;
+            Ok(Self { texture, surface, width, height })
+        }
+    }
+
+    fn create_texture(device: &ID3D11Device, width: u32, height: u32, staging: bool) -> Result<ID3D11Texture2D> {
+        let desc = D3D11_TEXTURE2D_DESC {
+            Width: width,
+            Height: height,
+            MipLevels: 1,
+            ArraySize: 1,
+            Format: DXGI_FORMAT_B8G8R8A8_UNORM,
+            SampleDesc: DXGI_SAMPLE_DESC { Count: 1, Quality: 0 },
+            Usage: if staging { D3D11_USAGE_STAGING } else { D3D11_USAGE_DEFAULT },
+            BindFlags: if staging { 0 } else { (D3D11_BIND_RENDER_TARGET.0 | D3D11_BIND_SHADER_RESOURCE.0) as u32 },
+            CPUAccessFlags: if staging { D3D11_CPU_ACCESS_READ.0 as u32 } else { 0 },
+            MiscFlags: 0,
+        };
+        let mut texture = None;
+        unsafe { device.CreateTexture2D(&desc, None, Some(&mut texture))? };
+        texture.ok_or_else(|| Error::from(E_FAIL))
+    }
+
+    /// Draws each frame the phone sends into the stage, without black bars.
+    /// Runs on the media player's own thread, as frames arrive.
+    struct Renderer {
+        device: ID3D11Device,
+        context: ID3D11DeviceContext,
+        target: ICompositionDrawingSurfaceInterop,
+        target_size: (u32, u32),
+        frame: Option<Texture>,
+        /// The small copy, and where it is read back from.
+        sample: Option<(Texture, ID3D11Texture2D)>,
+        measured: Option<Instant>,
+        framing: Framing,
+        queue: DispatcherQueue,
+    }
+
+    // The Direct3D device is multithread-protected, and the renderer is only
+    // ever used behind a mutex.
+    unsafe impl Send for Renderer {}
+
+    impl Renderer {
+        /// Returns the renderer and the surface it draws on.
+        fn new(compositor: &Compositor, queue: DispatcherQueue) -> Result<(Self, CompositionDrawingSurface)> {
+            let mut device = None;
+            let mut context = None;
+            unsafe {
+                D3D11CreateDevice(
+                    None,
+                    D3D_DRIVER_TYPE_HARDWARE,
+                    HMODULE::default(),
+                    D3D11_CREATE_DEVICE_BGRA_SUPPORT,
+                    None,
+                    D3D11_SDK_VERSION,
+                    Some(&mut device),
+                    None,
+                    Some(&mut context),
+                )?;
+            }
+            let device = device.ok_or_else(|| Error::from(E_FAIL))?;
+            let context = context.ok_or_else(|| Error::from(E_FAIL))?;
+            // Composition uses the device from its own thread too.
+            unsafe {
+                let _ = context.cast::<ID3D11Multithread>()?.SetMultithreadProtected(true);
+            }
+
+            let interop: ICompositorInterop = compositor.cast()?;
+            let graphics = unsafe { interop.CreateGraphicsDevice(&device)? };
+            let surface = graphics.CreateDrawingSurface(
+                Size { Width: 16.0, Height: 16.0 },
+                DirectXPixelFormat::B8G8R8A8UIntNormalized,
+                DirectXAlphaMode::Ignore,
+            )?;
+            let renderer = Self {
+                device,
+                context,
+                target: surface.cast()?,
+                target_size: (16, 16),
+                frame: None,
+                sample: None,
+                measured: None,
+                framing: Framing::default(),
+                queue,
+            };
+            Ok((renderer, surface))
+        }
+
+        fn draw(&mut self, player: &MediaPlayer) -> Result<()> {
+            let session = player.PlaybackSession()?;
+            let (width, height) = (session.NaturalVideoWidth()?, session.NaturalVideoHeight()?);
+            if width == 0 || height == 0 {
+                return Ok(());
+            }
+            if self.frame.as_ref().is_none_or(|frame| (frame.width, frame.height) != (width, height)) {
+                self.frame = Some(Texture::new(&self.device, width, height)?);
+                self.sample = None;
+                self.measured = None;
+                self.framing = Framing::default();
+            }
+            let Some(frame) = &self.frame else { return Ok(()) };
+            player.CopyFrameToVideoSurface(&frame.surface)?;
+
+            if self.measured.is_none_or(|at| at.elapsed() >= MEASURE_EVERY) {
+                self.measured = Some(Instant::now());
+                self.measure(player, width, height)?;
+            }
+            let crop = self.framing.shown().unwrap_or(Rect::full(width, height));
+
+            if (crop.width, crop.height) != self.target_size {
+                unsafe { self.target.Resize(SIZE { cx: crop.width as i32, cy: crop.height as i32 })? };
+                self.target_size = (crop.width, crop.height);
+                let (width, height) = self.target_size;
+                post(&self.queue, move |state| state.sized(width, height));
+            }
+
+            let Some(frame) = &self.frame else { return Ok(()) };
+            let mut offset = POINT::default();
+            unsafe {
+                let drawing: IDXGISurface = self.target.BeginDraw(None, &mut offset)?;
+                let texture: ID3D11Texture2D = drawing.cast()?;
+                let area = D3D11_BOX {
+                    left: crop.x,
+                    top: crop.y,
+                    front: 0,
+                    right: crop.x + crop.width,
+                    bottom: crop.y + crop.height,
+                    back: 1,
+                };
+                self.context.CopySubresourceRegion(
+                    &texture,
+                    0,
+                    offset.x as u32,
+                    offset.y as u32,
+                    0,
+                    &frame.texture,
+                    0,
+                    Some(&area),
+                );
+                self.target.EndDraw()?;
+            }
+            Ok(())
+        }
+
+        /// Copies the frame small, reads it back, and updates where the bars are.
+        fn measure(&mut self, player: &MediaPlayer, width: u32, height: u32) -> Result<()> {
+            if self.sample.is_none() {
+                let sample_width = SAMPLE_WIDTH.min(width);
+                let sample_height = ((u64::from(height) * u64::from(sample_width)) / u64::from(width)).max(1) as u32;
+                let texture = Texture::new(&self.device, sample_width, sample_height)?;
+                let staging = create_texture(&self.device, sample_width, sample_height, true)?;
+                self.sample = Some((texture, staging));
+            }
+            let Some((sample, staging)) = &self.sample else { return Ok(()) };
+            let area = windows::Foundation::Rect {
+                X: 0.0,
+                Y: 0.0,
+                Width: sample.width as f32,
+                Height: sample.height as f32,
+            };
+            player.CopyFrameToVideoSurfaceWithTargetRectangle(&sample.surface, area)?;
+            let found = unsafe {
+                self.context.CopyResource(staging, &sample.texture);
+                let mut mapped = D3D11_MAPPED_SUBRESOURCE::default();
+                self.context.Map(staging, 0, D3D11_MAP_READ, 0, Some(&mut mapped))?;
+                let stride = mapped.RowPitch as usize;
+                let pixels = std::slice::from_raw_parts(mapped.pData as *const u8, stride * sample.height as usize);
+                let found = letterbox::content(pixels, sample.width, sample.height, stride);
+                self.context.Unmap(staging, 0);
+                found
+            };
+            self.framing.update(found, (sample.width, sample.height), (width, height));
+            Ok(())
+        }
+    }
+
     pub struct State {
         app: AppHandle,
         settings: Arc<Mutex<Settings>>,
@@ -256,7 +470,7 @@ mod receiver {
         connection: Option<MiracastReceiverConnection>,
         client: Option<Client>,
         player: Option<MediaPlayer>,
-        surface: Option<MediaPlayerSurface>,
+        renderer: Option<Arc<Mutex<Renderer>>>,
         stage: Option<Stage>,
         /// Set while checking again in the background, so a check that
         /// changes nothing leaves nothing in the log.
@@ -299,7 +513,7 @@ mod receiver {
             connection: None,
             client: None,
             player: None,
-            surface: None,
+            renderer: None,
             stage: None,
             quiet: false,
         };
@@ -401,8 +615,11 @@ mod receiver {
             let name = self.settings.lock().unwrap().name.clone();
             let settings = receiver.GetDefaultSettings()?;
             settings.SetFriendlyName(&HSTRING::from(name))?;
-            // Like AirPlay in the engine: no code to type on the phone.
-            settings.SetAuthorizationMethod(MiracastReceiverAuthorizationMethod::None)?;
+            // Like AirPlay in the engine: no code to type on the phone, unless
+            // the phone insists on one. Recent Samsung phones do, and with no
+            // PIN on offer they wait forever after the PC is tapped; the PIN
+            // is then shown in the app.
+            settings.SetAuthorizationMethod(MiracastReceiverAuthorizationMethod::PinDisplayIfRequested)?;
             settings.SetRequireAuthorizationFromKnownTransmitters(false)?;
             let applied = receiver.DisconnectAllAndApplySettings(&settings)?.Status()?;
             if applied != MiracastReceiverApplySettingsStatus::Success {
@@ -416,13 +633,15 @@ mod receiver {
             let queue = self.queue.clone();
             session.ConnectionCreated(&TypedEventHandler::new(
                 move |_, args: Ref<MiracastReceiverConnectionCreatedEventArgs>| {
-                    if let Some(connection) = args.as_ref().and_then(|args| args.Connection().ok()) {
+                    let Some(args) = args.as_ref() else { return Ok(()) };
+                    if let Ok(connection) = args.Connection() {
                         let name = connection
                             .Transmitter()
                             .and_then(|transmitter| transmitter.Name())
                             .map(|name| name.to_string())
                             .unwrap_or_default();
-                        post(&queue, move |state| state.connected(connection, name));
+                        let pin = args.Pin().map(|pin| pin.to_string()).unwrap_or_default();
+                        post(&queue, move |state| state.connected(connection, name, pin));
                     }
                     Ok(())
                 },
@@ -530,9 +749,14 @@ mod receiver {
             unsafe { PostQuitMessage(0) };
         }
 
-        fn connected(&mut self, connection: MiracastReceiverConnection, name: String) {
+        fn connected(&mut self, connection: MiracastReceiverConnection, name: String, pin: String) {
             self.end();
-            self.note(format!("{name} is connecting"));
+            let pin = Some(pin.trim().to_string()).filter(|pin| !pin.is_empty());
+            if pin.is_some() {
+                self.note(format!("{name} is connecting and asked for a PIN"));
+            } else {
+                self.note(format!("{name} is connecting"));
+            }
             // The newest device takes over, whichever way it connects.
             if self.engine.has_client() {
                 self.engine.restart();
@@ -540,6 +764,7 @@ mod receiver {
             let client = Client {
                 name: if name.trim().is_empty() { "Android".into() } else { name.trim().to_string() },
                 model: "Android".into(),
+                pin,
             };
             self.connection = Some(connection);
             self.client = Some(client.clone());
@@ -555,49 +780,61 @@ mod receiver {
         }
 
         fn try_play(&mut self, source: MediaSource) -> Result<()> {
+            if let Some(client) = self.client.as_mut().filter(|client| client.pin.is_some()) {
+                client.pin = None;
+                self.engine.set_guest(Some(Guest { client: client.clone(), video: None }));
+            }
             if self.stage.is_none() {
                 self.stage = Some(Stage::create(&self.app)?);
             }
             let Some(stage) = &self.stage else { return Ok(()) };
 
+            let (renderer, surface) = Renderer::new(&stage.compositor, self.queue.clone())?;
+            let renderer = Arc::new(Mutex::new(renderer));
+
             let player = MediaPlayer::new()?;
-            // Show each frame as it arrives instead of buffering ahead.
+            // Show each frame as it arrives instead of buffering ahead, and
+            // hand each one over instead of drawing it.
             player.SetRealTimePlayback(true)?;
+            player.SetIsVideoFrameServerEnabled(true)?;
             player.SetIsMuted(!self.settings.lock().unwrap().sound)?;
 
-            let queue = self.queue.clone();
-            player.PlaybackSession()?.NaturalVideoSizeChanged(&TypedEventHandler::new(
-                move |session: Ref<MediaPlaybackSession>, _| {
-                    if let Some(session) = session.as_ref() {
-                        let (width, height) = (session.NaturalVideoWidth()?, session.NaturalVideoHeight()?);
-                        post(&queue, move |state| state.sized(width, height));
+            let drawing = renderer.clone();
+            let engine = self.engine.clone();
+            let mut failed = false;
+            player.VideoFrameAvailable(&TypedEventHandler::new(move |player: Ref<MediaPlayer>, _| {
+                if let (Some(player), Ok(mut renderer)) = (player.as_ref(), drawing.lock()) {
+                    if let Err(error) = renderer.draw(player) {
+                        // Once is enough: this would repeat for every frame.
+                        if !failed {
+                            failed = true;
+                            engine.note(format!("[mirlow] android: could not draw a frame: {error}"));
+                        }
                     }
-                    Ok(())
-                },
-            ))?;
+                }
+                Ok(())
+            }))?;
 
-            player.SetSource(&source)?;
-            player.SetSurfaceSize(Size { Width: 1920.0, Height: 1080.0 })?;
-            let surface = player.GetSurface(&stage.compositor)?;
-            let brush = stage.compositor.CreateSurfaceBrushWithSurface(&surface.CompositionSurface()?)?;
+            let brush = stage.compositor.CreateSurfaceBrushWithSurface(&surface.cast::<ICompositionSurface>()?)?;
             brush.SetStretch(CompositionStretch::Uniform)?;
             stage.visual.SetBrush(&brush)?;
+            player.SetSource(&source)?;
             player.Play()?;
 
             self.player = Some(player);
-            self.surface = Some(surface);
+            self.renderer = Some(renderer);
             Ok(())
         }
 
-        /// The size of the picture is known, or changed (the phone was turned).
+        /// The size of the picture is known, or changed: the phone was turned,
+        /// or black bars around it appeared or went away.
         fn sized(&mut self, width: u32, height: u32) {
-            let (Some(client), Some(stage), Some(player)) = (&self.client, &self.stage, &self.player) else {
+            let (Some(client), Some(stage), Some(_)) = (&self.client, &self.stage, &self.player) else {
                 return;
             };
             if width == 0 || height == 0 {
                 return;
             }
-            let _ = player.SetSurfaceSize(Size { Width: width as f32, Height: height as f32 });
             self.engine.set_guest(Some(Guest {
                 client: client.clone(),
                 video: Some(VideoSize { width, height }),
@@ -610,9 +847,7 @@ mod receiver {
             if let Some(player) = self.player.take() {
                 let _ = player.Close();
             }
-            if let Some(surface) = self.surface.take() {
-                let _ = surface.Close();
-            }
+            self.renderer = None;
             if let Some(stage) = &self.stage {
                 video::release(&self.app, stage.hwnd);
                 let _ = stage.visual.SetBrush(None);
@@ -634,7 +869,7 @@ mod receiver {
                 .and_then(|uri| MediaSource::CreateFromUri(&uri));
             match source {
                 Ok(source) => {
-                    let client = Client { name: "Android (rehearsal)".into(), model: "Android".into() };
+                    let client = Client { name: "Android (rehearsal)".into(), model: "Android".into(), pin: None };
                     self.client = Some(client.clone());
                     self.engine.set_guest(Some(Guest { client, video: None }));
                     self.play(source);

@@ -52,6 +52,7 @@ export const pt: Dictionary = {
       headline: "A ligar a {device}",
       headlineUnknown: "A ligar",
       body: "O seu ecrã aparece dentro de momentos.",
+      pin: "Escreva {pin} no telemóvel para ligar.",
     },
     mirroring: {
       from: "A projetar {device}",

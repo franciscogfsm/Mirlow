@@ -34,7 +34,7 @@ const status: Status = {
   name: settings.name,
   client:
     phase === "connecting" || phase === "audio" || phase === "mirroring"
-      ? { name: "Ana's iPhone", model: "iPhone16,1" }
+      ? { name: "Ana's iPhone", model: "iPhone16,1", pin: params.get("pin") }
       : null,
   video: phase === "mirroring" ? { width: 1170, height: 2532 } : null,
   error: phase === "error" ? "crashed" : null,

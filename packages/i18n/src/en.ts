@@ -49,6 +49,7 @@ export const en = {
       headline: "Connecting to {device}",
       headlineUnknown: "Connecting",
       body: "Your screen will appear in a moment.",
+      pin: "Enter {pin} on your phone to connect.",
     },
     mirroring: {
       from: "Mirroring {device}",

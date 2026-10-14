@@ -16,6 +16,8 @@ export type ErrorKind = "engineMissing" | "discovery" | "crashed" | "unknown";
 export interface Client {
   name: string;
   model: string;
+  /** A code to type on the device to let it connect, while it waits for one. */
+  pin: string | null;
 }
 
 export interface VideoSize {

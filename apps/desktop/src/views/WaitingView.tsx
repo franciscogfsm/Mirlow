@@ -161,7 +161,9 @@ export function WaitingView({
           headline: device
             ? format(t.connecting.headline, { device })
             : t.connecting.headlineUnknown,
-          body: t.connecting.body,
+          body: status.client?.pin
+            ? format(t.connecting.pin, { pin: status.client.pin })
+            : t.connecting.body,
           mode: "active",
         };
       case "audio":

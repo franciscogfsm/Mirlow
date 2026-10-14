@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -p tsconfig.json && vite build",
     "typecheck": "tsc -p tsconfig.json",
-    "tauri": "tauri"
+    "tauri": "node tauri.mjs"
   },
   "dependencies": {
     "@mirlow/i18n": "*",
