@@ -181,6 +181,14 @@ export const en = {
       fullscreen: "Full screen",
       settings: "Settings",
     },
+    update: {
+      available: "Mirlow {version} is here",
+      action: "Update",
+      downloading: "Updating… {percent}%",
+      installing: "Installing…",
+      failed: "Update didn't finish",
+      retry: "Try again",
+    },
     tray: {
       open: "Open Mirlow",
       quit: "Quit Mirlow",

@@ -78,6 +78,12 @@ export const api = {
   getEngineLog: () => invoke<string>("get_engine_log"),
   getDiagnostics: () => invoke<Diagnostics>("get_diagnostics"),
   fixAll: () => invoke<Diagnostics>("fix_all"),
+  checkUpdate: () => invoke<{ version: string } | null>("check_update"),
+  installUpdate: () => invoke<void>("install_update"),
+  onUpdateProgress: (handler: (progress: { downloaded: number; total: number | null }) => void) =>
+    listen<{ downloaded: number; total: number | null }>("update:progress", (event) =>
+      handler(event.payload),
+    ),
   openNetworkSettings: () => invoke<void>("open_network_settings"),
   openWindowsSettings: (page: "ms-settings:optionalfeatures" | "ms-settings:project") =>
     invoke<void>("open_windows_settings", { page }),

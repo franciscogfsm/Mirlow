@@ -89,7 +89,7 @@ if ($Version -ne $current) {
 
 & (Join-Path $PSScriptRoot 'build-installer.ps1') -Engine:$Engine
 
-$assets = 'Mirlow-Setup-x64.exe', 'THIRD-PARTY-RUNTIME.md', 'SHA256SUMS.txt' |
+$assets = 'Mirlow-Setup-x64.exe', 'THIRD-PARTY-RUNTIME.md', 'latest.json', 'SHA256SUMS.txt' |
     ForEach-Object { Join-Path $repo "release\$_" }
 $assets | ForEach-Object { if (-not (Test-Path $_)) { throw "Missing $_." } }
 

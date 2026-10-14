@@ -187,6 +187,14 @@ export const pt: Dictionary = {
       fullscreen: "Ecrã inteiro",
       settings: "Definições",
     },
+    update: {
+      available: "Já saiu o Mirlow {version}",
+      action: "Atualizar",
+      downloading: "A atualizar… {percent}%",
+      installing: "A instalar…",
+      failed: "A atualização não terminou",
+      retry: "Tentar novamente",
+    },
     tray: {
       open: "Abrir o Mirlow",
       quit: "Sair do Mirlow",

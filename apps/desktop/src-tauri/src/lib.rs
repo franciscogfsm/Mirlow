@@ -3,6 +3,7 @@ mod engine;
 mod miracast;
 mod settings;
 mod tray;
+mod updater;
 mod video;
 
 use engine::{Engine, Status};
@@ -141,6 +142,7 @@ pub fn run() {
             tray::show_window(app);
         }))
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(video::Video::default())
         // Closing the window keeps Mirlow running in the notification area, so
         // the PC stays discoverable. Quitting is done from the tray menu.
@@ -162,6 +164,8 @@ pub fn run() {
             open_windows_settings,
             layout_video,
             tray::set_tray_text,
+            updater::check_update,
+            updater::install_update,
         ])
         .setup(|app| {
             let handle = app.handle().clone();

@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { HelpSheet } from "./components/HelpSheet";
 import { SettingsSheet } from "./components/SettingsSheet";
 import { TitleBar } from "./components/TitleBar";
+import { UpdatePill } from "./components/UpdatePill";
 import { api, type Settings, type Status, type VideoSize } from "./lib/api";
 import { HOME_MIN, HOME_SIZE, MIRROR_BAR, MIRROR_FRAME, MIRROR_MIN } from "./lib/frame";
 import { I18nProvider, resolveLocale, useI18n } from "./lib/i18n";
@@ -282,6 +283,8 @@ function Shell({
           </motion.div>
         </AnimatePresence>
       </main>
+
+      <UpdatePill hidden={mirroring || settingsOpen || helpOpen} />
 
       <SettingsSheet
         open={settingsOpen}

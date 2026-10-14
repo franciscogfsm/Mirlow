@@ -31,6 +31,7 @@
   "bundle": {
     "active": true,
     "targets": ["nsis"],
+    "createUpdaterArtifacts": true,
     "publisher": "Mirlow",
     "copyright": "Copyright © 2026 the Mirlow contributors. GPL-3.0-or-later.",
     "category": "Utility",
@@ -62,6 +63,13 @@
         "displayLanguageSelector": false,
         "compression": "lzma"
       }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDg2RUQ5MzkyNTcwRkYwNDIKUldSQzhBOVhrcFB0aHArZU52a0ZrREQ5MjU3SVN5K2M3MFJobjdRYllqakEwRklFV3Y1MnRNR0sK",
+      "endpoints": ["https://github.com/franciscogfsm/Mirlow/releases/latest/download/latest.json"],
+      "windows": { "installMode": "passive" }
     }
   }
 }

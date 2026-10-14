@@ -66,6 +66,10 @@ mockIPC((command, payload) => {
       return diagnostics;
     case "get_engine_log":
       return "UxPlay 1.74: An Open-Source AirPlay mirroring and audio-streaming server.\n[mirlow] the engine exited unexpectedly";
+    case "check_update":
+      return params.get("update") ? { version: params.get("update") } : null;
+    case "install_update":
+      return new Promise((_, reject) => setTimeout(() => reject("offline"), 2000));
     case "fix_all":
       return new Promise((resolve) =>
         setTimeout(() => {
