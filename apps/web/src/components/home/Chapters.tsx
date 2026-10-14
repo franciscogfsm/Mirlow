@@ -59,12 +59,7 @@ export function HeroChapter({ t, how }: { t: Site["hero"]; how: Site["how"] }) {
     <Frame className="pb-16 pt-[132px]">
       <div className="grid w-full items-center gap-12 pinned:grid-cols-[minmax(0,6fr)_minmax(0,7fr)] pinned:gap-14">
         <div className="flex flex-col items-center text-center pinned:items-start pinned:text-left">
-          <p className="pill rise" style={order(0)}>
-            <span className="pill-tag">v{release.version}</span>
-            <span className="shiny">{t.eyebrow}</span>
-          </p>
-
-          <h1 className="mt-7 text-[clamp(2.6rem,7.6vw,4.6rem)] font-semibold leading-[1] tracking-[-0.045em] pinned:text-[clamp(2.5rem,3.9vw,3.9rem)]">
+          <h1 className="text-[clamp(2.6rem,7.6vw,4.6rem)] font-semibold leading-[1] tracking-[-0.045em] pinned:text-[clamp(2.5rem,3.9vw,3.9rem)]">
             <span className="rise block" style={order(1)}>
               {t.titleLine1}
             </span>

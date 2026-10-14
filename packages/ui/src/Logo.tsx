@@ -48,14 +48,25 @@ export interface WordmarkProps {
   gradient?: boolean;
 }
 
-/** Mark and name together. The name is real text, so it is selectable and read aloud once. */
+/**
+ * Mark and name together. The name is real text, so it is selectable and read aloud once.
+ * The mark is cropped to its stroke and sat on the text baseline at x-height, so it lines
+ * up with the lowercase letters instead of floating in its 24-unit box.
+ */
 export function Wordmark({ size = 20, className, gradient = true }: WordmarkProps) {
+  const markHeight = size * 0.56;
   return (
     <span
       className={className}
-      style={{ display: "inline-flex", alignItems: "center", gap: size * 0.36 }}
+      style={{ display: "inline-flex", alignItems: "baseline", gap: size * 0.34 }}
     >
-      <Mark size={size * 1.15} gradient={gradient} />
+      <Mark
+        gradient={gradient}
+        viewBox="3.8 6.3 16.4 12.4"
+        width={markHeight * (16.4 / 12.4)}
+        height={markHeight}
+        style={{ overflow: "visible" }}
+      />
       <span
         style={{
           fontSize: size,
