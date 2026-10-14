@@ -32,7 +32,9 @@ if (-not $env:TAURI_SIGNING_PRIVATE_KEY) {
     $keyArgs = '--private-key-path', $UpdaterKey
 }
 # Through node rather than npm, which would split the paths at their spaces.
-node (Join-Path $repo 'node_modules\@tauri-apps\cli\tauri.js') signer sign @keyArgs --app-version $version $installer
+# Input is piped in so it never asks for the password at a terminal: what is
+# typed there is not taken as the empty password the key has.
+'' | node (Join-Path $repo 'node_modules\@tauri-apps\cli\tauri.js') signer sign @keyArgs --app-version $version $installer
 if ($LASTEXITCODE -ne 0) { throw "Signing the update failed (exit code $LASTEXITCODE)." }
 $signatureFile = "$installer.sig"
 $signature = (Get-Content $signatureFile -Raw).Trim()
