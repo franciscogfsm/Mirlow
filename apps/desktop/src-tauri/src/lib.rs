@@ -66,25 +66,56 @@ fn get_engine_log(engine: State<'_, Engine>) -> String {
 }
 
 #[tauri::command]
-async fn get_diagnostics() -> diagnostics::Diagnostics {
-    diagnostics::collect()
+async fn get_diagnostics(app: AppHandle) -> diagnostics::Diagnostics {
+    diagnostics::collect(app.state::<Miracast>().status())
 }
 
-/// Asks Windows (with its permission prompt) to let the engine through the
-/// firewall, then restarts the engine so it announces itself again.
+/// Asks Windows (with its permission prompt) to let the engine and the app
+/// through the firewall, then restarts both receivers so they announce
+/// themselves again.
 #[tauri::command]
 async fn allow_firewall(app: AppHandle) -> bool {
-    let exe = app.state::<AppState>().engine_dir.join("bin").join("mirlow-engine.exe");
-    let allowed = diagnostics::allow_firewall(&exe);
+    let engine_exe = app.state::<AppState>().engine_dir.join("bin").join("mirlow-engine.exe");
+    let app_exe = std::env::current_exe().ok();
+    let mut programs = vec![engine_exe.as_path()];
+    programs.extend(app_exe.as_deref());
+    let allowed = diagnostics::allow_firewall(&programs);
     if allowed {
         app.state::<Engine>().restart();
+        app.state::<Miracast>().retry();
     }
     allowed
+}
+
+/// Installs Windows' Wireless Display feature (with its permission prompt),
+/// then listens for Android phones again and reports how that went.
+#[tauri::command]
+async fn install_wireless_display(app: AppHandle) -> miracast::AndroidStatus {
+    diagnostics::install_wireless_display();
+    let miracast = app.state::<Miracast>();
+    miracast.retry();
+    // Listening again takes a moment; wait for the answer, within reason.
+    for _ in 0..50 {
+        if miracast.status() != miracast::AndroidStatus::Starting {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(100));
+    }
+    miracast.status()
 }
 
 #[tauri::command]
 fn open_network_settings() {
     diagnostics::open_network_settings();
+}
+
+/// Opens a page of Windows Settings the help sheet points to.
+#[tauri::command]
+fn open_windows_settings(page: &str) {
+    const PAGES: [&str; 2] = ["ms-settings:optionalfeatures", "ms-settings:project"];
+    if PAGES.contains(&page) {
+        diagnostics::open_settings(page);
+    }
 }
 
 /// Tells the native video window where the interface wants the picture.
@@ -119,7 +150,9 @@ pub fn run() {
             get_engine_log,
             get_diagnostics,
             allow_firewall,
+            install_wireless_display,
             open_network_settings,
+            open_windows_settings,
             layout_video,
             tray::set_tray_text,
         ])

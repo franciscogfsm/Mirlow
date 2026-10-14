@@ -13,11 +13,19 @@
   Pop $0
   nsExec::Exec 'netsh advfirewall firewall add rule name="Mirlow" dir=in action=allow program="$INSTDIR\engine\bin\mirlow-engine.exe" enable=yes profile=any description="Lets your iPhone or iPad find and mirror to this PC with Mirlow."'
   Pop $0
+  ; The app itself receives Android phones over Miracast. That link is a
+  ; Wi-Fi Direct network, which Windows treats as Public, so it needs its own rule.
+  nsExec::Exec 'netsh advfirewall firewall delete rule name=all program="$INSTDIR\${MAINBINARYNAME}.exe"'
+  Pop $0
+  nsExec::Exec 'netsh advfirewall firewall add rule name="Mirlow" dir=in action=allow program="$INSTDIR\${MAINBINARYNAME}.exe" enable=yes profile=any description="Lets your Android phone mirror to this PC with Mirlow."'
+  Pop $0
 !macroend
 
 !macro NSIS_HOOK_PREUNINSTALL
   nsExec::Exec 'netsh advfirewall firewall delete rule name="Mirlow"'
   Pop $0
   nsExec::Exec 'netsh advfirewall firewall delete rule name=all program="$INSTDIR\engine\bin\mirlow-engine.exe"'
+  Pop $0
+  nsExec::Exec 'netsh advfirewall firewall delete rule name=all program="$INSTDIR\${MAINBINARYNAME}.exe"'
   Pop $0
 !macroend

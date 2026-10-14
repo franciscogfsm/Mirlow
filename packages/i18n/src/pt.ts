@@ -80,6 +80,31 @@ export const pt: Dictionary = {
         working: "A aguardar o Windows…",
         failed: "O Windows não aplicou a alteração. Pode tentar novamente.",
       },
+      android: {
+        ready: "Pronto para Android",
+        readyBody: "No telemóvel, abra Smart View, Transmitir ou Ecrã sem fios e escolha este PC.",
+        needsFeature: {
+          title: "Ativar o espelhamento de Android",
+          body: "Os telemóveis Android precisam da funcionalidade Ecrã sem fios do Windows, que não está instalada. O Windows vai pedir permissão e transferi‑la, o que pode demorar alguns minutos.",
+          action: "Instalar Ecrã sem fios",
+          working: "A instalar… pode demorar alguns minutos",
+          failed: "O Windows não a instalou. Abra Funcionalidades opcionais, escolha Adicionar uma funcionalidade e adicione Ecrã sem fios.",
+          settings: "Abrir Funcionalidades opcionais",
+        },
+        wifiOff: {
+          title: "Ligue o Wi‑Fi deste PC",
+          body: "Os telemóveis Android ligam‑se diretamente ao PC por Wi‑Fi, mesmo que o PC use Ethernet.",
+        },
+        unsupported: {
+          title: "Este PC não consegue receber Android",
+          body: "O adaptador Wi‑Fi não suporta Miracast, que é o que os telemóveis Android usam. O iPhone continua a funcionar.",
+        },
+        disabled: {
+          title: "A projeção para este PC está desligada",
+          body: "O Windows está definido para não aceitar ecrãs de outros dispositivos. Ative‑a em Projetar para este PC.",
+          action: "Abrir definições de projeção",
+        },
+      },
       publicNetwork: {
         title: "Esta rede está definida como Pública",
         body: "O Windows esconde o PC nas redes públicas. Se estiver em casa, mude esta rede para Privada nas definições do Windows.",

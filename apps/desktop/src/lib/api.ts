@@ -43,9 +43,19 @@ export interface Settings {
   language: LanguageSetting;
 }
 
+/** Mirrors `miracast::AndroidStatus` in the Rust backend. */
+export type AndroidStatus =
+  | "starting"
+  | "listening"
+  | "needsFeature"
+  | "wifiOff"
+  | "unsupported"
+  | "disabled";
+
 export interface Diagnostics {
   firewallAllowed: boolean;
   network: { name: string; category: "public" | "private" | "domain" } | null;
+  android: AndroidStatus;
 }
 
 /** A rectangle in physical pixels, relative to the window's client area. */
@@ -66,7 +76,10 @@ export const api = {
   getEngineLog: () => invoke<string>("get_engine_log"),
   getDiagnostics: () => invoke<Diagnostics>("get_diagnostics"),
   allowFirewall: () => invoke<boolean>("allow_firewall"),
+  installWirelessDisplay: () => invoke<AndroidStatus>("install_wireless_display"),
   openNetworkSettings: () => invoke<void>("open_network_settings"),
+  openWindowsSettings: (page: "ms-settings:optionalfeatures" | "ms-settings:project") =>
+    invoke<void>("open_windows_settings", { page }),
   setTrayText: (text: { status: string; open: string; quit: string }) =>
     invoke<void>("set_tray_text", text),
   layoutVideo: (rect: Rect, visible: boolean, radius: number) =>

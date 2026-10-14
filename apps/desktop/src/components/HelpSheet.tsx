@@ -1,6 +1,6 @@
-import { Globe, Lock, RotateCw, Shield, ShieldCheck, Wifi, WifiOff } from "lucide-react";
+import { Globe, Lock, RotateCw, Shield, ShieldCheck, Smartphone, Wifi, WifiOff } from "lucide-react";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { api, type Diagnostics } from "../lib/api";
+import { api, type AndroidStatus, type Diagnostics } from "../lib/api";
 import { useI18n } from "../lib/i18n";
 import { GlassButton } from "./controls";
 import { Sheet } from "./Sheet";
@@ -32,6 +32,59 @@ function Item({
 }
 
 type FirewallState = "idle" | "working" | "failed";
+
+/** Whether Android phones can find this PC, and the fix when they can't. */
+function AndroidItem({ status, onChange }: { status: AndroidStatus; onChange: () => void }) {
+  const { t } = useI18n();
+  const a = t.help.android;
+  const [install, setInstall] = useState<FirewallState>("idle");
+  const size = 18;
+
+  const run = async () => {
+    setInstall("working");
+    const next = await api.installWirelessDisplay().catch(() => null);
+    setInstall(next === "listening" ? "idle" : "failed");
+    onChange();
+  };
+
+  switch (status) {
+    case "listening":
+      return <Item tone="good" icon={<Smartphone size={size} />} title={a.ready} body={a.readyBody} />;
+    case "needsFeature":
+      return (
+        <Item
+          tone="warn"
+          icon={<Smartphone size={size} />}
+          title={a.needsFeature.title}
+          body={install === "failed" ? a.needsFeature.failed : a.needsFeature.body}
+        >
+          {install === "failed" ? (
+            <GlassButton onClick={() => void api.openWindowsSettings("ms-settings:optionalfeatures")}>
+              {a.needsFeature.settings}
+            </GlassButton>
+          ) : (
+            <GlassButton tone="accent" onClick={run} disabled={install === "working"}>
+              {install === "working" ? a.needsFeature.working : a.needsFeature.action}
+            </GlassButton>
+          )}
+        </Item>
+      );
+    case "wifiOff":
+      return <Item tone="warn" icon={<WifiOff size={size} />} title={a.wifiOff.title} body={a.wifiOff.body} />;
+    case "unsupported":
+      return <Item icon={<Smartphone size={size} />} title={a.unsupported.title} body={a.unsupported.body} />;
+    case "disabled":
+      return (
+        <Item tone="warn" icon={<Smartphone size={size} />} title={a.disabled.title} body={a.disabled.body}>
+          <GlassButton onClick={() => void api.openWindowsSettings("ms-settings:project")}>
+            {a.disabled.action}
+          </GlassButton>
+        </Item>
+      );
+    default:
+      return null;
+  }
+}
 
 /**
  * Help for the one thing that goes wrong: the iPhone not seeing this PC.
@@ -72,6 +125,8 @@ export function HelpSheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange} title={h.title} closeLabel={t.settings.close}>
       <ul>
+        {diagnostics && <AndroidItem status={diagnostics.android} onChange={refresh} />}
+
         {diagnostics && !network && (
           <Item
             tone="warn"

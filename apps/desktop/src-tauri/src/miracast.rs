@@ -16,10 +16,30 @@
 
 use crate::engine::Engine;
 use crate::settings::Settings;
+use serde::Serialize;
 use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Manager};
 
+/// Whether an Android phone can find this PC right now, and if not, why.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum AndroidStatus {
+    Starting,
+    Listening,
+    /// Windows' "Wireless Display" optional feature, which holds the Miracast
+    /// receiver, is missing. It is not installed by default since Windows 10
+    /// 2004, so this is the usual reason a phone does not see the PC.
+    NeedsFeature,
+    /// The Wi-Fi adapter is off, so nothing can be announced.
+    WifiOff,
+    /// The Wi-Fi adapter cannot do Miracast at all.
+    Unsupported,
+    /// "Projecting to this PC" is turned off, by the user or by policy.
+    Disabled,
+}
+
 pub struct Miracast {
+    status: Arc<Mutex<AndroidStatus>>,
     #[cfg(windows)]
     queue: Arc<Mutex<Option<windows::System::DispatcherQueue>>>,
 }
@@ -28,26 +48,44 @@ impl Miracast {
     /// Starts listening for Android devices. Never fails: on a PC that cannot
     /// receive Miracast the reason is noted in the log and nothing else changes.
     pub fn start(app: AppHandle, settings: Arc<Mutex<Settings>>, engine: Engine) -> Self {
+        let status = Arc::new(Mutex::new(AndroidStatus::Starting));
         #[cfg(windows)]
         {
             let queue = Arc::new(Mutex::new(None));
             let slot = queue.clone();
+            let shared = status.clone();
             let spawned = std::thread::Builder::new().name("miracast".into()).spawn(move || {
                 let log = engine.clone();
-                if let Err(error) = receiver::run(app, settings, engine, slot) {
+                if let Err(error) = receiver::run(app, settings, engine, shared.clone(), slot) {
                     log.note(format!("[mirlow] android: receiver stopped: {error}"));
+                    *shared.lock().unwrap() = AndroidStatus::NeedsFeature;
                 }
             });
             if spawned.is_err() {
                 // Nothing to do: the app works without it.
             }
-            Self { queue }
+            Self { status, queue }
         }
         #[cfg(not(windows))]
         {
             let _ = (app, settings, engine);
-            Self {}
+            *status.lock().unwrap() = AndroidStatus::Unsupported;
+            Self { status }
         }
+    }
+
+    pub fn status(&self) -> AndroidStatus {
+        *self.status.lock().unwrap()
+    }
+
+    /// Starts listening again from scratch, after Windows' setup changed.
+    pub fn retry(&self) {
+        *self.status.lock().unwrap() = AndroidStatus::Starting;
+        #[cfg(windows)]
+        self.post(|state| {
+            state.close();
+            state.listen();
+        });
     }
 
     /// Applies the current name and sound settings.
@@ -85,13 +123,14 @@ pub fn disconnect(app: &AppHandle) {
 
 #[cfg(windows)]
 mod receiver {
+    use super::AndroidStatus;
     use crate::engine::{Client, Engine, Guest, VideoSize};
     use crate::settings::Settings;
     use crate::video;
     use std::cell::RefCell;
     use std::sync::{Arc, Mutex};
     use tauri::AppHandle;
-    use windows::core::{w, Error, Interface, Ref, Result, HSTRING};
+    use windows::core::{w, Error, IInspectable, Interface, Ref, Result, HSTRING};
     use windows_numerics::Vector2;
     use windows::Foundation::{Size, TypedEventHandler};
     use windows::Media::Core::MediaSource;
@@ -99,8 +138,8 @@ mod receiver {
         MiracastReceiver, MiracastReceiverApplySettingsStatus, MiracastReceiverAuthorizationMethod,
         MiracastReceiverConnection, MiracastReceiverConnectionCreatedEventArgs,
         MiracastReceiverDisconnectReason, MiracastReceiverDisconnectedEventArgs,
-        MiracastReceiverMediaSourceCreatedEventArgs, MiracastReceiverSession,
-        MiracastReceiverSessionStartStatus, MiracastReceiverWiFiStatus,
+        MiracastReceiverListeningStatus, MiracastReceiverMediaSourceCreatedEventArgs,
+        MiracastReceiverSession, MiracastReceiverSessionStartStatus, MiracastReceiverWiFiStatus,
     };
     use windows::Media::Playback::{MediaPlaybackSession, MediaPlayer, MediaPlayerSurface};
     use windows::System::{DispatcherQueue, DispatcherQueueHandler};
@@ -209,8 +248,10 @@ mod receiver {
         app: AppHandle,
         settings: Arc<Mutex<Settings>>,
         engine: Engine,
+        status: Arc<Mutex<AndroidStatus>>,
         queue: DispatcherQueue,
         receiver: Option<MiracastReceiver>,
+        watch: Option<i64>,
         session: Option<MiracastReceiverSession>,
         connection: Option<MiracastReceiverConnection>,
         client: Option<Client>,
@@ -223,6 +264,7 @@ mod receiver {
         app: AppHandle,
         settings: Arc<Mutex<Settings>>,
         engine: Engine,
+        status: Arc<Mutex<AndroidStatus>>,
         slot: Arc<Mutex<Option<DispatcherQueue>>>,
     ) -> Result<()> {
         // The picture is drawn through Windows' compositor, which needs a
@@ -241,8 +283,10 @@ mod receiver {
             app,
             settings,
             engine,
+            status,
             queue: queue.clone(),
             receiver: None,
+            watch: None,
             session: None,
             connection: None,
             client: None,
@@ -272,22 +316,47 @@ mod receiver {
             self.engine.note(format!("[mirlow] android: {}", text.as_ref()));
         }
 
-        fn listen(&mut self) {
-            match self.open() {
-                Ok(true) => self.note("listening for Miracast devices"),
-                Ok(false) => {}
-                Err(error) => self.note(format!("could not start the receiver: {error}")),
-            }
+        fn set_status(&self, status: AndroidStatus) {
+            *self.status.lock().unwrap() = status;
         }
 
-        /// Starts a receiver session. `Ok(false)` means this PC cannot, and why
-        /// has been noted.
-        fn open(&mut self) -> Result<bool> {
+        pub fn listen(&mut self) {
+            let status = match self.open() {
+                Ok(status) => status,
+                Err(error) => {
+                    self.note(format!("could not start the receiver: {error}"));
+                    AndroidStatus::NeedsFeature
+                }
+            };
+            if status == AndroidStatus::Listening {
+                self.note("listening for Miracast devices");
+            }
+            self.set_status(status);
+        }
+
+        /// Starts a receiver session, and says whether phones can now find this
+        /// PC. When they cannot, the reason has been noted.
+        fn open(&mut self) -> Result<AndroidStatus> {
             let receiver = MiracastReceiver::new()?;
-            let wifi = receiver.GetStatus()?.WiFiStatus()?;
+            // Kept even when listening fails, to hear when the Wi-Fi comes back.
+            let queue = self.queue.clone();
+            self.watch = receiver
+                .StatusChanged(&TypedEventHandler::new(move |_, _: Ref<IInspectable>| {
+                    post(&queue, |state| state.status_changed());
+                    Ok(())
+                }))
+                .ok();
+            self.receiver = Some(receiver.clone());
+
+            let status = receiver.GetStatus()?;
+            let wifi = status.WiFiStatus()?;
             if wifi == MiracastReceiverWiFiStatus::MiracastNotSupported {
                 self.note("this PC's Wi-Fi adapter does not support Miracast");
-                return Ok(false);
+                return Ok(AndroidStatus::Unsupported);
+            }
+            if status.ListeningStatus()? == MiracastReceiverListeningStatus::DisabledByPolicy {
+                self.note("projecting to this PC is turned off in Windows");
+                return Ok(AndroidStatus::Disabled);
             }
 
             let name = self.settings.lock().unwrap().name.clone();
@@ -342,19 +411,50 @@ mod receiver {
                 let error = started.ExtendedError().map(|error| error.0).unwrap_or_default();
                 self.note(format!("Windows would not start listening ({}, {error:#010x})", status.0));
                 let _ = session.Close();
-                return Ok(false);
+                return Ok(match status {
+                    MiracastReceiverSessionStartStatus::AccessDenied => AndroidStatus::Disabled,
+                    MiracastReceiverSessionStartStatus::MiracastNotSupported => AndroidStatus::Unsupported,
+                    // An adapter that cannot say whether it does Miracast is
+                    // one that is switched off.
+                    _ if wifi == MiracastReceiverWiFiStatus::MiracastSupportUndetermined => {
+                        AndroidStatus::WifiOff
+                    }
+                    // The adapter can do it, so what is missing is the
+                    // receiver itself: the Wireless Display feature.
+                    _ => AndroidStatus::NeedsFeature,
+                });
             }
-            self.receiver = Some(receiver);
             self.session = Some(session);
-            Ok(true)
+            Ok(AndroidStatus::Listening)
         }
 
-        fn close(&mut self) {
+        pub fn close(&mut self) {
             self.end();
             if let Some(session) = self.session.take() {
                 let _ = session.Close();
             }
-            self.receiver = None;
+            if let Some(receiver) = self.receiver.take() {
+                if let Some(token) = self.watch.take() {
+                    let _ = receiver.RemoveStatusChanged(token);
+                }
+            }
+        }
+
+        /// Windows' view of the receiver changed. If the Wi-Fi has just been
+        /// turned on, try again; otherwise there is nothing to do.
+        fn status_changed(&mut self) {
+            if *self.status.lock().unwrap() != AndroidStatus::WifiOff {
+                return;
+            }
+            let wifi = self
+                .receiver
+                .as_ref()
+                .and_then(|receiver| receiver.GetStatus().ok())
+                .and_then(|status| status.WiFiStatus().ok());
+            if wifi.is_some_and(|wifi| wifi != MiracastReceiverWiFiStatus::MiracastSupportUndetermined) {
+                self.close();
+                self.listen();
+            }
         }
 
         /// The name changed, or the sound setting did.

@@ -2,6 +2,7 @@
 //! whether the firewall lets the engine through, and what kind of network the
 //! PC is on.
 
+use crate::miracast::AndroidStatus;
 use serde::Serialize;
 use std::path::Path;
 use std::process::Command;
@@ -24,10 +25,12 @@ pub struct Diagnostics {
     pub firewall_allowed: bool,
     /// The network the PC is connected to, if any.
     pub network: Option<Network>,
+    /// Whether an Android phone can find this PC.
+    pub android: AndroidStatus,
 }
 
-pub fn collect() -> Diagnostics {
-    Diagnostics { firewall_allowed: firewall_rule_exists(), network: current_network() }
+pub fn collect(android: AndroidStatus) -> Diagnostics {
+    Diagnostics { firewall_allowed: firewall_rule_exists(), network: current_network(), android }
 }
 
 fn hidden(program: &str) -> Command {
@@ -88,29 +91,58 @@ fn current_network() -> Option<Network> {
     networks.into_iter().next()
 }
 
-/// Replaces every firewall rule for the engine with one that allows it in.
-/// Windows asks the user for permission; returns whether the rule was added.
-pub fn allow_firewall(engine_exe: &Path) -> bool {
+/// Replaces every firewall rule for the engine and the app with ones that let
+/// them in: the engine for AirPlay, the app for the Miracast connection an
+/// Android phone opens. Windows asks the user for permission; returns whether
+/// the rule was added.
+pub fn allow_firewall(programs: &[&Path]) -> bool {
     // Removing existing rules first matters: if the Windows prompt was ever
     // dismissed, it left "block" rules behind, and those win over "allow".
-    let exe = engine_exe.display();
-    let script = format!(
-        "netsh advfirewall firewall delete rule name=all program=\"{exe}\" & \
-         netsh advfirewall firewall add rule name=\"{FIREWALL_RULE}\" dir=in action=allow \
-         program=\"{exe}\" enable=yes profile=any"
-    );
-    run_elevated("cmd.exe", &format!("/d /c \"{script}\"")) && firewall_rule_exists()
+    let script = programs
+        .iter()
+        .map(|program| {
+            let exe = program.display();
+            format!(
+                "netsh advfirewall firewall delete rule name=all program=\"{exe}\" & \
+                 netsh advfirewall firewall add rule name=\"{FIREWALL_RULE}\" dir=in action=allow \
+                 program=\"{exe}\" enable=yes profile=any"
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(" & ");
+    run_elevated("cmd.exe", &format!("/d /c \"{script}\"")).is_some() && firewall_rule_exists()
+}
+
+/// Installs Windows' "Wireless Display" optional feature, which holds the
+/// Miracast receiver Android phones connect to. Windows asks the user for
+/// permission and downloads it from Windows Update; returns whether it worked.
+pub fn install_wireless_display() -> bool {
+    const SUCCESS: u32 = 0;
+    const SUCCESS_REBOOT_REQUIRED: u32 = 3010;
+    matches!(
+        run_elevated(
+            "dism.exe",
+            "/Online /Add-Capability /CapabilityName:App.WirelessDisplay.Connect~~~~0.0.1.0 /NoRestart /Quiet",
+        ),
+        Some(SUCCESS | SUCCESS_REBOOT_REQUIRED)
+    )
 }
 
 pub fn open_network_settings() {
-    let _ = hidden("cmd").args(["/d", "/c", "start", "", "ms-settings:network-status"]).spawn();
+    open_settings("ms-settings:network-status");
 }
 
+pub fn open_settings(page: &str) {
+    let _ = hidden("cmd").args(["/d", "/c", "start", "", page]).spawn();
+}
+
+/// Runs a program with administrator rights and waits for it. Returns its exit
+/// code, or `None` if it never ran (the user declined the permission prompt).
 #[cfg(windows)]
-fn run_elevated(program: &str, parameters: &str) -> bool {
+fn run_elevated(program: &str, parameters: &str) -> Option<u32> {
     use windows::core::{w, HSTRING, PCWSTR};
     use windows::Win32::Foundation::CloseHandle;
-    use windows::Win32::System::Threading::{WaitForSingleObject, INFINITE};
+    use windows::Win32::System::Threading::{GetExitCodeProcess, WaitForSingleObject, INFINITE};
     use windows::Win32::UI::Shell::{ShellExecuteExW, SEE_MASK_NOCLOSEPROCESS, SHELLEXECUTEINFOW};
     use windows::Win32::UI::WindowsAndMessaging::SW_HIDE;
 
@@ -128,15 +160,17 @@ fn run_elevated(program: &str, parameters: &str) -> bool {
     unsafe {
         // Fails if the user declines the permission prompt.
         if ShellExecuteExW(&mut info).is_err() || info.hProcess.is_invalid() {
-            return false;
+            return None;
         }
         WaitForSingleObject(info.hProcess, INFINITE);
+        let mut code = 0u32;
+        let _ = GetExitCodeProcess(info.hProcess, &mut code);
         let _ = CloseHandle(info.hProcess);
+        Some(code)
     }
-    true
 }
 
 #[cfg(not(windows))]
-fn run_elevated(_program: &str, _parameters: &str) -> bool {
-    false
+fn run_elevated(_program: &str, _parameters: &str) -> Option<u32> {
+    None
 }

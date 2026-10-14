@@ -49,7 +49,9 @@ No app on the phone, no account, no cable.
 An iPhone, iPad or Mac needs to be on the same Wi-Fi or wired network as the PC.
 An Android phone connects to the PC directly over Miracast, so the PC needs a
 Wi-Fi adapter that supports it. Google Pixel phones do not have Miracast and
-cannot connect.
+cannot connect. Windows also needs its **Wireless Display** optional feature,
+which is not installed by default; if your phone doesn't see the PC, open
+"Can't see this PC?" in Mirlow and it will install it for you.
 
 The installer is not code-signed yet, so Windows may say "Windows protected
 your PC" the first time. Choose **More info**, then **Run anyway**. You do not

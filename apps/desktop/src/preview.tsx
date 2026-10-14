@@ -15,7 +15,7 @@ import { mockIPC, mockWindows } from "@tauri-apps/api/mocks";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
-import type { Diagnostics, Phase, Settings, Status } from "./lib/api";
+import type { AndroidStatus, Diagnostics, Phase, Settings, Status } from "./lib/api";
 import "./styles.css";
 
 const params = new URLSearchParams(location.search);
@@ -44,6 +44,7 @@ const status: Status = {
 const diagnostics: Diagnostics = {
   firewallAllowed: params.get("firewall") === "ok",
   network: { name: "Home Wi-Fi", category: params.get("network") === "public" ? "public" : "private" },
+  android: (params.get("android") as AndroidStatus | null) ?? "listening",
 };
 
 mockWindows("main");
@@ -62,6 +63,8 @@ mockIPC((command, payload) => {
       return "UxPlay 1.74: An Open-Source AirPlay mirroring and audio-streaming server.\n[mirlow] the engine exited unexpectedly";
     case "allow_firewall":
       return true;
+    case "install_wireless_display":
+      return new Promise((resolve) => setTimeout(() => resolve("listening"), 1500));
     case "plugin:app|version":
       return "0.1.0";
     case "plugin:window|is_fullscreen":

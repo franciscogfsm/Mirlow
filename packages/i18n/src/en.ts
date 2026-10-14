@@ -75,6 +75,31 @@ export const en = {
         working: "Waiting for Windows…",
         failed: "Windows didn't apply the change. You can try again.",
       },
+      android: {
+        ready: "Ready for Android",
+        readyBody: "On your phone, open Smart View, Cast or Wireless display and choose this PC.",
+        needsFeature: {
+          title: "Turn on Android mirroring",
+          body: "Android phones need Windows' Wireless Display feature, which isn't installed. Windows will ask for permission and download it, which can take a few minutes.",
+          action: "Install Wireless Display",
+          working: "Installing… this can take a few minutes",
+          failed: "Windows didn't install it. Open Optional features, choose Add a feature and add Wireless Display.",
+          settings: "Open Optional features",
+        },
+        wifiOff: {
+          title: "Turn on this PC's Wi‑Fi",
+          body: "Android phones connect to the PC directly over Wi‑Fi, even when the PC uses Ethernet.",
+        },
+        unsupported: {
+          title: "This PC can't receive Android",
+          body: "Its Wi‑Fi adapter doesn't support Miracast, which Android phones use. iPhones still work.",
+        },
+        disabled: {
+          title: "Projecting to this PC is turned off",
+          body: "Windows is set not to accept screens from other devices. Turn it on in Projecting to this PC.",
+          action: "Open projection settings",
+        },
+      },
       publicNetwork: {
         title: "This network is set to Public",
         body: "Windows hides your PC on public networks. If you're at home, set this network to Private in Windows settings.",
