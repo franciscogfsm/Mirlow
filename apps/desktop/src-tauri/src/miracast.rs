@@ -146,7 +146,8 @@ mod receiver {
         MiracastReceiverConnection, MiracastReceiverConnectionCreatedEventArgs,
         MiracastReceiverDisconnectReason, MiracastReceiverDisconnectedEventArgs,
         MiracastReceiverListeningStatus, MiracastReceiverMediaSourceCreatedEventArgs,
-        MiracastReceiverSession, MiracastReceiverSessionStartStatus, MiracastReceiverWiFiStatus,
+        MiracastReceiverSession, MiracastReceiverSessionStartStatus, MiracastReceiverStatus,
+        MiracastReceiverWiFiStatus, MiracastTransmitterAuthorizationStatus,
     };
     use windows::Media::Playback::MediaPlayer;
     use windows::System::{DispatcherQueue, DispatcherQueueHandler};
@@ -475,6 +476,8 @@ mod receiver {
         /// Set while checking again in the background, so a check that
         /// changes nothing leaves nothing in the log.
         quiet: bool,
+        /// What Windows last said about the receiver, to log only changes.
+        reported: Option<(i32, i32)>,
     }
 
     /// How often to look again when phones cannot find this PC: the Wi-Fi may
@@ -516,6 +519,7 @@ mod receiver {
             renderer: None,
             stage: None,
             quiet: false,
+            reported: None,
         };
         state.listen();
         #[cfg(debug_assertions)]
@@ -602,6 +606,7 @@ mod receiver {
             self.receiver = Some(receiver.clone());
 
             let status = receiver.GetStatus()?;
+            self.review_transmitters(&status);
             let wifi = status.WiFiStatus()?;
             if wifi == MiracastReceiverWiFiStatus::MiracastNotSupported {
                 self.note("this PC's Wi-Fi adapter does not support Miracast");
@@ -698,9 +703,53 @@ mod receiver {
             }
         }
 
-        /// Windows' view of the receiver changed. If the Wi-Fi has just been
-        /// turned on, try again; otherwise there is nothing to do.
+        /// The phones Windows remembers. One it was once told to block is
+        /// turned away without a word, which looks to the person holding it
+        /// as if tapping the PC did nothing. Mirlow lets any device in, as the
+        /// AirPlay engine does, so such a block is lifted.
+        fn review_transmitters(&self, status: &MiracastReceiverStatus) {
+            let Ok(known) = status.KnownTransmitters() else { return };
+            for index in 0..known.Size().unwrap_or(0) {
+                let Ok(transmitter) = known.GetAt(index) else { continue };
+                let name = transmitter.Name().map(|name| name.to_string()).unwrap_or_default();
+                let Ok(authorization) = transmitter.AuthorizationStatus() else { continue };
+                if authorization == MiracastTransmitterAuthorizationStatus::Blocked
+                    || authorization == MiracastTransmitterAuthorizationStatus::AlwaysPrompt
+                {
+                    let lifted = transmitter.SetAuthorizationStatus(MiracastTransmitterAuthorizationStatus::Undecided);
+                    self.note(format!(
+                        "{name} was {} by Windows; {}",
+                        if authorization == MiracastTransmitterAuthorizationStatus::Blocked { "blocked" } else { "set to ask" },
+                        if lifted.is_ok() { "allowed again" } else { "could not change that" },
+                    ));
+                } else {
+                    self.note(format!("known device: {name} ({})", authorization.0));
+                }
+            }
+        }
+
+        /// Windows' view of the receiver changed. Noted in the log, since it
+        /// shows a phone trying to connect even when no connection follows.
+        /// If the Wi-Fi has just been turned on, try again.
         fn status_changed(&mut self) {
+            let current = self
+                .receiver
+                .as_ref()
+                .and_then(|receiver| receiver.GetStatus().ok())
+                .and_then(|status| Some((status.ListeningStatus().ok()?.0, status.WiFiStatus().ok()?.0)));
+            if let Some(current) = current.filter(|current| Some(*current) != self.reported) {
+                self.reported = Some(current);
+                let listening = match current.0 {
+                    0 => "not listening",
+                    1 => "listening",
+                    2 => "a device is connecting",
+                    3 => "connected",
+                    4 => "disabled by policy",
+                    5 => "temporarily disabled",
+                    _ => "unknown",
+                };
+                self.note(format!("Windows reports: {listening} (Wi-Fi {})", current.1));
+            }
             if *self.status.lock().unwrap() != AndroidStatus::WifiOff {
                 return;
             }

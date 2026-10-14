@@ -1,6 +1,6 @@
 [package]
 name = "mirlow"
-version = "1.5.0"
+version = "1.5.1"
 description = "Mirror your iPhone to Windows. For free."
 authors = ["Mirlow contributors"]
 license = "GPL-3.0-or-later"
