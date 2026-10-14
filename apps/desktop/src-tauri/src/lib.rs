@@ -71,7 +71,14 @@ fn get_engine_log(engine: State<'_, Engine>) -> String {
 fn receivers(app: &AppHandle) -> Vec<PathBuf> {
     let mut programs = vec![app.state::<AppState>().engine_dir.join("bin").join("mirlow-engine.exe")];
     programs.extend(std::env::current_exe().ok());
+    // Firewall rules hold plain paths; a "\\?\C:\..." one would never match.
     programs
+        .into_iter()
+        .map(|path| match path.to_str().and_then(|text| text.strip_prefix(r"\\?\")) {
+            Some(plain) if !plain.starts_with("UNC\\") => PathBuf::from(plain),
+            _ => path,
+        })
+        .collect()
 }
 
 #[tauri::command]

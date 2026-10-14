@@ -1,5 +1,6 @@
 import { Globe, Lock, RotateCw, Shield, ShieldCheck, Smartphone, Wifi, WifiOff } from "lucide-react";
-import { useEffect, type ReactNode } from "react";
+import { getVersion } from "@tauri-apps/api/app";
+import { useEffect, useState, type ReactNode } from "react";
 import { api } from "../lib/api";
 import { useI18n } from "../lib/i18n";
 import type { DiagnosticsState } from "../lib/useDiagnostics";
@@ -53,7 +54,24 @@ export function HelpSheet({
 
   useEffect(() => {
     if (open) refresh();
+    setCopied(false);
   }, [open, refresh]);
+
+  // Everything needed to tell what is wrong on someone else's PC, in one paste.
+  const [copied, setCopied] = useState(false);
+  const copyDetails = async () => {
+    const [version, log] = await Promise.all([
+      getVersion().catch(() => "?"),
+      api.getEngineLog().catch(() => ""),
+    ]);
+    const text = [
+      `Mirlow ${version} on ${navigator.userAgent}`,
+      JSON.stringify(diagnostics, null, 2),
+      "",
+      log,
+    ].join("\n");
+    await navigator.clipboard.writeText(text).then(() => setCopied(true), () => {});
+  };
 
   const network = diagnostics?.network;
   const android = diagnostics?.android;
@@ -166,6 +184,14 @@ export function HelpSheet({
           </GlassButton>
         </Item>
       </ul>
+
+      <button
+        type="button"
+        onClick={() => void copyDetails()}
+        className="mt-2 h-8 w-full cursor-pointer rounded-full text-[12.5px] text-faint transition-colors duration-300 hover:text-ink"
+      >
+        {copied ? h.copied : h.copyDetails}
+      </button>
     </Sheet>
   );
 }

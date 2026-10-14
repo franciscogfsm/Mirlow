@@ -1,0 +1,135 @@
+# Builds, code-signs and publishes a release when a version tag is pushed
+# (scripts/release.ps1 pushes one).
+#
+# The installer is signed by SignPath Foundation, which signs open-source
+# projects for free. Two of its conditions shape this workflow: the installer
+# must be built here, from the public source of the tag, and every signing
+# request is approved by hand on signpath.io. The run waits for that approval.
+#
+# One-time setup is in docs/RELEASING.md.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: windows-latest
+    timeout-minutes: 360
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+
+      # The app is built with the GNU toolchain, which links with MSYS2's
+      # MinGW tools, as on the maintainer's PC.
+      - name: Rust
+        run: |
+          rustup toolchain install stable-x86_64-pc-windows-gnu --profile minimal
+          rustup default stable-x86_64-pc-windows-gnu
+
+      - id: msys2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+
+      - name: Engine
+        run: ./scripts/build-engine.ps1 -InstallDeps -MsysRoot '${{ steps.msys2.outputs.msys2-location }}'
+
+      - name: Installer
+        run: ./scripts/build-installer.ps1 -BuildOnly -MsysRoot '${{ steps.msys2.outputs.msys2-location }}'
+
+      - id: unsigned
+        uses: actions/upload-artifact@v7
+        with:
+          name: unsigned-installer
+          path: release/Mirlow-Setup-x64.exe
+          if-no-files-found: error
+
+      # Waits until the request is approved on signpath.io.
+      - name: Code signing
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          github-artifact-id: ${{ steps.unsigned.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 14400
+          output-artifact-directory: signed
+
+      - name: Use the signed installer
+        run: |
+          $signed = Get-Item signed/Mirlow-Setup-x64.exe
+          $check = Get-AuthenticodeSignature $signed.FullName
+          if ($check.Status -ne 'Valid') { throw "The installer's signature is not valid: $($check.StatusMessage)" }
+          "Signed by: $($check.SignerCertificate.Subject)"
+          Copy-Item $signed.FullName release/Mirlow-Setup-x64.exe -Force
+
+      - name: Updater manifest and checksums
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: ./scripts/finish-release.ps1
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          $version = $env:TAG.TrimStart('v')
+          # Notes given to scripts/release.ps1 are in the tag; otherwise
+          # GitHub writes them from the commits since the last release.
+          # (Checkout leaves a lightweight copy of the tag; fetch the real one.)
+          git fetch --force origin "refs/tags/$($env:TAG):refs/tags/$($env:TAG)"
+          if ((git cat-file -t $env:TAG) -eq 'tag') {
+            $notes = (git tag -l --format='%(contents)' $env:TAG) -join "`n"
+          } else {
+            $notes = gh api "repos/${{ github.repository }}/releases/generate-notes" -f tag_name=$env:TAG --jq .body
+            $notes = $notes -join "`n"
+          }
+          $notes += "`n`n---`nFree code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org). See the [code signing policy](https://github.com/${{ github.repository }}#code-signing-policy)."
+          Set-Content "$env:RUNNER_TEMP/notes.md" $notes -Encoding utf8
+          gh release create $env:TAG `
+            release/Mirlow-Setup-x64.exe release/THIRD-PARTY-RUNTIME.md release/latest.json release/SHA256SUMS.txt `
+            --title "Mirlow $version" --notes-file "$env:RUNNER_TEMP/notes.md"
+          if ($LASTEXITCODE -ne 0) { throw "gh release create failed." }
+
+      # The website shows the installer's checksum, which is only known now
+      # that it is signed. Pushing it to main also redeploys the site.
+      - name: Website checksum
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          Copy-Item packages/i18n/src/release.ts "$env:RUNNER_TEMP/release.ts"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git fetch origin main
+          git checkout -B main origin/main
+          Copy-Item "$env:RUNNER_TEMP/release.ts" packages/i18n/src/release.ts -Force
+          git add packages/i18n/src/release.ts
+          git diff --cached --quiet
+          if ($LASTEXITCODE -eq 0) { 'Checksum already up to date.'; exit 0 }
+          git commit -m "Website: checksum of the $env:TAG installer"
+          git push origin main
+          if ($LASTEXITCODE -ne 0) { throw 'git push failed.' }

@@ -23,6 +23,8 @@ export function describePage(locale: Locale, page: PageId): { title: string; des
       return { title: `${site.privacy.title} — Mirlow`, description: site.privacy.intro };
     case "licenses":
       return { title: `${site.licenses.title} — Mirlow`, description: site.licenses.intro };
+    case "codeSigning":
+      return { title: `${site.codeSigning.title} — Mirlow`, description: site.codeSigning.intro };
     case "guides":
       return { title: site.guides.metaTitle, description: site.guides.intro };
     default: {
@@ -38,7 +40,12 @@ export function buildMetadata(locale: Locale, page: PageId): Metadata {
   const { title, description } = describePage(locale, page);
   const url = pageUrl(locale, page);
   const image = `${siteUrl}${asset("/og.png")}`;
-  const fixed = page === "home" || page === "privacy" || page === "licenses" || page === "guides";
+  const fixed =
+    page === "home" ||
+    page === "privacy" ||
+    page === "licenses" ||
+    page === "codeSigning" ||
+    page === "guides";
 
   return {
     title,

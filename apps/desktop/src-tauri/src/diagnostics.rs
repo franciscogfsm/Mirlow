@@ -39,9 +39,12 @@ pub struct Diagnostics {
 
 /// `programs` are the executables that must be let through the firewall.
 pub fn collect(android: AndroidStatus, programs: &[PathBuf]) -> Diagnostics {
+    let (network, firewall_on) = network_and_firewall();
     Diagnostics {
-        firewall_allowed: firewall_allows(programs),
-        network: current_network(),
+        // A firewall that is off (or replaced by an antivirus's own, which
+        // turns Windows' off) blocks nothing, so there is nothing to allow.
+        firewall_allowed: !firewall_on || firewall_allows(programs),
+        network,
         wifi_off: wifi_off(),
         android,
     }
@@ -93,29 +96,51 @@ fn firewall_allows(programs: &[PathBuf]) -> bool {
     if !output.status.success() {
         return false;
     }
-    let listed = String::from_utf8_lossy(&output.stdout).to_lowercase();
+    // netsh wraps long lines, often in the middle of a path ("C:\Program
+    // Files\...\mirlow-engine.exe" does not fit), so whitespace and line
+    // breaks are dropped on both sides before comparing.
+    let squeeze = |text: &str| -> String {
+        text.chars().filter(|c| !c.is_whitespace()).collect::<String>().to_lowercase()
+    };
+    let listed = squeeze(&String::from_utf8_lossy(&output.stdout));
     programs.iter().all(|program| {
         let path = program.display().to_string();
         // netsh prints in the console's code page, so a path with accents may
         // not read back as written; the rule existing is then the best guess.
-        !path.is_ascii() || listed.contains(&path.to_lowercase())
+        !path.is_ascii() || listed.contains(&squeeze(&path))
     })
 }
 
-fn current_network() -> Option<Network> {
-    let output = hidden("powershell")
-        .args([
-            "-NoProfile",
-            "-NonInteractive",
-            "-Command",
-            "Get-NetConnectionProfile | Select-Object Name, @{n='Category';e={[int]$_.NetworkCategory}} | ConvertTo-Json -Compress",
-        ])
+/// The network the PC is on, and whether Windows Firewall is on for it. Asked
+/// in one go, since starting PowerShell is the slow part.
+fn network_and_firewall() -> (Option<Network>, bool) {
+    // The firewall's state comes from its COM interface, which answers the
+    // same in every display language. If even that fails, the firewall
+    // service is not running at all.
+    const SCRIPT: &str = "\
+        $n = @(Get-NetConnectionProfile | Select-Object Name, @{n='Category';e={[int]$_.NetworkCategory}}); \
+        $on = $true; \
+        try { $p = New-Object -ComObject HNetCfg.FwPolicy2; $t = $p.CurrentProfileTypes; \
+              $on = @(1, 2, 4 | Where-Object { ($t -band $_) -and $p.FirewallEnabled($_) }).Count -gt 0 } \
+        catch { $on = $false }; \
+        @{ networks = $n; firewallOn = $on } | ConvertTo-Json -Compress -Depth 3";
+    let Some(value) = hidden("powershell")
+        .args(["-NoProfile", "-NonInteractive", "-Command", SCRIPT])
         .output()
-        .ok()?;
-    let value: serde_json::Value = serde_json::from_slice(&output.stdout).ok()?;
-    let profiles = match value {
-        serde_json::Value::Array(items) => items,
-        single @ serde_json::Value::Object(_) => vec![single],
+        .ok()
+        .and_then(|output| serde_json::from_slice::<serde_json::Value>(&output.stdout).ok())
+    else {
+        // Unknown: assume the firewall is on, so its rule is still checked.
+        return (None, true);
+    };
+    let firewall_on = value.get("firewallOn").and_then(|on| on.as_bool()).unwrap_or(true);
+    (current_network(value.get("networks")), firewall_on)
+}
+
+fn current_network(value: Option<&serde_json::Value>) -> Option<Network> {
+    let profiles = match value? {
+        serde_json::Value::Array(items) => items.clone(),
+        single @ serde_json::Value::Object(_) => vec![single.clone()],
         _ => return None,
     };
 

@@ -3,8 +3,14 @@ import Link from "next/link";
 import { pagePath } from "@/lib/site";
 import { SiteFrame } from "../site/SiteFrame";
 
-/** The two text pages, privacy and licences: a title, a lead, and plain sections. */
-export function ProsePage({ locale, page }: { locale: Locale; page: "privacy" | "licenses" }) {
+/** The text pages (privacy, licences, code signing): a title, a lead, and plain sections. */
+export function ProsePage({
+  locale,
+  page,
+}: {
+  locale: Locale;
+  page: "privacy" | "licenses" | "codeSigning";
+}) {
   const site = getDictionary(locale).site;
   const t = site[page];
 

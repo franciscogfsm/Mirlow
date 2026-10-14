@@ -1,9 +1,11 @@
 import { locales } from "@mirlow/i18n";
 import type { MetadataRoute } from "next";
 import { guidesUpdated } from "@/content/guides";
-import { indexedPages, languageAlternates, pageUrl } from "@/lib/site";
+import { indexedPages, languageAlternates, pageUrl, type PageId } from "@/lib/site";
 
 export const dynamic = "force-static";
+
+const prosePages = new Set<PageId>(["privacy", "licenses", "codeSigning"]);
 
 /** Every page in every language, each pointing at its translations. */
 export default function sitemap(): MetadataRoute.Sitemap {
@@ -12,7 +14,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       url: pageUrl(locale, page),
       lastModified: guidesUpdated,
       changeFrequency: "monthly" as const,
-      priority: page === "home" ? 1 : page === "privacy" || page === "licenses" ? 0.3 : 0.8,
+      priority: page === "home" ? 1 : prosePages.has(page) ? 0.3 : 0.8,
       alternates: { languages: languageAlternates(page) },
     })),
   );

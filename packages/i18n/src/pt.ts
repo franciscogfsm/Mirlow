@@ -143,6 +143,8 @@ export const pt: Dictionary = {
         action: "Reiniciar o recetor",
       },
       network: "Rede: {name}",
+      copyDetails: "Copiar detalhes para suporte",
+      copied: "Copiado. Cole numa mensagem.",
     },
     settings: {
       title: "Definições",
@@ -400,6 +402,7 @@ export const pt: Dictionary = {
       guides: "Guias",
       privacy: "Privacidade",
       licenses: "Licenças",
+      codeSigning: "Política de assinatura de código",
       source: "Código‑fonte",
       releases: "Todas as transferências",
       rights: "Software livre, distribuído sob a licença GPL‑3.0.",
@@ -416,6 +419,10 @@ export const pt: Dictionary = {
           body: "O Mirlow recebe o ecrã e o som do telemóvel diretamente, pela sua rede local ou por uma ligação Wi‑Fi direta, e mostra‑os no PC. Nada é gravado, guardado ou enviado para outro sítio. A aplicação não tem contas, análises de utilização nem publicidade, e não precisa de internet para funcionar.",
         },
         {
+          title: "Atualizações",
+          body: "Enquanto está aberto, o Mirlow pergunta ao GitHub, onde as versões são publicadas, se existe uma versão mais recente: pouco depois de abrir e depois de poucas em poucas horas. O pedido não diz nada sobre si nem sobre o seu PC além do que qualquer ligação revela, como o seu endereço IP, que o GitHub pode registar de acordo com a sua própria política de privacidade. Uma nova versão só é transferida quando escolhe Atualizar, e só é instalada se tiver a nossa assinatura.",
+        },
+        {
           title: "O que fica no seu PC",
           body: "O Mirlow guarda as suas definições (o nome do PC, o som, o aspeto e o idioma) e uma chave de emparelhamento que permite aos seus dispositivos reconhecer este PC. Estes ficheiros ficam na sua pasta de utilizador do Windows e são removidos ao desinstalar.",
         },
@@ -426,6 +433,25 @@ export const pt: Dictionary = {
         {
           title: "Dúvidas",
           body: "O Mirlow é de código aberto, por isso pode verificar tudo isto por si. Se algo não estiver claro, abra um pedido no GitHub.",
+        },
+      ],
+    },
+    codeSigning: {
+      title: "Política de assinatura de código",
+      intro:
+        "Assinatura de código gratuita fornecida pela SignPath.io, com certificado emitido pela SignPath Foundation.",
+      sections: [
+        {
+          title: "O que é assinado",
+          body: "O instalador do Mirlow anexado a cada versão no GitHub. É compilado pelo GitHub Actions a partir do código‑fonte público dessa versão e só é assinado depois de aprovado por um responsável do projeto. O Windows mostra como editor a SignPath Foundation: se mostrar outro nome, ou nenhum, o ficheiro não foi publicado por nós.",
+        },
+        {
+          title: "Funções da equipa",
+          body: "Autores e revisores: Francisco Martins (franciscogfsm no GitHub). Aprovadores: Francisco Martins. As alterações de qualquer outra pessoa são revistas antes de serem integradas.",
+        },
+        {
+          title: "Privacidade",
+          body: "O Mirlow não transfere informação para outros sistemas em rede, a não ser que o utilizador, ou quem o instala ou opera, o peça expressamente. A única exceção é a verificação de novas versões no GitHub, descrita na política de privacidade.",
         },
       ],
     },

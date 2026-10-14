@@ -340,22 +340,9 @@ mod receiver {
         /// in the way has gone. Says nothing unless the outcome changes.
         fn recheck(&mut self) {
             let before = *self.status.lock().unwrap();
-            let stopped = match before {
-                AndroidStatus::Starting => false,
-                // Listening, as far as we know; Windows may have stopped after
-                // sleep or a change of adapter without saying so.
-                AndroidStatus::Listening => {
-                    self.client.is_none()
-                        && self
-                            .receiver
-                            .as_ref()
-                            .and_then(|receiver| receiver.GetStatus().ok())
-                            .and_then(|status| status.ListeningStatus().ok())
-                            .is_some_and(|listening| listening == MiracastReceiverListeningStatus::NotListening)
-                }
-                _ => true,
-            };
-            if !stopped {
+            // A session that is listening is left alone: starting it over
+            // takes the PC off the phone's list while the phone is looking.
+            if matches!(before, AndroidStatus::Starting | AndroidStatus::Listening) {
                 return;
             }
             self.quiet = true;

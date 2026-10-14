@@ -15,7 +15,7 @@ export const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
  */
 export const downloadUrl = process.env.NEXT_PUBLIC_DOWNLOAD_URL || links.download;
 
-type FixedPage = "home" | "privacy" | "licenses";
+type FixedPage = "home" | "privacy" | "licenses" | "codeSigning";
 
 /** A page of the site: one of the fixed ones, the list of guides, or a single guide. */
 export type PageId = FixedPage | "guides" | GuideId;
@@ -24,10 +24,11 @@ const fixedPaths: Record<FixedPage, string> = {
   home: "",
   privacy: "privacy/",
   licenses: "licenses/",
+  codeSigning: "code-signing/",
 };
 
 /** Every page that search engines should know about, most important first. */
-export const indexedPages: PageId[] = ["home", "guides", ...guideIds, "privacy", "licenses"];
+export const indexedPages: PageId[] = ["home", "guides", ...guideIds, "privacy", "licenses", "codeSigning"];
 
 /**
  * The route for a page in a language. English lives at the root and other

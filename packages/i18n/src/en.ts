@@ -138,6 +138,8 @@ export const en = {
         action: "Restart receiver",
       },
       network: "Network: {name}",
+      copyDetails: "Copy details for support",
+      copied: "Copied. Paste them in a message.",
     },
     settings: {
       title: "Settings",
@@ -393,6 +395,7 @@ export const en = {
       guides: "Guides",
       privacy: "Privacy",
       licenses: "Licences",
+      codeSigning: "Code signing policy",
       source: "Source code",
       releases: "All downloads",
       rights: "Free software, released under GPL‑3.0.",
@@ -409,6 +412,10 @@ export const en = {
           body: "Mirlow receives your phone's screen and sound directly, over your local network or a direct Wi‑Fi link, and shows them on your PC. Nothing is recorded, stored or sent anywhere else. The app has no accounts, no analytics and no advertising, and it doesn't need the internet to work.",
         },
         {
+          title: "Updates",
+          body: "While it runs, Mirlow asks GitHub, where its releases are published, whether a newer version is out: shortly after it opens, then every few hours. The request says nothing about you or your PC beyond what any connection does, such as your IP address, which GitHub may log under its own privacy policy. A new version is downloaded only when you choose Update, and installed only if it carries our signature.",
+        },
+        {
           title: "What stays on your PC",
           body: "Mirlow saves your settings (the PC's name, sound, appearance and language) and a pairing key that lets your devices recognise this PC. These files stay in your Windows user folder and are removed when you uninstall.",
         },
@@ -419,6 +426,24 @@ export const en = {
         {
           title: "Questions",
           body: "Mirlow is open source, so you can check all of this yourself. If something is unclear, open an issue on GitHub.",
+        },
+      ],
+    },
+    codeSigning: {
+      title: "Code signing policy",
+      intro: "Free code signing provided by SignPath.io, certificate by SignPath Foundation.",
+      sections: [
+        {
+          title: "What is signed",
+          body: "The Mirlow installer attached to each release on GitHub. It is built by GitHub Actions from the public source code of that release, and signed only after a maintainer has approved it. Windows shows its publisher as SignPath Foundation: if it shows anything else, or no publisher at all, the file is not one we published.",
+        },
+        {
+          title: "Team roles",
+          body: "Committers and reviewers: Francisco Martins (franciscogfsm on GitHub). Approvers: Francisco Martins. Changes from anyone else are reviewed before they are merged.",
+        },
+        {
+          title: "Privacy",
+          body: "Mirlow will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it. The one exception is the check for a newer version on GitHub, which the privacy policy describes.",
         },
       ],
     },

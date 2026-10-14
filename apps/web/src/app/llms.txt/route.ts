@@ -29,6 +29,7 @@ export function GET() {
     `- [Download for Windows](${pageUrl("en")})`,
     `- [Licences and source code](${pageUrl("en", "licenses")})`,
     `- [Privacy](${pageUrl("en", "privacy")})`,
+    `- [Code signing policy](${pageUrl("en", "codeSigning")})`,
     "",
     "## Guides",
     "",

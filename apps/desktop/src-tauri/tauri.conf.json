@@ -31,7 +31,6 @@
   "bundle": {
     "active": true,
     "targets": ["nsis"],
-    "createUpdaterArtifacts": true,
     "publisher": "Mirlow",
     "copyright": "Copyright © 2026 the Mirlow contributors. GPL-3.0-or-later.",
     "category": "Utility",
