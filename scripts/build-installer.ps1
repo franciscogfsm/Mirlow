@@ -8,14 +8,11 @@
 # It also records the installer's version and checksum in
 # packages\i18n\src\release.ts, which the website reads.
 #
-# Published releases are built by .github/workflows/release.yml, which signs
-# the installer between the two halves of this script. A local build is not
-# code-signed, so it is for testing only.
-#
 #   .\scripts\build-installer.ps1               build the installer
 #   .\scripts\build-installer.ps1 -Engine       rebuild the AirPlay engine first
-#   .\scripts\build-installer.ps1 -BuildOnly    stop after the installer; the
-#                                               rest is scripts\finish-release.ps1
+#   .\scripts\build-installer.ps1 -BuildOnly    stop after the installer (to
+#                                               code-sign it), then run
+#                                               scripts\finish-release.ps1
 param(
     [switch]$Engine,
     [switch]$BuildOnly,

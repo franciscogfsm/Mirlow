@@ -6,8 +6,8 @@
 #   SHA256SUMS.txt              checksums of everything in .\release\
 #   packages\i18n\src\release.ts  the version and checksum the website shows
 #
-# The updater key comes from TAURI_SIGNING_PRIVATE_KEY (the key itself, as the
-# release workflow provides it) or else from the file -UpdaterKey.
+# The updater key comes from TAURI_SIGNING_PRIVATE_KEY (the key itself) or
+# else from the file -UpdaterKey.
 param(
     # The key that signs updates. Installed copies of Mirlow only accept an
     # update signed with it, so keep a backup: without it, no release can

@@ -435,7 +435,7 @@ export const en = {
       sections: [
         {
           title: "What is signed",
-          body: "The Mirlow installer attached to each release on GitHub. It is built by GitHub Actions from the public source code of that release, and signed only after a maintainer has approved it. Windows shows its publisher as SignPath Foundation: if it shows anything else, or no publisher at all, the file is not one we published.",
+          body: "The Mirlow installer attached to each release on GitHub. Code signing through SignPath Foundation is being set up; until it is in place, installers are not signed and Windows shows their publisher as unknown. You can check any download against the SHA‑256 checksums published with each release.",
         },
         {
           title: "Team roles",

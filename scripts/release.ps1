@@ -1,22 +1,22 @@
-# Starts a new release: sets the version everywhere, commits, tags and pushes.
-# The tag starts .github/workflows/release.yml on GitHub, which builds the
-# installer from that exact source, has it code-signed by SignPath, and
-# publishes the GitHub Release. Approve the signing request on signpath.io
-# when it arrives; the workflow then finishes by itself and also updates the
-# website's checksum on main (run "git pull" afterwards).
+# Publishes a new release in one go: sets the version everywhere, builds the
+# installer, commits, tags, pushes, and creates the GitHub Release with the
+# installer attached. Pushing also redeploys the website with the new checksum.
 #
 #   .\scripts\release.ps1                 next patch version (0.1.0 -> 0.1.1)
 #   .\scripts\release.ps1 minor           next minor version (0.1.0 -> 0.2.0)
 #   .\scripts\release.ps1 major           next major version (0.1.0 -> 1.0.0)
 #   .\scripts\release.ps1 0.3.0           exactly this version
 #   .\scripts\release.ps1 -All            also commit whatever is uncommitted
+#   .\scripts\release.ps1 -Engine         rebuild the AirPlay engine first
 #   .\scripts\release.ps1 -Notes "..."    release notes (default: generated from commits)
 #
-# Try the installer locally first with scripts\build-installer.ps1.
+# If the build fails, nothing has been committed or pushed. Fix the problem and
+# run it again with the version it printed, e.g. .\scripts\release.ps1 0.1.1
 param(
     [Parameter(Position = 0)]
     [string]$Version = 'patch',
     [switch]$All,
+    [switch]$Engine,
     [string]$Notes
 )
 $ErrorActionPreference = 'Stop'
@@ -41,6 +41,9 @@ function Edit-File {
 
 # --- Checks, before anything is changed --------------------------------------
 
+if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
+    throw 'The GitHub CLI (gh) is needed to publish. Install it from https://cli.github.com'
+}
 $branch = (git rev-parse --abbrev-ref HEAD).Trim()
 if ($branch -ne 'main') { throw "Releases are made from main; this is '$branch'." }
 
@@ -82,6 +85,14 @@ if ($Version -ne $current) {
     Edit-File 'apps\desktop\src-tauri\Cargo.toml' '^(version\s*=\s*")[^"]+' "`${1}$Version"
 }
 
+# --- Build --------------------------------------------------------------------
+
+& (Join-Path $PSScriptRoot 'build-installer.ps1') -Engine:$Engine
+
+$assets = 'Mirlow-Setup-x64.exe', 'THIRD-PARTY-RUNTIME.md', 'latest.json', 'SHA256SUMS.txt' |
+    ForEach-Object { Join-Path $repo "release\$_" }
+$assets | ForEach-Object { if (-not (Test-Path $_)) { throw "Missing $_." } }
+
 # --- Publish ------------------------------------------------------------------
 
 if ($All) {
@@ -90,21 +101,22 @@ if ($All) {
     Invoke-Checked 'git add' {
         git add package.json package-lock.json apps/*/package.json packages/*/package.json `
             apps/desktop/src-tauri/tauri.conf.json apps/desktop/src-tauri/Cargo.toml `
-            apps/desktop/src-tauri/Cargo.lock
+            apps/desktop/src-tauri/Cargo.lock packages/i18n/src/release.ts
     }
 }
 Invoke-Checked 'git commit' { git commit --quiet -m "Release $Version" }
-# Notes travel in the tag, where the release workflow reads them.
-if ($Notes) {
-    Invoke-Checked 'git tag' { git tag -a $tag -m $Notes }
-} else {
-    Invoke-Checked 'git tag' { git tag $tag }
-}
+Invoke-Checked 'git tag' { git tag $tag }
 Invoke-Checked 'git push' { git push origin main $tag }
 
-$slug = (git remote get-url origin) -replace '^.*github\.com[:/]', '' -replace '\.git$', ''
+if ($Notes) {
+    Invoke-Checked 'gh release create' { gh release create $tag $assets --title "Mirlow $Version" --notes $Notes }
+} else {
+    Invoke-Checked 'gh release create' { gh release create $tag $assets --title "Mirlow $Version" --generate-notes }
+}
+
+$hash = (Get-FileHash $assets[0] -Algorithm SHA256).Hash.ToLower()
 Write-Host ''
-Write-Host "Mirlow $Version is on its way." -ForegroundColor Green
-Write-Host "Building on GitHub:  https://github.com/$slug/actions/workflows/release.yml"
-Write-Host 'Approve the signing request on https://app.signpath.io when it arrives.'
-Write-Host 'Then upload the published installer to VirusTotal, so the report link on the site works.'
+Write-Host "Mirlow $Version is published." -ForegroundColor Green
+Write-Host 'The website is redeploying with the new checksum.'
+Write-Host 'Still to do by hand: upload the installer to VirusTotal, so the report link on the site works:'
+Write-Host "  https://www.virustotal.com/gui/file/$hash"

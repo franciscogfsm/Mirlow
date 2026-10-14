@@ -443,7 +443,7 @@ export const pt: Dictionary = {
       sections: [
         {
           title: "O que é assinado",
-          body: "O instalador do Mirlow anexado a cada versão no GitHub. É compilado pelo GitHub Actions a partir do código‑fonte público dessa versão e só é assinado depois de aprovado por um responsável do projeto. O Windows mostra como editor a SignPath Foundation: se mostrar outro nome, ou nenhum, o ficheiro não foi publicado por nós.",
+          body: "O instalador do Mirlow anexado a cada versão no GitHub. A assinatura através da SignPath Foundation está a ser configurada; até lá, os instaladores não são assinados e o Windows mostra o editor como desconhecido. Pode verificar qualquer transferência com as somas SHA‑256 publicadas em cada versão.",
         },
         {
           title: "Funções da equipa",
