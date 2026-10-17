@@ -118,7 +118,10 @@ function Shell({
   // Checked while the PC waits for a phone, so problems show before anyone looks for help.
   const diagnostics = useDiagnostics(status.phase === "ready" || helpOpen);
 
-  const video = status.phase === "mirroring" ? status.video : null;
+  // A paused picture keeps its place, so the window (and full screen) stay as
+  // they are until it comes back, rather than shrinking away and back.
+  const paused = status.phase === "paused";
+  const video = status.phase === "mirroring" || paused ? status.video : null;
   const mirroring = video !== null;
   const videoKey = video ? `${video.width}x${video.height}` : "";
 
@@ -202,6 +205,9 @@ function Shell({
     switch (status.phase) {
       case "mirroring":
         return device ? format(t.mirroring.from, { device }) : t.mirroring.fromUnknown;
+      case "paused":
+        if (!device) return status.sound ? t.paused.soundOnly : t.status.paused;
+        return format(status.sound ? t.paused.labelSound : t.paused.label, { device });
       case "ready":
         return t.status.ready;
       default:
@@ -211,9 +217,16 @@ function Shell({
   const tone =
     status.phase === "error" || status.phase === "recovering"
       ? "warn"
-      : status.phase === "starting"
+      : status.phase === "starting" || paused
         ? "idle"
         : "live";
+  const compactLabel = !mirroring
+    ? undefined
+    : paused
+      ? status.sound
+        ? t.paused.soundOnly
+        : t.status.paused
+      : (device ?? t.mirroring.fromUnknown);
 
   // Keep the notification-area icon's wording in step with the interface.
   const trayStatus =
@@ -239,7 +252,7 @@ function Shell({
       >
         <TitleBar
           label={label}
-          compactLabel={mirroring ? (device ?? t.mirroring.fromUnknown) : undefined}
+          compactLabel={compactLabel}
           tone={tone}
           mirroring={mirroring}
           fullscreen={fullscreen}
@@ -269,6 +282,7 @@ function Shell({
                 fullscreen={fullscreen}
                 controlsVisible={controlsVisible}
                 hidden={settingsOpen || helpOpen}
+                pause={paused ? { locked: status.locked, sound: status.sound, device } : null}
                 onToggleFullscreen={() => void toggleFullscreen()}
               />
             )}

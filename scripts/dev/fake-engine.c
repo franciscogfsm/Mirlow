@@ -7,7 +7,10 @@
  * MIRLOW_DEV_ENGINE_EXE points at it (see docs/DEVELOPMENT.md).
  *
  * Timeline: ready, a device connects, a portrait picture, a rotation to
- * landscape, back to portrait, then the device disconnects. Then it repeats.
+ * landscape, back to portrait. Sound starts; the phone is locked, then
+ * unlocked sideways; the sound stops. Back upright, the picture stops while
+ * the device stays connected, then comes back. Then the device disconnects,
+ * and it all repeats.
  */
 #include <gst/gst.h>
 #include <stdio.h>
@@ -40,8 +43,16 @@ static void show(int width, int height) {
     say(event);
 }
 
+static void stop(void) {
+    if (pipeline) {
+        gst_element_set_state(pipeline, GST_STATE_NULL);
+        gst_object_unref(pipeline);
+        pipeline = NULL;
+    }
+}
+
 static gboolean advance(gpointer data) {
-    switch (step++ % 6) {
+    switch (step++ % 13) {
     case 0:
         say("client iPhone16,1\tTest iPhone");
         say("connections 1");
@@ -54,14 +65,37 @@ static gboolean advance(gpointer data) {
         break;
     case 3:
         show(590, 1280);
+        say("sound 1");
         break;
     case 4:
-        say("video-reset 3");
-        if (pipeline) {
-            gst_element_set_state(pipeline, GST_STATE_NULL);
-            gst_object_unref(pipeline);
-            pipeline = NULL;
-        }
+        /* Locked: as in UxPlay, the picture freezes on its last frame, and the
+         * size is reported again from the same packet. */
+        say("video-pause");
+        say("video-size 590 1280 590 1280");
+        if (pipeline) gst_element_set_state(pipeline, GST_STATE_PAUSED);
+        break;
+    case 5:
+        /* Unlocked, having been turned sideways while locked. */
+        say("video-resume");
+        show(1280, 590);
+        break;
+    case 6:
+        say("sound 0");
+        break;
+    case 7:
+        show(590, 1280);
+        break;
+    case 8:
+        /* The picture stops, but the device stays connected. */
+        say("video-reset 1");
+        stop();
+        break;
+    case 9:
+        show(590, 1280);
+        break;
+    case 10:
+        say("video-reset 1");
+        stop();
         say("connections 0");
         break;
     default:

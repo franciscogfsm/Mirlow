@@ -7,9 +7,11 @@
  *   npm run dev -w @mirlow/desktop
  *   http://127.0.0.1:5183/preview.html?phase=ready&theme=dark&lang=pt&sheet=settings
  *
- * phase: starting | ready | connecting | mirroring | audio | recovering | error
+ * phase: starting | ready | connecting | mirroring | paused | audio | recovering | error
  * (With `mirroring` the stage stays empty: the picture is a native window
  * that only exists inside the real app.)
+ * With `paused`: &locked=1 for a locked phone, &sound=1 for sound still playing,
+ * &orientation=landscape for a sideways picture.
  */
 import { mockIPC, mockWindows } from "@tauri-apps/api/mocks";
 import { StrictMode } from "react";
@@ -29,16 +31,20 @@ let settings: Settings = {
   language: (params.get("lang") ?? "system") as Settings["language"],
 };
 
+const picture = params.get("orientation") === "landscape" ? { width: 2532, height: 1170 } : { width: 1170, height: 2532 };
+
 const status: Status = {
   phase,
   name: settings.name,
   client:
-    phase === "connecting" || phase === "audio" || phase === "mirroring"
+    phase === "connecting" || phase === "audio" || phase === "mirroring" || phase === "paused"
       ? { name: "Ana's iPhone", model: "iPhone16,1", pin: params.get("pin") }
       : null,
-  video: phase === "mirroring" ? { width: 1170, height: 2532 } : null,
+  video: phase === "mirroring" || phase === "paused" ? picture : null,
   error: phase === "error" ? "crashed" : null,
   softwareDecoding: false,
+  sound: params.get("sound") === "1" || phase === "audio",
+  locked: params.get("locked") === "1",
 };
 
 const diagnostics: Diagnostics = {

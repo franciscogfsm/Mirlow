@@ -33,7 +33,16 @@ struct Inner {
     rect: Rect,
     /// Corner radius of the picture, in physical pixels.
     radius: i32,
+    /// Whether the interface wants the picture shown.
     visible: bool,
+    /// Kept hidden whatever the interface wants: the device's screen is asleep.
+    concealed: bool,
+}
+
+impl Inner {
+    fn shown(&self) -> bool {
+        self.visible && !self.concealed
+    }
 }
 
 #[derive(Default)]
@@ -68,7 +77,7 @@ pub fn watch(app: &AppHandle, pid: u32) {
                 platform::adopt(hwnd, parent);
                 inner.hwnd = hwnd;
                 inner.own = false;
-                platform::place(hwnd, inner.rect, inner.radius, inner.visible);
+                platform::place(hwnd, inner.rect, inner.radius, inner.shown());
                 return;
             }
             thread::sleep(Duration::from_millis(30));
@@ -82,6 +91,8 @@ pub fn detach(app: &AppHandle) {
     let video = app.state::<Video>();
     video.generation.fetch_add(1, Ordering::SeqCst);
     let mut inner = video.inner.lock().unwrap();
+    // Whatever comes next is a new picture.
+    inner.concealed = false;
     if inner.own {
         return;
     }
@@ -102,6 +113,7 @@ pub fn attach(app: &AppHandle, hwnd: isize) {
     }
     inner.hwnd = hwnd;
     inner.own = true;
+    inner.concealed = false;
     platform::place(hwnd, inner.rect, inner.radius, inner.visible);
 }
 
@@ -123,6 +135,21 @@ pub fn main_window(app: &AppHandle) -> Option<isize> {
     main_hwnd(app)
 }
 
+/// Hides the engine's picture at once, whatever the layout says, or lets the
+/// layout decide again. While a device's screen is asleep its last frame stays
+/// in the window, and nobody should be left looking at it.
+pub fn conceal(app: &AppHandle, concealed: bool) {
+    let video = app.state::<Video>();
+    let mut inner = video.inner.lock().unwrap();
+    if inner.concealed == concealed {
+        return;
+    }
+    inner.concealed = concealed;
+    if inner.hwnd != 0 && !inner.own && platform::is_window(inner.hwnd) {
+        platform::place(inner.hwnd, inner.rect, inner.radius, inner.shown());
+    }
+}
+
 /// Sets where the picture goes, how round its corners are, and whether it is shown.
 pub fn layout(app: &AppHandle, rect: Rect, radius: i32, visible: bool) {
     let video = app.state::<Video>();
@@ -132,7 +159,7 @@ pub fn layout(app: &AppHandle, rect: Rect, radius: i32, visible: bool) {
     inner.visible = visible;
     if inner.hwnd != 0 {
         if platform::is_window(inner.hwnd) {
-            platform::place(inner.hwnd, rect, inner.radius, visible);
+            platform::place(inner.hwnd, rect, inner.radius, inner.shown());
         } else {
             inner.hwnd = 0;
         }

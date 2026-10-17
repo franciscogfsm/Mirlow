@@ -7,6 +7,7 @@ export type Phase =
   | "ready"
   | "connecting"
   | "mirroring"
+  | "paused"
   | "audio"
   | "recovering"
   | "error";
@@ -32,6 +33,10 @@ export interface Status {
   video: VideoSize | null;
   error: ErrorKind | null;
   softwareDecoding: boolean;
+  /** The device is sending sound that can be heard. */
+  sound: boolean;
+  /** The device's screen went to sleep (it was locked); the picture is paused until it wakes. */
+  locked: boolean;
 }
 
 export type ThemeSetting = "system" | "light" | "dark";

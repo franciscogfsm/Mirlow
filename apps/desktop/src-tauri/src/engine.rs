@@ -37,6 +37,10 @@ pub enum Phase {
     Connecting,
     /// A screen is being mirrored.
     Mirroring,
+    /// A screen was being mirrored and the device is still connected, but its
+    /// picture has stopped: it was locked, or stopped sending it. The last
+    /// frame is hidden, and the window keeps its shape for when it comes back.
+    Paused,
     /// A device is playing audio only.
     Audio,
     /// The engine stopped unexpectedly and is being restarted.
@@ -84,6 +88,11 @@ pub struct Status {
     pub error: Option<ErrorKind>,
     /// True while video is decoded in software because the GPU path failed.
     pub software_decoding: bool,
+    /// The device is sending sound that can be heard.
+    pub sound: bool,
+    /// The device said its screen went to sleep: it was locked, or its screen
+    /// turned off. The picture comes back when it wakes.
+    pub locked: bool,
 }
 
 /// A device mirroring through something other than the AirPlay engine (an
@@ -106,6 +115,19 @@ enum Outcome {
     Restart,
     Shutdown,
     Exited,
+}
+
+/// What the engine has said about the connected device beyond what [`Status`]
+/// shows. Cleared when the device goes.
+#[derive(Default)]
+struct Session {
+    /// The device's screen is asleep, so the picture is paused.
+    locked: bool,
+    /// The newest picture size while asleep, applied when the device wakes, so
+    /// the window does not change shape behind the pause.
+    held: Option<VideoSize>,
+    /// The device is streaming music (AirPlay audio) rather than its screen.
+    audio_only: bool,
 }
 
 struct Shared {
@@ -149,6 +171,8 @@ impl Engine {
                 video: None,
                 error: None,
                 software_decoding: false,
+                sound: false,
+                locked: false,
             }),
             guest: Mutex::new(None),
             shown: Mutex::new(None),
@@ -163,6 +187,7 @@ impl Engine {
             tx: tx.clone(),
             rx,
             job: ProcessJob::new(),
+            session: Session::default(),
         };
         thread::Builder::new()
             .name("engine-supervisor".into())
@@ -228,6 +253,8 @@ impl Shared {
             status.client = Some(guest.client);
             status.video = guest.video;
             status.error = None;
+            status.sound = false;
+            status.locked = false;
         }
         status
     }
@@ -256,10 +283,11 @@ struct Supervisor {
     tx: Sender<Message>,
     rx: Receiver<Message>,
     job: ProcessJob,
+    session: Session,
 }
 
 impl Supervisor {
-    fn run(self) {
+    fn run(mut self) {
         let mut failures: Vec<Instant> = Vec::new();
         // Set when the GPU decoder fails mid-session; lasts until the app closes.
         let mut software_fallback = false;
@@ -268,6 +296,7 @@ impl Supervisor {
             let settings = self.shared.settings.lock().unwrap().clone();
             let software = settings.compatibility || software_fallback;
             self.shared.connections.store(0, Ordering::Relaxed);
+            self.session = Session::default();
             self.update(|status| {
                 status.phase = if failures.is_empty() { Phase::Starting } else { Phase::Recovering };
                 status.name = settings.name.clone();
@@ -275,6 +304,8 @@ impl Supervisor {
                 status.video = None;
                 status.error = None;
                 status.software_decoding = software && !settings.compatibility;
+                status.sound = false;
+                status.locked = false;
             });
 
             let mut child = match self.spawn(&settings, software) {
@@ -368,6 +399,8 @@ impl Supervisor {
                 status.phase = Phase::Recovering;
                 status.client = None;
                 status.video = None;
+                status.sound = false;
+                status.locked = false;
             });
             let backoff = Duration::from_millis(400 * (1 << (failures.len() - 1).min(4)) as u64);
             match self.rx.recv_timeout(backoff) {
@@ -404,6 +437,10 @@ impl Supervisor {
             .arg(&settings.name)
             .arg("-nh") // advertise the name as given, without "@hostname"
             .arg("-nohold") // a new device may take over from the current one
+            // When a device drops off the network, close its picture rather
+            // than leave the last frame up: Mirlow hides it anyway, and a
+            // window left behind could not be found again for the next device.
+            .arg("-nofreeze")
             .args(["-fps", "60"])
             .arg("-key")
             .arg(self.shared.data_dir.join("receiver.pem"))
@@ -467,7 +504,7 @@ impl Supervisor {
         }
     }
 
-    fn handle_line(&self, line: &str, hint: &mut Option<ErrorKind>, video_failed: &mut bool) {
+    fn handle_line(&mut self, line: &str, hint: &mut Option<ErrorKind>, video_failed: &mut bool) {
         let line = line.trim_end();
         if line.is_empty() {
             return;
@@ -488,15 +525,12 @@ impl Supervisor {
         }
         // "ct=2" is Apple Lossless, which only audio-only AirPlay uses.
         if line.starts_with("ct=2 ") {
-            self.update(|status| {
-                if status.video.is_none() && status.phase != Phase::Mirroring {
-                    status.phase = Phase::Audio;
-                }
-            });
+            self.session.audio_only = true;
+            self.update(|status| settle(status, true));
         }
     }
 
-    fn handle_event(&self, event: &str) {
+    fn handle_event(&mut self, event: &str) {
         let (kind, rest) = event.split_once(' ').unwrap_or((event, ""));
         match kind {
             "ready" => self.update(|status| {
@@ -511,11 +545,13 @@ impl Supervisor {
                 crate::tray::show_window(&self.shared.app);
                 // The newest device takes over, whichever way it connects.
                 crate::miracast::disconnect(&self.shared.app);
+                let audio_only = self.session.audio_only;
                 self.update(|status| {
                     status.client = Some(client);
                     if status.phase == Phase::Ready {
                         status.phase = Phase::Connecting;
                     }
+                    settle(status, audio_only);
                 });
             }
             "connections" => {
@@ -523,18 +559,23 @@ impl Supervisor {
                 self.shared.connections.store(count, Ordering::Relaxed);
                 if count == 0 {
                     video::detach(&self.shared.app);
+                    self.session = Session::default();
                     self.update(|status| {
                         if status.phase != Phase::Error {
                             status.phase = Phase::Ready;
                         }
                         status.client = None;
                         status.video = None;
+                        status.sound = false;
+                        status.locked = false;
                     });
                 } else {
+                    let audio_only = self.session.audio_only;
                     self.update(|status| {
                         if status.phase == Phase::Ready {
                             status.phase = Phase::Connecting;
                         }
+                        settle(status, audio_only);
                     });
                 }
             }
@@ -542,23 +583,95 @@ impl Supervisor {
                 let mut numbers = rest.split_whitespace().filter_map(|n| n.parse::<u32>().ok());
                 if let (Some(width), Some(height)) = (numbers.next(), numbers.next()) {
                     if width > 0 && height > 0 {
-                        self.update(|status| {
-                            status.phase = Phase::Mirroring;
-                            status.video = Some(VideoSize { width, height });
-                        });
+                        let size = VideoSize { width, height };
+                        if self.session.locked {
+                            // Asleep: keep the window's shape until the device
+                            // wakes, which reports its size again anyway.
+                            self.session.held = Some(size);
+                            self.update(|status| {
+                                if status.video.is_none() {
+                                    status.video = Some(size);
+                                    status.phase = Phase::Paused;
+                                }
+                            });
+                        } else {
+                            self.session.held = None;
+                            self.update(|status| {
+                                status.phase = Phase::Mirroring;
+                                status.video = Some(size);
+                            });
+                        }
                         video::watch(&self.shared.app, self.shared.pid.load(Ordering::Relaxed));
                     }
                 }
             }
+            "video-pause" => {
+                // The device's screen went to sleep, usually because it was
+                // locked. Its last frame must not stay on show (it may be on a
+                // projector), so it is hidden before anything else happens.
+                video::conceal(&self.shared.app, true);
+                self.session.locked = true;
+                self.update(|status| {
+                    status.locked = true;
+                    if status.video.is_some() {
+                        status.phase = Phase::Paused;
+                    }
+                });
+            }
+            "video-resume" => {
+                // Awake again. The picture is revealed once the interface has
+                // laid it out, by which time a fresh frame has replaced the old one.
+                video::conceal(&self.shared.app, false);
+                self.session.locked = false;
+                let held = self.session.held.take();
+                self.update(|status| {
+                    status.locked = false;
+                    if let Some(size) = held {
+                        status.video = Some(size);
+                    }
+                    if status.phase == Phase::Paused && status.video.is_some() {
+                        status.phase = Phase::Mirroring;
+                    }
+                });
+            }
             "video-reset" => {
-                // The picture stopped; the device may stay connected for audio.
+                // The picture stopped. The device may stay connected: to carry
+                // on later, or to keep playing sound in the meantime.
                 video::detach(&self.shared.app);
                 let connected = self.shared.connections.load(Ordering::Relaxed) > 0;
+                // Type 0 means another device is taking over from this one.
+                let takeover = rest.trim() == "0";
+                self.session.locked = false;
+                self.session.held = None;
+                if takeover {
+                    self.session = Session::default();
+                }
+                let audio_only = self.session.audio_only;
                 self.update(|status| {
-                    status.video = None;
-                    if status.phase == Phase::Mirroring {
-                        status.phase = if connected { Phase::Connecting } else { Phase::Ready };
+                    status.locked = false;
+                    if takeover {
+                        status.client = None;
+                        status.sound = false;
                     }
+                    if connected && !takeover && status.video.is_some() {
+                        // Keep the window as it was, with the picture hidden,
+                        // rather than claim to be connecting all over again.
+                        status.phase = Phase::Paused;
+                    } else {
+                        status.video = None;
+                        if matches!(status.phase, Phase::Mirroring | Phase::Paused) {
+                            status.phase = if connected { Phase::Connecting } else { Phase::Ready };
+                        }
+                        settle(status, audio_only);
+                    }
+                });
+            }
+            "sound" => {
+                let sound = rest.trim() == "1";
+                let audio_only = self.session.audio_only;
+                self.update(|status| {
+                    status.sound = sound;
+                    settle(status, audio_only);
                 });
             }
             _ => {}
@@ -592,6 +705,18 @@ impl Supervisor {
 
     fn log_line(&self, line: String) {
         self.shared.log_line(line);
+    }
+}
+
+/// A device with no picture that is sending sound is playing sound, not
+/// connecting; once the sound stops (and it is not streaming music, where a
+/// quiet moment between songs means nothing) it is back to waiting for a picture.
+fn settle(status: &mut Status, audio_only: bool) {
+    let sound = status.sound || audio_only;
+    match status.phase {
+        Phase::Connecting if sound => status.phase = Phase::Audio,
+        Phase::Audio if !sound => status.phase = Phase::Connecting,
+        _ => {}
     }
 }
 
@@ -745,4 +870,49 @@ impl ProcessJob {
 
     #[cfg(not(windows))]
     fn assign(&self, _child: &Child) {}
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn status(phase: Phase, sound: bool) -> Status {
+        Status {
+            phase,
+            name: "PC".into(),
+            client: None,
+            video: None,
+            error: None,
+            software_decoding: false,
+            sound,
+            locked: false,
+        }
+    }
+
+    #[test]
+    fn sound_without_a_picture_is_not_connecting() {
+        let mut playing = status(Phase::Connecting, true);
+        settle(&mut playing, false);
+        assert_eq!(playing.phase, Phase::Audio);
+
+        let mut quiet = status(Phase::Audio, false);
+        settle(&mut quiet, false);
+        assert_eq!(quiet.phase, Phase::Connecting);
+    }
+
+    #[test]
+    fn music_between_songs_is_still_music() {
+        let mut between = status(Phase::Audio, false);
+        settle(&mut between, true);
+        assert_eq!(between.phase, Phase::Audio);
+    }
+
+    #[test]
+    fn a_picture_is_left_alone() {
+        for phase in [Phase::Mirroring, Phase::Paused, Phase::Ready] {
+            let mut shown = status(phase, true);
+            settle(&mut shown, true);
+            assert_eq!(shown.phase, phase);
+        }
+    }
 }

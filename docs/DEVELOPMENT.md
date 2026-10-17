@@ -69,6 +69,7 @@ by canned answers, and the address chooses the state:
 ```
 preview.html?phase=ready&theme=dark&lang=pt
 preview.html?phase=connecting
+preview.html?phase=paused&locked=1&sound=1
 preview.html?phase=error
 preview.html?phase=ready&sheet=settings
 preview.html?phase=ready&sheet=help&network=public
@@ -76,8 +77,10 @@ preview.html?phase=ready&sheet=help&network=public
 
 **Stand-in engine.** `scripts/dev/fake-engine.c` speaks the engine's protocol
 and opens a real Direct3D 11 window showing a test pattern: a device connects,
-shows a portrait picture, rotates to landscape and back, and disconnects, on a
-loop. It exercises the window adoption, layout and resizing code for real.
+shows a portrait picture, rotates to landscape and back, plays sound, is locked
+and unlocked sideways, stops its picture while staying connected, and
+disconnects, on a loop. It exercises the window adoption, layout, resizing and
+pausing code for real.
 
 ```bash
 # in an MSYS2 UCRT64 shell
@@ -108,7 +111,10 @@ iPhone ── AirPlay over the local network ──▶ mirlow-engine.exe (UxPlay
 ```
 
 Events the engine prints (see `engine/patches/0001-…`): `ready`, `client`,
-`connections`, `video-codec`, `video-size`, `video-reset`.
+`connections`, `video-codec`, `video-size`, `video-reset`, `video-pause` and
+`video-resume` (the device's screen went to sleep, usually because it was
+locked, and woke again), and `sound 1` / `sound 0` (sound from the device can
+be heard, or has been silent for a few seconds).
 
 ## Updating UxPlay
 

@@ -1,8 +1,58 @@
+diff --git a/renderers/audio_renderer.c b/renderers/audio_renderer.c
+index c33a0ce..9c376ce 100644
+--- a/renderers/audio_renderer.c
++++ b/renderers/audio_renderer.c
+@@ -52,6 +52,11 @@ typedef struct audio_renderer_s {
+ } audio_renderer_t ;
+ static audio_renderer_t *renderer_type[NFORMATS];
+ static audio_renderer_t *renderer = NULL;
++static void (*level_callback)(double peak_db) = NULL;
++
++void audio_renderer_set_level_callback(void (*callback)(double peak_db)) {
++    level_callback = callback;
++}
+ 
+ /* GStreamer Caps strings for Airplay-defined audio compression types (ct) */
+ 
+@@ -429,6 +434,20 @@ static gboolean gstreamer_audio_pipeline_bus_callback(GstBus *bus, GstMessage *m
+         break;
+     case GST_MESSAGE_ELEMENT:
+       // many "level" messages may be sent
++        if (level_callback && gst_message_has_name(message, "level")) {
++G_GNUC_BEGIN_IGNORE_DEPRECATIONS
++            GValueArray *peaks = NULL;
++            if (gst_structure_get_array((GstStructure *) gst_message_get_structure(message), "peak", &peaks)) {
++                double loudest = -INFINITY;
++                for (guint i = 0; i < peaks->n_values; i++) {
++                    double peak = g_value_get_double(g_value_array_get_nth(peaks, i));
++                    if (peak > loudest) loudest = peak;
++                }
++                g_value_array_free(peaks);
++                level_callback(loudest);
++            }
++G_GNUC_END_IGNORE_DEPRECATIONS
++        }
+         break;
+     default:
+         /* unhandled message */
+diff --git a/renderers/audio_renderer.h b/renderers/audio_renderer.h
+index df31661..137ebc1 100644
+--- a/renderers/audio_renderer.h
++++ b/renderers/audio_renderer.h
+@@ -41,6 +41,8 @@ void audio_renderer_set_volume(double volume);
+ void audio_renderer_flush();
+ void audio_renderer_destroy();
+ unsigned int audio_renderer_listen(void *loop, int id);
++/* Mirlow: called with the loudest channel's peak level, in dB, as the level meter reports it */
++void audio_renderer_set_level_callback(void (*callback)(double peak_db));
+ #ifdef __cplusplus
+ }
+ #endif
 diff --git a/uxplay.cpp b/uxplay.cpp
-index be41031..419e7fe 100644
+index be41031..c091448 100644
 --- a/uxplay.cpp
 +++ b/uxplay.cpp
-@@ -295,6 +295,24 @@ static void log(int level, const char* format, ...) {
+@@ -295,6 +295,50 @@ static void log(int level, const char* format, ...) {
  #define LOGW(...) log(LOGGER_WARNING, __VA_ARGS__)
  #define LOGE(...) log(LOGGER_ERR, __VA_ARGS__)
  
@@ -24,10 +74,36 @@ index be41031..419e7fe 100644
 +    fflush(stdout);
 +}
 +
++/* Mirlow: whether sound from the client can be heard, judged by the audio renderer's level meter.
++ * "sound 1" is reported at once; "sound 0" only after a few seconds of silence, so that the gap
++ * between two songs is not reported. Both functions run on the main loop's thread. */
++#define MIRLOW_AUDIBLE_DB (-60.0)
++#define MIRLOW_SILENCE_US (3 * G_TIME_SPAN_SECOND)
++static bool mirlow_sound = false;
++static gint64 mirlow_sound_heard = 0;
++
++static void mirlow_sound_level(double peak_db) {
++    if (peak_db <= MIRLOW_AUDIBLE_DB) return;
++    mirlow_sound_heard = g_get_monotonic_time();
++    if (!mirlow_sound) {
++        mirlow_sound = true;
++        mirlow_event("sound 1");
++    }
++}
++
++static gboolean mirlow_sound_watch(gpointer data) {
++    bool silent = g_get_monotonic_time() - mirlow_sound_heard > MIRLOW_SILENCE_US;
++    if (mirlow_sound && (silent || open_connections == 0)) {
++        mirlow_sound = false;
++        mirlow_event("sound 0");
++    }
++    return G_SOURCE_CONTINUE;
++}
++
  #ifdef DBUS
  static void dbus_screensaver_inhibiter(bool inhibit) {
      g_assert(inhibit != dbus_last_message);
-@@ -625,6 +643,22 @@ static gboolean handle_signal(gpointer data) {
+@@ -625,6 +669,22 @@ static gboolean handle_signal(gpointer data) {
      return G_SOURCE_REMOVE;
  }
  
@@ -50,7 +126,7 @@ index be41031..419e7fe 100644
  static BOOL WINAPI CtrlHandler(DWORD signal) {
      switch (signal) {
      case CTRL_C_EVENT:
-@@ -2515,6 +2549,7 @@ static bool check_blocked_client(char *deviceid) {
+@@ -2515,6 +2575,7 @@ static bool check_blocked_client(char *deviceid) {
  //to be simplified
  
  extern "C" void video_reset(void *cls, reset_type_t type) {
@@ -58,7 +134,7 @@ index be41031..419e7fe 100644
      switch (type) {
      case RESET_TYPE_NOHOLD:
          LOGD("video_reset: type = NoHold");
-@@ -2576,6 +2611,7 @@ extern "C" void video_reset(void *cls, reset_type_t type) {
+@@ -2576,6 +2637,7 @@ extern "C" void video_reset(void *cls, reset_type_t type) {
  
  extern "C" int video_set_codec(void *cls, video_codec_t codec) {
      bool video_is_h265 = (codec == VIDEO_CODEC_H265);
@@ -66,7 +142,7 @@ index be41031..419e7fe 100644
      if (mux_to_file) {
          mux_renderer_choose_video_codec(video_is_h265);
      }
-@@ -2624,6 +2660,7 @@ extern "C" void export_dacp(void *cls, const char *active_remote, const char *da
+@@ -2624,6 +2686,7 @@ extern "C" void export_dacp(void *cls, const char *active_remote, const char *da
  extern "C" void conn_init (void *cls) {
      open_connections++;
      LOGD("Open connections: %i", open_connections);
@@ -74,7 +150,7 @@ index be41031..419e7fe 100644
      //video_renderer_update_background(1);
  }
  
-@@ -2631,6 +2668,7 @@ extern "C" void conn_destroy (void *cls) {
+@@ -2631,6 +2694,7 @@ extern "C" void conn_destroy (void *cls) {
      //video_renderer_update_background(-1);
      open_connections--;
      LOGD("Open connections: %i", open_connections);
@@ -82,7 +158,7 @@ index be41031..419e7fe 100644
      if (open_connections == 0) {
          remote_clock_offset = 0;
          if (use_audio) {
-@@ -2672,6 +2710,7 @@ extern "C" void conn_reset (void *cls, int reason) {
+@@ -2672,6 +2736,7 @@ extern "C" void conn_reset (void *cls, int reason) {
  
  extern "C" void report_client_request(void *cls, char *deviceid, char * model, char *name, bool * admit) {
      LOGI("connection request from %s (%s) with deviceID = %s\n", name, model, deviceid);
@@ -90,7 +166,22 @@ index be41031..419e7fe 100644
      if (restrict_clients) {
          *admit = check_client(deviceid);
          if (*admit == false) {
-@@ -2877,6 +2916,7 @@ extern "C" void audio_get_format (void *cls, unsigned char *ct, unsigned short *
+@@ -2762,12 +2827,14 @@ extern "C" void mirror_video_running  (void *cls, bool is_running) {
+ #endif
+ 
+ extern "C" void video_pause (void *cls) {
++    mirlow_event("video-pause");
+     if (use_video) {
+         video_renderer_pause();
+     }
+ }
+ 
+ extern "C" void video_resume (void *cls) {
++    mirlow_event("video-resume");
+     if (use_video) {
+         video_renderer_resume();
+     }
+@@ -2877,6 +2944,7 @@ extern "C" void audio_get_format (void *cls, unsigned char *ct, unsigned short *
  }
  
  extern "C" void video_report_size(void *cls, float *width_source, float *height_source, float *width, float *height) {
@@ -98,18 +189,20 @@ index be41031..419e7fe 100644
      if (use_video) {
          video_renderer_size(width_source, height_source, width, height);
      }
-@@ -3295,6 +3335,10 @@ int main (int argc, char *argv[]) {
+@@ -3295,6 +3363,12 @@ int main (int argc, char *argv[]) {
          LOGE("Could not set control handler");
          exit(1);
      }
 +    if (getenv("MIRLOW_SUPERVISED")) {
 +        mirlow_supervised = true;
 +        g_thread_unref(g_thread_new("mirlow-stdin", mirlow_stdin_watch, NULL));
++        audio_renderer_set_level_callback(mirlow_sound_level);
++        g_timeout_add(250, mirlow_sound_watch, NULL);
 +    }
  #else
      signal(SIGINT, CtrlHandler);
      signal(SIGTERM, CtrlHandler);
-@@ -3669,6 +3713,7 @@ int main (int argc, char *argv[]) {
+@@ -3669,6 +3743,7 @@ int main (int argc, char *argv[]) {
          stop_dnssd();
          cleanup();
      }

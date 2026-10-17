@@ -39,7 +39,27 @@ when mirrored. That is decided by those apps and is expected.
 2. **Expected:** Mirlow's window glides to a landscape shape, and back to
    portrait when the phone is turned upright.
 
-## 5. Full screen and controls
+## 5. Locking the phone
+
+This is the case that matters when presenting: nothing from the phone may stay
+on the PC's screen while the phone is locked.
+
+1. Mirror the Notes app, then lock the iPhone with the side button.
+2. **Expected:** the picture disappears at once and Mirlow shows *Screen
+   locked* in its place. The window keeps its size, and full screen stays full
+   screen. The bar says *(device) · paused*.
+3. Play music, lock the iPhone, and keep the music playing.
+   **Expected:** the same, with *Sound is still playing* underneath, and the
+   bar says *(device) · sound only* rather than *Connecting*.
+4. Unlock the iPhone. **Expected:** the picture comes back where it was.
+5. Lock it again, turn it sideways, unlock it in an app that rotates.
+   **Expected:** the picture comes back in landscape, and the window glides to
+   the new shape.
+6. Leave it locked for a minute. **Expected:** Mirlow either stays on *Screen
+   locked* or, if the iPhone drops the connection, returns to *Ready to
+   mirror*. It never shows the old picture again.
+
+## 6. Full screen and controls
 
 1. Press **F11** (or **F**, or double-click the picture). **Expected:** full
    screen, with the bar fading away after a moment and returning when the mouse
@@ -48,14 +68,14 @@ when mirrored. That is decided by those apps and is expected.
 3. Click **Disconnect**. **Expected:** mirroring stops and Mirlow returns to
    *Ready to mirror*; the iPhone shows it is no longer mirroring.
 
-## 6. Ending from the phone, and recovery
+## 7. Ending from the phone, and recovery
 
 1. Mirror again, then on the iPhone tap **Stop Mirroring**. **Expected:** Mirlow
    returns to *Ready to mirror* at its compact size.
 2. Mirror again, then turn the phone's Wi-Fi off. **Expected:** within about
    fifteen seconds Mirlow returns to *Ready to mirror* on its own.
 
-## 7. The notification area
+## 8. The notification area
 
 1. Close Mirlow's window with **X**. **Expected:** the window goes, the Mirlow
    icon stays next to the clock, and the PC is still listed on the iPhone.
@@ -63,9 +83,9 @@ when mirrored. That is decided by those apps and is expected.
 3. Right-click the icon and choose **Quit Mirlow**. **Expected:** the PC
    disappears from the iPhone's list within a few seconds.
 
-## 8. iPad and Mac
+## 9. iPad and Mac
 
-Repeat sections 1 to 4 with an iPad. A Mac can also mirror: in its Control
+Repeat sections 1 to 5 with an iPad. A Mac can also mirror: in its Control
 Centre choose **Screen Mirroring** and pick the PC.
 
 ## If something fails
