@@ -1,0 +1,647 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<title>Mirlow TikTok</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300..800&family=Instrument+Serif:ital@0;1&display=block" rel="stylesheet">
+<style>
+  :root {
+    --paper: #050505;
+    --ink: #fafafa;
+    --soft: rgba(250,250,250,.62);
+    --faint: rgba(250,250,250,.36);
+    --line: rgba(250,250,250,.1);
+    --line-strong: rgba(250,250,250,.18);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1080px; height: 1920px; overflow: hidden; background: var(--paper); }
+  body {
+    color: var(--ink);
+    font-family: "Geist", "Segoe UI Variable Display", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  #stage { position: absolute; inset: 0; overflow: hidden; background: var(--paper); }
+  .abs { position: absolute; }
+  .layer { position: absolute; inset: 0; }
+
+  /* Backdrop: faint grid that slides one cell per chapter, soft fields of light. */
+  #grid {
+    position: absolute; inset: -200px 0 0 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px);
+    background-size: 90px 90px;
+    mask-image: radial-gradient(ellipse 85% 55% at 50% 30%, #000 0%, transparent 80%);
+  }
+  .glow { position: absolute; border-radius: 50%; filter: blur(140px); }
+  #glowA { width: 760px; height: 760px; background: rgba(255,255,255,.11); }
+  #glowB { width: 640px; height: 640px; background: rgba(255,255,255,.06); }
+  #vignette { position: absolute; inset: 0; background: radial-gradient(ellipse 120% 80% at 50% 45%, transparent 55%, rgba(0,0,0,.65) 100%); }
+
+  /* Type */
+  .h { font-weight: 620; letter-spacing: -0.045em; line-height: 1.02; text-align: center; width: 100%; }
+  .w { display: inline-block; will-change: transform, filter, opacity; white-space: pre; }
+  .accent { font-family: "Instrument Serif", Georgia, serif; font-style: italic; font-weight: 400; letter-spacing: -0.01em; padding-right: .08em; }
+  .eyebrow { font-size: 30px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--faint); text-align: center; width: 100%; }
+  .soft { color: var(--soft); }
+  .faint { color: var(--faint); }
+
+  /* Glass */
+  .glass {
+    background: linear-gradient(180deg, rgba(255,255,255,.085), rgba(255,255,255,.03));
+    border: 1.5px solid rgba(255,255,255,.14);
+    box-shadow:
+      inset 0 1.5px 0 rgba(255,255,255,.32),
+      inset 0 -1px 0 rgba(255,255,255,.05),
+      0 2px 2px rgba(0,0,0,.3),
+      0 40px 80px -24px rgba(0,0,0,.9);
+    backdrop-filter: blur(24px);
+  }
+
+  /* Signal */
+  #signal { width: 560px; height: 560px; left: 260px; top: 580px; }
+  .ring { position: absolute; inset: 0; border-radius: 50%; border: 1.5px solid var(--line-strong); }
+  .pulse { position: absolute; inset: 0; border-radius: 50%; border: 2.5px solid var(--ink); opacity: 0; }
+  #disc {
+    position: absolute; left: 50%; top: 50%; width: 236px; height: 236px; margin: -118px 0 0 -118px;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  }
+
+  /* Strike list */
+  .strike-item { position: absolute; left: 0; width: 100%; text-align: center; font-size: 104px; font-weight: 620; letter-spacing: -0.045em; }
+  .strike-item span { position: relative; display: inline-block; }
+  .strike-item i { position: absolute; left: -3%; top: 54%; height: 7px; width: 106%; background: var(--ink); border-radius: 4px; transform-origin: left center; }
+
+  /* PC window */
+  #win {
+    left: 90px; top: 340px; width: 900px; height: 560px; border-radius: 30px; overflow: hidden;
+    background: #0c0c0c; border: 1.5px solid rgba(255,255,255,.12);
+    box-shadow: inset 0 1.5px 0 rgba(255,255,255,.14), 0 60px 120px -30px rgba(0,0,0,1), 0 0 0 1px rgba(0,0,0,.6);
+  }
+  #win .bar { position: absolute; left: 0; right: 0; top: 0; height: 56px; display: flex; align-items: center; padding: 0 24px; gap: 12px; color: var(--soft); font-size: 20px; font-weight: 500; }
+  #win .ctl { margin-left: auto; display: flex; gap: 30px; color: var(--faint); }
+  #win .content { position: absolute; left: 0; right: 0; top: 56px; bottom: 0; }
+  #stageBlack { position: absolute; inset: 0; background: #000; }
+  #monitorStand { left: 470px; top: 900px; width: 140px; height: 0; }
+
+  /* Phone */
+  #phone { left: 400px; top: 990px; width: 280px; height: 600px; border-radius: 52px; background: #111; border: 2px solid rgba(255,255,255,.2);
+    box-shadow: inset 0 0 0 7px #000, inset 0 2px 0 9px rgba(255,255,255,.08), 0 50px 100px -20px rgba(0,0,0,1); }
+  #phoneScreen { position: absolute; left: 9px; top: 9px; right: 9px; bottom: 9px; border-radius: 43px; overflow: hidden; }
+  .island { position: absolute; left: 50%; top: 12px; width: 84px; height: 25px; margin-left: -42px; background: #000; border-radius: 20px; z-index: 5; }
+
+  .ps { position: absolute; inset: 0; overflow: hidden; background: #f4f4f3; color: #0a0a0a; container-type: inline-size; font-family: "Geist", system-ui, sans-serif; }
+  .ps .in { display: flex; flex-direction: column; height: 100%; padding: 12cqw 6cqw 6cqw; }
+  .ps .status { display: flex; justify-content: space-between; align-items: center; font-weight: 600; font-size: 4.6cqw; padding: 0 3cqw; }
+  .ps .track { display: flex; }
+  .ps .card { position: relative; width: 100%; flex-shrink: 0; aspect-ratio: 1 / 1.08; }
+  .ps .dots { display: flex; justify-content: center; gap: 1.8cqw; margin-top: 4.5cqw; }
+  .ps .dots i { display: block; height: 1.6cqw; border-radius: 9px; background: #000; }
+
+  /* Control centre (on the phone) */
+  #cc { position: absolute; inset: 0; background: rgba(8,8,8,.74); backdrop-filter: blur(24px) saturate(1.1); container-type: inline-size; color: #fff; }
+  #cc .grid { position: absolute; left: 7cqw; right: 7cqw; top: 22cqw; display: grid; grid-template-columns: 1fr 1fr; gap: 4cqw; }
+  #cc .blk { background: rgba(255,255,255,.14); border-radius: 7cqw; aspect-ratio: 1; }
+  #cc .dot4 { display: grid; grid-template-columns: 1fr 1fr; gap: 3cqw; padding: 5cqw; }
+  #cc .dot4 i { display: block; border-radius: 50%; background: rgba(255,255,255,.22); aspect-ratio: 1; }
+  #cc .dot4 i.on { background: #fff; }
+  #ccMirror { grid-column: span 2; height: 18cqw; border-radius: 6cqw; display: flex; align-items: center; gap: 3.5cqw; padding: 0 5.5cqw; font-size: 4.9cqw; font-weight: 600; background: rgba(255,255,255,.14); }
+  #cc .sl { height: 38cqw; border-radius: 7cqw; background: rgba(255,255,255,.14); position: relative; overflow: hidden; aspect-ratio: auto; }
+  #cc .sl b { position: absolute; left: 0; right: 0; bottom: 0; background: #fff; }
+  #sheet { position: absolute; left: 6cqw; right: 6cqw; top: 78cqw; box-shadow: 0 20px 60px rgba(0,0,0,.6); border-radius: 7cqw; background: rgba(38,38,38,.94); backdrop-filter: blur(20px); padding: 5cqw 0 2cqw; color: #fff; }
+  #sheet .t { text-align: center; font-weight: 650; font-size: 5.4cqw; }
+  #sheet .s { text-align: center; font-size: 3.6cqw; opacity: .55; margin-top: 1cqw; }
+  #sheet .row { display: flex; align-items: center; gap: 3.5cqw; padding: 4.5cqw 6cqw; margin-top: 3.5cqw; border-top: 1px solid rgba(255,255,255,.12); font-size: 5cqw; font-weight: 550; }
+  #sheet .row .r { margin-left: auto; width: 6cqw; height: 6cqw; position: relative; }
+
+  #finger { width: 58px; height: 58px; border-radius: 50%; margin: -29px 0 0 -29px; background: rgba(255,255,255,.92); box-shadow: 0 10px 30px rgba(0,0,0,.5), inset 0 -3px 6px rgba(0,0,0,.12); z-index: 30; }
+  #ripple { width: 58px; height: 58px; border-radius: 50%; margin: -29px 0 0 -29px; border: 3px solid #fff; z-index: 29; }
+
+  /* Steps caption */
+  .step { position: absolute; left: 0; width: 100%; top: 150px; display: flex; justify-content: center; align-items: center; gap: 26px; }
+  .num { width: 76px; height: 76px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 36px; font-weight: 650; flex-shrink: 0; }
+  .step .txt { font-size: 60px; font-weight: 620; letter-spacing: -0.04em; }
+
+  /* Feature rows */
+  .feat { position: absolute; left: 90px; width: 900px; height: 156px; border-radius: 40px; display: flex; align-items: center; gap: 30px; padding: 0 34px; }
+  .feat .ic { width: 92px; height: 92px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1.5px solid var(--line-strong); flex-shrink: 0; }
+  .feat .ft { font-size: 46px; font-weight: 620; letter-spacing: -0.035em; line-height: 1.1; }
+  .feat .fs { font-size: 29px; color: var(--soft); margin-top: 6px; letter-spacing: -0.01em; }
+
+  .pill { display: inline-flex; align-items: center; gap: 18px; border-radius: 999px; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="grid"></div>
+  <div id="glowA" class="glow"></div>
+  <div id="glowB" class="glow"></div>
+
+  <!-- 1. Hook -->
+  <div id="s1" class="layer">
+    <div id="s1eb" class="eyebrow abs" style="top:600px">Pouca gente sabe disto</div>
+    <div id="s1h" class="h abs" style="top:690px;font-size:124px"></div>
+  </div>
+
+  <!-- 2. Forget all that -->
+  <div id="s2" class="layer">
+    <div id="s2eb" class="h abs" style="top:430px;font-size:64px;color:var(--soft)"></div>
+    <div id="s2list" class="abs" style="left:0;width:100%;top:600px"></div>
+    <div id="s2end" class="h abs" style="top:1290px;font-size:84px"></div>
+  </div>
+
+  <!-- 3. Logo reveal (the signal also flies into the PC window in scene 4) -->
+  <div id="s3" class="layer">
+    <div id="s3name" class="abs" style="left:0;width:100%;top:1230px;display:flex;justify-content:center;align-items:center;gap:24px">
+      <svg id="s3mark" width="112" height="112" viewBox="0 0 24 24" fill="none"><path d="M5 17.5V11a3.5 3.5 0 0 1 7 0v4.5M12 11a3.5 3.5 0 0 1 7 0v6.5" stroke="#fafafa" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" pathLength="1" stroke-dasharray="1" /></svg>
+      <span id="s3word" style="font-size:132px;font-weight:640;letter-spacing:-0.055em;line-height:1">Mirlow</span>
+    </div>
+    <div id="s3tag" class="h abs soft" style="top:1410px;font-size:50px;font-weight:450;letter-spacing:-0.02em"></div>
+  </div>
+
+  <!-- 4. Demo -->
+  <div id="s4" class="layer">
+    <div id="win" class="abs">
+      <div class="bar">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M5 17.5V11a3.5 3.5 0 0 1 7 0v4.5M12 11a3.5 3.5 0 0 1 7 0v6.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Mirlow
+        <span class="ctl"><span>&#8212;</span><span>&#9633;</span><span>&#10005;</span></span>
+      </div>
+      <div class="content">
+        <div id="stageBlack"></div>
+        <div id="waitTxt" class="abs" style="left:0;right:0;top:300px;text-align:center">
+          <div style="font-size:36px;font-weight:620;letter-spacing:-0.035em">Pronto para projetar</div>
+          <div class="faint" style="font-size:15px;font-weight:500;letter-spacing:.1em;margin-top:16px">NOME DESTE PC</div>
+          <div class="glass pill" style="margin-top:12px;padding:12px 30px;font-size:22px;font-weight:620">O meu PC</div>
+        </div>
+      </div>
+    </div>
+    <div id="sheen" class="abs" style="left:90px;top:340px;width:900px;height:560px;border-radius:30px;overflow:hidden;pointer-events:none">
+      <div id="sheenBar" class="abs" style="top:-200px;width:260px;height:1000px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),transparent);transform:rotate(18deg)"></div>
+    </div>
+
+    <div id="phone" class="abs">
+      <div class="island"></div>
+      <div id="phoneScreen"></div>
+    </div>
+    <div id="mirror" class="abs" style="overflow:hidden"></div>
+
+    <div id="finger" class="abs"></div>
+    <div id="ripple" class="abs"></div>
+
+    <div id="st1" class="step"><div class="num glass">1</div><div class="txt">Abre o Mirlow no PC</div></div>
+    <div id="st2" class="step"><div class="num glass">2</div><div class="txt">Toca em Projeção do ecrã</div></div>
+    <div id="st3" class="step"><div class="num glass">3</div><div class="txt">Já está. <span class="accent" style="font-size:72px">Com som.</span></div></div>
+  </div>
+
+  <!-- Signal lives above scenes 3 and 4 -->
+  <div id="signal" class="abs">
+    <div class="ring" style="transform:scale(1)"></div>
+    <div class="ring" style="transform:scale(.78)"></div>
+    <div class="ring" style="transform:scale(.56)"></div>
+    <div class="pulse"></div><div class="pulse"></div><div class="pulse"></div>
+    <div id="disc" class="glass">
+      <svg width="104" height="104" viewBox="0 0 24 24" fill="none">
+        <defs><linearGradient id="mg" x1="4" y1="6" x2="20" y2="19" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fafafa"/><stop offset="1" stop-color="#fafafa" stop-opacity=".55"/></linearGradient></defs>
+        <path d="M5 17.5V11a3.5 3.5 0 0 1 7 0v4.5M12 11a3.5 3.5 0 0 1 7 0v6.5" stroke="url(#mg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- 5. Features -->
+  <div id="s5" class="layer">
+    <div id="s5h" class="h abs" style="top:330px;font-size:104px"></div>
+  </div>
+
+  <!-- 6. Free -->
+  <div id="s6" class="layer">
+    <div id="s6a" class="h abs" style="top:600px;font-size:270px;font-weight:660;letter-spacing:-0.065em;line-height:1"></div>
+    <div id="s6b" class="h abs" style="top:880px;font-size:170px;line-height:1"></div>
+    <div id="s6c" class="abs" style="left:0;width:100%;top:1150px;display:flex;flex-direction:column;align-items:center;gap:22px"></div>
+  </div>
+
+  <!-- 7. CTA -->
+  <div id="s7" class="layer">
+    <div id="s7icon" class="abs" style="left:400px;top:470px;width:280px;height:280px"></div>
+    <div id="s7word" class="h abs" style="top:810px;font-size:150px;font-weight:640;letter-spacing:-0.055em"></div>
+    <div id="s7tag" class="h abs soft" style="top:990px;font-size:46px;font-weight:450;letter-spacing:-0.02em"></div>
+    <div id="s7pill" class="abs" style="left:0;width:100%;top:1110px;display:flex;justify-content:center">
+      <div class="glass pill" style="padding:30px 52px;font-size:46px;font-weight:600;letter-spacing:-0.025em">
+        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#fafafa" stroke-width="2.2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 4.5 4.5"/></svg>
+        Pesquisa &ldquo;Mirlow&rdquo;
+      </div>
+    </div>
+    <div id="s7foot" class="eyebrow abs" style="top:1290px">Windows 10 &middot; 11 &middot; Grátis</div>
+  </div>
+
+  <div id="vignette"></div>
+</div>
+
+<script>
+// ---------- timing helpers ----------
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+function bezier(x1, y1, x2, y2) {
+  const bx = (t) => 3 * x1 * t * (1 - t) ** 2 + 3 * x2 * t * t * (1 - t) + t ** 3;
+  const by = (t) => 3 * y1 * t * (1 - t) ** 2 + 3 * y2 * t * t * (1 - t) + t ** 3;
+  return (x) => {
+    if (x <= 0) return 0;
+    if (x >= 1) return 1;
+    let lo = 0, hi = 1, t = x;
+    for (let i = 0; i < 28; i++) { t = (lo + hi) / 2; if (bx(t) < x) lo = t; else hi = t; }
+    return by(t);
+  };
+}
+const EO = bezier(0.16, 1, 0.3, 1);      // Mirlow --ease-out
+const EIO = bezier(0.65, 0, 0.35, 1);    // Mirlow --ease-in-out
+const EI = bezier(0.55, 0, 0.9, 0.4);
+const p = (t, s, d, e = EO) => e(clamp((t - s) / d));
+const lerp = (a, b, k) => a + (b - a) * k;
+// Damped spring, 0 → 1 with a small overshoot.
+const spring = (t, s, w = 13, z = 7.5) => { const x = t - s; return x <= 0 ? 0 : 1 - Math.exp(-z * x) * Math.cos(w * x); };
+const $ = (id) => document.getElementById(id);
+const css = (el, o) => { for (const k in o) el.style[k] = o[k]; };
+
+// ---------- words ----------
+// "*word*" is set in the serif italic, "|" breaks the line.
+function words(el, text) {
+  el.innerHTML = text.split(" ").map((w) => {
+    if (w === "|") return "<br>";
+    const acc = w.startsWith("*");
+    const clean = w.replace(/\*/g, "");
+    return `<span class="w${acc ? " accent" : ""}">${clean}</span>`;
+  }).join(" ");
+  return [...el.querySelectorAll(".w")];
+}
+function reveal(ws, t, start, { stag = 0.06, dur = 0.7, rise = 70, blur = 16, exit = Infinity, exitDur = 0.45, exitRise = -50 } = {}) {
+  ws.forEach((w, i) => {
+    const k = p(t, start + i * stag, dur);
+    const e = p(t, exit + i * 0.025, exitDur, EI);
+    w.style.opacity = (k * (1 - e)).toFixed(3);
+    w.style.transform = `translateY(${((1 - k) * rise + e * exitRise).toFixed(2)}px)`;
+    const b = (1 - k) * blur + e * 12;
+    w.style.filter = b > 0.05 ? `blur(${b.toFixed(2)}px)` : "none";
+  });
+}
+function fade(el, t, s, d, exit = Infinity, { rise = 50, blur = 14, scale = 0 } = {}) {
+  const k = p(t, s, d);
+  const e = p(t, exit, 0.45, EI);
+  el.style.opacity = (k * (1 - e)).toFixed(3);
+  el.style.transform = `translateY(${((1 - k) * rise - e * 40).toFixed(2)}px) scale(${(1 - (1 - k) * scale - e * 0.03).toFixed(4)})`;
+  const b = (1 - k) * blur + e * 12;
+  el.style.filter = b > 0.05 ? `blur(${b.toFixed(2)}px)` : "none";
+  return k * (1 - e);
+}
+const show = (el, on) => { el.style.display = on ? "" : "none"; };
+
+// ---------- the phone's made-up app (same as the website's PhoneScreen) ----------
+const CARDS = [
+  { title: "Lisboa", meta: "24 fotos", art: "radial-gradient(120% 90% at 20% 15%, #fff 0%, #cfcfcf 34%, #6b6b6b 68%, #1c1c1c 100%)" },
+  { title: "Atlântico", meta: "18 fotos", art: "linear-gradient(160deg, #1a1a1a 0%, #5c5c5c 42%, #e9e9e9 58%, #9a9a9a 100%)" },
+  { title: "Sintra", meta: "31 fotos", art: "radial-gradient(90% 120% at 80% 90%, #f4f4f4 0%, #a3a3a3 38%, #3a3a3a 72%, #0d0d0d 100%)" },
+  { title: "Porto", meta: "12 fotos", art: "linear-gradient(200deg, #f2f2f2 0%, #8a8a8a 45%, #262626 100%)" },
+];
+function phoneScreen(host) {
+  host.innerHTML = `<div class="ps"><div class="in">
+    <div class="status"><span>9:41</span><span style="display:flex;gap:1.4cqw;align-items:center"><i style="display:block;width:4.6cqw;height:2.6cqw;border-radius:9px;background:#0a0a0a;opacity:.85"></i><i style="display:block;width:6.4cqw;height:3.2cqw;border-radius:30%;border:1px solid #0a0a0a"></i></span></div>
+    <p style="color:rgba(0,0,0,.45);font-size:4.2cqw;margin-top:8cqw">Terça-feira</p>
+    <p style="font-weight:650;letter-spacing:-.03em;font-size:9.4cqw;line-height:1.05">Álbuns</p>
+    <div style="overflow:hidden;margin-top:6cqw;border-radius:7cqw"><div class="track">
+      ${CARDS.map((c) => `<div class="card"><div style="position:absolute;inset:0;background:${c.art}"></div>
+        <div style="position:absolute;left:0;right:0;bottom:0;color:#fff;padding:14cqw 6cqw 5.5cqw;background:linear-gradient(to top,rgba(0,0,0,.7),transparent)">
+        <p style="font-weight:650;font-size:6.4cqw;line-height:1.1">${c.title}</p><p style="opacity:.7;font-size:3.9cqw">${c.meta}</p></div></div>`).join("")}
+    </div></div>
+    <div class="dots">${CARDS.map(() => "<i></i>").join("")}</div>
+    <div style="margin-top:auto;display:flex;flex-direction:column;gap:3.4cqw">
+      ${[62, 78, 48].map((w, i) => `<div style="display:flex;align-items:center;gap:3.6cqw"><i style="display:block;flex-shrink:0;width:10cqw;height:10cqw;border-radius:28%;background:rgba(0,0,0,.1)"></i>
+        <span style="flex:1;display:flex;flex-direction:column;gap:1.8cqw"><i style="display:block;height:2.3cqw;border-radius:9px;background:rgba(0,0,0,.75);width:${w}%"></i><i style="display:block;height:1.9cqw;border-radius:9px;background:rgba(0,0,0,.15);width:${w - 22 + i * 6}%"></i></span></div>`).join("")}
+    </div></div></div>`;
+  return { track: host.querySelector(".track"), dots: [...host.querySelectorAll(".dots i")] };
+}
+function setCards(ps, pos) {
+  ps.track.style.transform = `translateX(${(-pos * 100).toFixed(3)}%)`;
+  ps.dots.forEach((d, i) => {
+    const a = clamp(1 - Math.abs(pos - i));
+    d.style.width = `${(1.6 + 3.4 * a).toFixed(3)}cqw`;
+    d.style.opacity = (0.22 + 0.78 * a).toFixed(3);
+  });
+}
+
+// ---------- build ----------
+const s1h = words($("s1h"), "Põe o teu iPhone | no ecrã do *PC.*");
+const s2eb = words($("s2eb"), "Esquece:");
+const ITEMS = ["Cabos", "Apps no telemóvel", "Contas", "Subscrições"];
+$("s2list").innerHTML = ITEMS.map((x, i) => `<div class="strike-item" style="top:${i * 150}px"><span>${x}<i></i></span></div>`).join("");
+const s2items = [...document.querySelectorAll(".strike-item")];
+const s2end = words($("s2end"), "Só *isto:*");
+const s3tag = words($("s3tag"), "O teu telemóvel no PC. Sem fios.");
+
+const phoneMain = phoneScreen($("phoneScreen"));
+const mirrorPs = phoneScreen($("mirror"));
+$("phoneScreen").insertAdjacentHTML("beforeend", `
+  <div id="cc">
+    <div class="grid">
+      <div class="blk dot4"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div>
+      <div class="blk" style="padding:5cqw;display:flex;flex-direction:column;justify-content:flex-end;gap:2cqw">
+        <i style="display:block;height:2.4cqw;width:70%;border-radius:9px;background:rgba(255,255,255,.8)"></i>
+        <i style="display:block;height:2cqw;width:45%;border-radius:9px;background:rgba(255,255,255,.35)"></i></div>
+      <div id="ccMirror">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" style="width:7cqw;height:7cqw"><rect x="3" y="4" width="13" height="10" rx="2"/><rect x="8" y="9" width="13" height="10" rx="2" fill="currentColor" fill-opacity=".0"/></svg>
+        Projeção do ecrã</div>
+      <div class="blk sl"><b style="height:62%"></b></div>
+      <div class="blk sl"><b style="height:40%"></b></div>
+    </div>
+    <div id="sheet">
+      <div class="t">Projeção do ecrã</div>
+      <div class="s">A procurar…</div>
+      <div class="row">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" style="width:6.5cqw;height:6.5cqw"><rect x="2.5" y="4" width="19" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        O meu PC
+        <span class="r"><svg id="spin" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" style="position:absolute;inset:0;width:100%;height:100%"><path d="M12 3a9 9 0 1 0 9 9"/></svg>
+        <svg id="check" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;inset:0;width:100%;height:100%"><path d="M5 12.5l4.5 4.5L19 7.5" pathLength="1" stroke-dasharray="1"/></svg></span>
+      </div>
+    </div>
+  </div>`);
+
+const FEATS = [
+  ["Som incluído", "O áudio do telemóvel sai no PC", '<path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/>'],
+  ["Ecrã inteiro", "Uma tecla e ocupa o monitor todo", '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>'],
+  ["Privado", "Tudo fica na tua rede. Sem contas.", '<rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>'],
+  ["iPhone, iPad e Android", "Nada para instalar no telemóvel", '<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18h2"/>'],
+];
+$("s5").insertAdjacentHTML("beforeend", FEATS.map(([a, b, ic], i) => `
+  <div class="feat glass" style="top:${640 + i * 186}px">
+    <div class="ic"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#fafafa" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${ic}</svg></div>
+    <div><div class="ft">${a}</div><div class="fs">${b}</div></div>
+  </div>`).join(""));
+const feats = [...document.querySelectorAll(".feat")];
+const s5h = words($("s5h"), "E ainda *tens:*");
+
+$("s6a").innerHTML = "Grátis.".split("").map((c) => `<span class="w">${c}</span>`).join("");
+const s6aL = [...$("s6a").querySelectorAll(".w")];
+const s6b = words($("s6b"), "*A* *sério.*");
+$("s6c").innerHTML = ["Sem teste", "Sem marca de água", "Sem subscrição"].map((x) =>
+  `<div class="w" style="font-size:44px;font-weight:500;letter-spacing:-0.02em;color:var(--soft)">${x}</div>`).join("") +
+  `<div class="w glass pill" style="margin-top:22px;padding:16px 34px;font-size:32px;font-weight:600">Código aberto &middot; GPL-3.0</div>`;
+const s6c = [...$("s6c").children];
+
+$("s7icon").innerHTML = `<svg width="280" height="280" viewBox="80 80 864 864" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="ib" x1="170" y1="90" x2="860" y2="940" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#2a2a2a"/><stop offset=".55" stop-color="#0d0d0d"/><stop offset="1" stop-color="#000"/></linearGradient>
+    <radialGradient id="iga" cx="250" cy="230" r="520" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fff" stop-opacity=".2"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+    <linearGradient id="is" x1="250" y1="330" x2="780" y2="720" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fff"/><stop offset=".52" stop-color="#f2f2f2"/><stop offset="1" stop-color="#bdbdbd"/></linearGradient>
+    <linearGradient id="ir" x1="200" y1="80" x2="820" y2="950" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fff" stop-opacity=".5"/><stop offset=".35" stop-color="#fff" stop-opacity=".06"/><stop offset=".7" stop-color="#fff" stop-opacity=".03"/><stop offset="1" stop-color="#fff" stop-opacity=".22"/></linearGradient>
+    <clipPath id="ic"><rect x="80" y="80" width="864" height="864" rx="212"/></clipPath>
+    <filter id="isoft" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="26"/></filter>
+  </defs>
+  <g clip-path="url(#ic)">
+    <rect x="80" y="80" width="864" height="864" fill="url(#ib)"/><rect x="80" y="80" width="864" height="864" fill="url(#iga)"/>
+    <path d="M292 672V470a110 110 0 0 1 220 0v140M512 470a110 110 0 0 1 220 0v202" fill="none" stroke="url(#is)" stroke-width="84" stroke-linecap="round" stroke-linejoin="round" opacity=".28" filter="url(#isoft)"/>
+    <path id="iconMark" d="M292 672V470a110 110 0 0 1 220 0v140M512 470a110 110 0 0 1 220 0v202" fill="none" stroke="url(#is)" stroke-width="76" stroke-linecap="round" stroke-linejoin="round" pathLength="1" stroke-dasharray="1"/>
+  </g>
+  <rect x="83" y="83" width="858" height="858" rx="209" fill="none" stroke="url(#ir)" stroke-width="6"/>
+</svg>`;
+$("s7icon").style.filter = "drop-shadow(0 50px 70px rgba(0,0,0,.9)) drop-shadow(0 0 80px rgba(255,255,255,.08))";
+const s7word = words($("s7word"), "Mirlow");
+const s7tag = words($("s7tag"), "O teu telemóvel no PC. *Grátis.*");
+
+// ---------- timeline ----------
+const T = {
+  s2: 2.75, s3: 5.75, s4: 8.55, mirror: 12.45, s5: 15.9, s6: 19.55, s7: 22.6, end: 26,
+};
+window.DURATION = T.end;
+
+// Window geometry, for the signal's flight and the mirror's landing.
+const WIN = { x: 90, y: 340, w: 900, h: 560, bar: 56 };
+const PHONE_SCREEN = { x: 409, y: 999, w: 262, h: 582, r: 43 };
+const MIRROR = { h: 478 };
+MIRROR.w = MIRROR.h * PHONE_SCREEN.w / PHONE_SCREEN.h;
+MIRROR.x = WIN.x + WIN.w / 2 - MIRROR.w / 2;
+MIRROR.y = WIN.y + WIN.bar + (WIN.h - WIN.bar) / 2 - MIRROR.h / 2;
+
+const TAP1 = 10.95, TAP2 = 11.75;
+
+// Centre of an element in stage pixels, ignoring transforms (where it sits once settled).
+function centre(el, fx = 0.5) {
+  let x = el.offsetWidth * fx, y = el.offsetHeight / 2;
+  for (let n = el; n && n.id !== "stage"; n = n.offsetParent) { x += n.offsetLeft; y += n.offsetTop; }
+  return { x, y };
+}
+
+function render(t) {
+  // Backdrop: the grid moves one cell per chapter; light drifts slowly.
+  const chapters = [T.s2, T.s3, T.s4, T.s5, T.s6, T.s7];
+  let ch = 0;
+  chapters.forEach((c) => (ch += p(t, c - 0.25, 1.3, EIO)));
+  $("grid").style.transform = `translateY(${(ch * 90 + t * 6).toFixed(2)}px)`;
+  css($("glowA"), { left: `${-180 + Math.sin(t * 0.35) * 160}px`, top: `${120 + Math.cos(t * 0.28) * 140}px` });
+  css($("glowB"), { left: `${560 + Math.cos(t * 0.31) * 150}px`, top: `${1050 + Math.sin(t * 0.4) * 160}px` });
+
+  // ---- 1. Hook
+  show($("s1"), t < T.s2 + 0.6);
+  fade($("s1eb"), t, 0.05, 0.6, T.s2 - 0.35, { rise: 20 });
+  reveal(s1h, t, 0.0, { stag: 0.07, dur: 0.75, exit: T.s2 - 0.4 });
+  // A slow push-in keeps the hook alive.
+  $("s1h").style.transform = `scale(${(1 + t * 0.012).toFixed(4)})`;
+
+  // ---- 2. Forget all that
+  const s2 = t > T.s2 - 0.1 && t < T.s3 + 0.5;
+  show($("s2"), s2);
+  if (s2) {
+    reveal(s2eb, t, T.s2, { exit: T.s3 - 0.45, rise: 40 });
+    s2items.forEach((el, i) => {
+      const at = T.s2 + 0.25 + i * 0.38;
+      const k = p(t, at, 0.6);
+      const strike = p(t, at + 0.28, 0.32, EIO);
+      const e = p(t, T.s3 - 0.45 + i * 0.03, 0.45, EI);
+      el.style.opacity = (k * (1 - 0.68 * strike) * (1 - e)).toFixed(3);
+      el.style.transform = `translateY(${((1 - k) * 60 - e * 40).toFixed(2)}px)`;
+      const b = (1 - k) * 14 + e * 12;
+      el.style.filter = b > 0.05 ? `blur(${b.toFixed(2)}px)` : "none";
+      el.querySelector("i").style.transform = `scaleX(${strike.toFixed(4)})`;
+    });
+    reveal(s2end, t, T.s2 + 2.0, { exit: T.s3 - 0.4 });
+  }
+
+  // ---- 3 + 4. Signal: born in the middle, then flies into the PC window
+  const sig = $("signal");
+  const born = spring(t, T.s3, 11, 6.5);
+  const fly = p(t, T.s4 - 0.05, 1.0, EIO);
+  const sigGone = p(t, T.mirror - 0.15, 0.45, EI);
+  const visible = t > T.s3 - 0.05 && t < T.mirror + 0.4;
+  show(sig, visible);
+  if (visible) {
+    const cx = lerp(540, 540, fly), cy = lerp(860, WIN.y + WIN.bar + 135, fly);
+    const sc = lerp(1, 0.4, fly) * lerp(0.55, 1, clamp(born, 0, 1.2));
+    css(sig, {
+      left: `${cx - 280}px`, top: `${cy - 280}px`,
+      transform: `scale(${(sc * (1 - sigGone * 0.15)).toFixed(4)})`,
+      opacity: (clamp(born * 1.4) * (1 - sigGone)).toFixed(3),
+      filter: sigGone > 0.01 ? `blur(${(sigGone * 10).toFixed(2)}px)` : "none",
+    });
+    const rings = sig.querySelectorAll(".ring");
+    rings.forEach((r, i) => (r.style.opacity = p(t, T.s3 + 0.15 + i * 0.1, 0.8).toFixed(3)));
+    // Pulses: slow when ready, quick once a phone is connecting.
+    const period = t > TAP2 ? 1.6 : 2.4;
+    sig.querySelectorAll(".pulse").forEach((pl, i) => {
+      const local = t - T.s3 - 0.3 - (i * period) / 3;
+      if (local < 0) { pl.style.opacity = 0; return; }
+      const ph = (local % period) / period;
+      const k = EO(ph);
+      pl.style.transform = `scale(${(0.34 + 0.66 * k).toFixed(4)})`;
+      pl.style.opacity = (ph < 0.18 ? (ph / 0.18) * 0.55 : 0.55 * (1 - (ph - 0.18) / 0.82)).toFixed(3);
+    });
+  }
+  const s3 = t > T.s3 - 0.1 && t < T.s4 + 0.6;
+  show($("s3"), s3);
+  if (s3) {
+    const draw = p(t, T.s3 + 0.35, 1.0, EIO);
+    $("s3mark").querySelector("path").style.strokeDashoffset = (1 - draw).toFixed(4);
+    fade($("s3name"), t, T.s3 + 0.3, 0.8, T.s4 - 0.3, { rise: 40 });
+    reveal(s3tag, t, T.s3 + 0.75, { stag: 0.05, exit: T.s4 - 0.3, rise: 40 });
+  }
+
+  // ---- 4. Demo
+  const s4 = t > T.s4 - 0.1 && t < T.s5 + 0.5;
+  show($("s4"), s4);
+  if (s4) {
+    const out = p(t, T.s5 - 0.45, 0.5, EI);
+    // Window
+    const wk = p(t, T.s4 + 0.1, 0.9);
+    css($("win"), { opacity: (wk * (1 - out)).toFixed(3), transform: `translateY(${((1 - wk) * 30 - out * 40).toFixed(2)}px)`, filter: out > 0.01 ? `blur(${(out * 12).toFixed(2)}px)` : "none" });
+    const mk = p(t, T.mirror, 0.5);
+    const wt = $("waitTxt");
+    const wtk = p(t, T.s4 + 0.6, 0.7);
+    css(wt, { opacity: (wtk * (1 - mk)).toFixed(3), transform: `translateY(${((1 - wtk) * 20).toFixed(2)}px) scale(${(1 - mk * 0.04).toFixed(4)})`, filter: mk > 0.01 ? `blur(${(mk * 8).toFixed(2)}px)` : "none" });
+    $("stageBlack").style.opacity = p(t, T.mirror + 0.1, 0.6).toFixed(3);
+
+    // Sheen across the glass when the picture lands
+    const sh = p(t, T.mirror + 0.45, 1.1, EIO);
+    css($("sheen"), { opacity: (1 - out).toFixed(3) });
+    $("sheenBar").style.left = `${lerp(-400, 1100, sh)}px`;
+    $("sheenBar").style.opacity = sh > 0 && sh < 1 ? 1 : 0;
+
+    // Phone
+    const pk = p(t, T.s4 + 0.55, 1.0);
+    css($("phone"), { opacity: (pk * (1 - out)).toFixed(3), transform: `translateY(${((1 - pk) * 260 + out * 60).toFixed(2)}px)`, filter: out > 0.01 ? `blur(${(out * 12).toFixed(2)}px)` : "none" });
+
+    // Control centre pulled down, tile tapped, PC chosen, then dismissed
+    const ccIn = p(t, 10.15, 0.6);
+    const ccOut = p(t, 12.2, 0.55, EIO);
+    css($("cc"), { opacity: (clamp(ccIn * 1.5) * (1 - ccOut)).toFixed(3), transform: `translateY(${((-1 + ccIn) * 30 - ccOut * 40).toFixed(2)}%)` });
+    const tileOn = p(t, TAP1 + 0.02, 0.2);
+    css($("ccMirror"), { background: `rgba(255,255,255,${(0.14 + 0.86 * tileOn).toFixed(3)})`, color: tileOn > 0.5 ? "#0a0a0a" : "#fff",
+      transform: `scale(${(1 - 0.05 * Math.sin(Math.PI * clamp((t - TAP1 + 0.08) / 0.3))).toFixed(4)})` });
+    const shk = spring(t, TAP1 + 0.18, 16, 9);
+    css($("sheet"), { opacity: clamp(shk * 1.6).toFixed(3), transform: `translateY(${((1 - shk) * 16).toFixed(2)}cqw) scale(${(0.92 + 0.08 * clamp(shk, 0, 1.1)).toFixed(4)})` });
+    $("cc").querySelector(".grid").style.opacity = (1 - 0.7 * clamp(shk, 0, 1)).toFixed(3);
+    $("cc").querySelector(".grid").style.filter = shk > 0.01 ? `blur(${(clamp(shk, 0, 1) * 3).toFixed(2)}px)` : "none";
+    const conn = p(t, TAP2 + 0.35, 0.2);
+    css($("spin"), { opacity: (t > TAP2 ? 1 - conn : 0).toFixed(3), transform: `rotate(${(t * 520) % 360}deg)` });
+    $("check").style.opacity = conn.toFixed(3);
+    $("check").querySelector("path").style.strokeDashoffset = (1 - p(t, TAP2 + 0.38, 0.35)).toFixed(4);
+
+    // Finger
+    let fx = 0, fy = 0, fo = 0, fs = 1, ro = 0, rs = 1;
+    // Positions within the phone screen
+    const tile = centre($("ccMirror"), 0.78);
+    const row = centre($("sheet").querySelector(".row"), 0.72);
+    const fin = p(t, TAP1 - 0.5, 0.4), fmove = p(t, TAP1 + 0.25, 0.45, EIO), fout = p(t, TAP2 + 0.25, 0.35, EI);
+    fx = lerp(tile.x + 40, tile.x, fin); fy = lerp(tile.y + 60, tile.y, fin);
+    fx = lerp(fx, row.x, fmove); fy = lerp(fy, row.y, fmove);
+    fo = fin * (1 - fout) * (1 - out);
+    const press = (at) => Math.sin(Math.PI * clamp((t - at + 0.1) / 0.24));
+    fs = 1 - 0.16 * (press(TAP1) + press(TAP2));
+    css($("finger"), { left: `${fx}px`, top: `${fy + 30 * fout}px`, opacity: (fo * 0.95).toFixed(3), transform: `scale(${fs.toFixed(4)})` });
+    let rip = 0, ripPos = tile;
+    if (t >= TAP2) { rip = clamp((t - TAP2) / 0.55); ripPos = row; } else if (t >= TAP1) rip = clamp((t - TAP1) / 0.55);
+    css($("ripple"), { left: `${ripPos.x}px`, top: `${ripPos.y}px`, opacity: rip > 0 && rip < 1 ? ((1 - rip) * 0.8).toFixed(3) : 0, transform: `scale(${(1 + EO(rip) * 1.6).toFixed(4)})` });
+
+    // The picture lifts off the phone and lands in the PC window
+    const fl = p(t, T.mirror, 0.95, EIO);
+    const mirrorOn = t >= T.mirror;
+    const m = $("mirror");
+    css(m, {
+      display: mirrorOn ? "" : "none",
+      left: `${lerp(PHONE_SCREEN.x, MIRROR.x, fl)}px`, top: `${lerp(PHONE_SCREEN.y, MIRROR.y, fl)}px`,
+      width: `${lerp(PHONE_SCREEN.w, MIRROR.w, fl)}px`, height: `${lerp(PHONE_SCREEN.h, MIRROR.h, fl)}px`,
+      borderRadius: `${lerp(PHONE_SCREEN.r, 18, fl)}px`,
+      opacity: (clamp((t - T.mirror) / 0.12) * (1 - out)).toFixed(3),
+      transform: `translateY(${(-out * 40).toFixed(2)}px)`,
+      boxShadow: `0 ${lerp(60, 0, fl).toFixed(1)}px ${lerp(120, 30, fl).toFixed(1)}px rgba(0,0,0,${lerp(0.9, 0.5, fl).toFixed(2)}), 0 0 ${(Math.sin(Math.PI * fl) * 90).toFixed(1)}px rgba(255,255,255,${(Math.sin(Math.PI * fl) * 0.25).toFixed(3)})`,
+      filter: out > 0.01 ? `blur(${(out * 12).toFixed(2)}px)` : "none",
+    });
+
+    // Both screens move together
+    const ticks = [13.55, 14.35, 15.1];
+    let pos = 0;
+    ticks.forEach((tk) => (pos += p(t, tk, 0.75, EIO)));
+    setCards(phoneMain, pos);
+    setCards(mirrorPs, pos);
+
+    // Step captions
+    const steps = [[$("st1"), T.s4 + 0.2, 10.0], [$("st2"), 10.0, T.mirror + 0.05], [$("st3"), T.mirror + 0.05, T.s5 - 0.45]];
+    steps.forEach(([el, a, b]) => {
+      const k = p(t, a + 0.08, 0.6);
+      const e = p(t, b - 0.05, 0.4, EI);
+      css(el, { opacity: (k * (1 - e)).toFixed(3), transform: `translateY(${((1 - k) * 40 - e * 30).toFixed(2)}px)`, filter: (1 - k) * 12 + e * 10 > 0.05 ? `blur(${((1 - k) * 12 + e * 10).toFixed(2)}px)` : "none" });
+    });
+  }
+
+  // ---- 5. Features
+  const s5 = t > T.s5 - 0.1 && t < T.s6 + 0.5;
+  show($("s5"), s5);
+  if (s5) {
+    reveal(s5h, t, T.s5, { exit: T.s6 - 0.45 });
+    feats.forEach((el, i) => {
+      const at = T.s5 + 0.45 + i * 0.32;
+      const k = p(t, at, 0.85);
+      const e = p(t, T.s6 - 0.45 + i * 0.03, 0.45, EI);
+      css(el, { opacity: (k * (1 - e)).toFixed(3), transform: `translate(${((1 - k) * 80).toFixed(2)}px, ${(-e * 40).toFixed(2)}px) scale(${(0.96 + 0.04 * k).toFixed(4)})`, filter: (1 - k) * 14 + e * 12 > 0.05 ? `blur(${((1 - k) * 14 + e * 12).toFixed(2)}px)` : "none" });
+      // Icon pops in after its row
+      const ic = el.querySelector("svg");
+      const pop = spring(t, at + 0.2, 16, 8);
+      ic.style.transform = `scale(${clamp(pop, 0, 1.2).toFixed(4)})`;
+    });
+  }
+
+  // ---- 6. Free
+  const s6 = t > T.s6 - 0.1 && t < T.s7 + 0.5;
+  show($("s6"), s6);
+  if (s6) {
+    const ex = T.s7 - 0.45;
+    s6aL.forEach((w, i) => {
+      const k = p(t, T.s6 + i * 0.045, 0.75);
+      const e = p(t, ex + i * 0.02, 0.45, EI);
+      w.style.opacity = (k * (1 - e)).toFixed(3);
+      w.style.transform = `translateY(${((1 - k) * 140 - e * 50).toFixed(2)}px) scale(${(0.9 + 0.1 * k).toFixed(4)})`;
+      const b = (1 - k) * 22 + e * 12;
+      w.style.filter = b > 0.05 ? `blur(${b.toFixed(2)}px)` : "none";
+    });
+    // Slow breathe on the big word
+    $("s6a").style.transform = `scale(${(1 + 0.025 * p(t, T.s6, 3, EIO)).toFixed(4)})`;
+    reveal(s6b, t, T.s6 + 0.6, { stag: 0.12, exit: ex });
+    reveal(s6c, t, T.s6 + 1.15, { stag: 0.16, exit: ex, rise: 40 });
+  }
+
+  // ---- 7. CTA
+  const s7 = t > T.s7 - 0.1;
+  show($("s7"), s7);
+  if (s7) {
+    const ik = spring(t, T.s7, 10, 6);
+    css($("s7icon"), { opacity: clamp((t - T.s7) / 0.25).toFixed(3), transform: `translateY(${((1 - clamp(ik, 0, 1.3)) * 120).toFixed(2)}px) scale(${(0.6 + 0.4 * ik).toFixed(4)}) rotate(${((1 - clamp(ik, 0, 1.2)) * -8).toFixed(3)}deg)` });
+    $("iconMark").style.strokeDashoffset = (1 - p(t, T.s7 + 0.2, 1.1, EIO)).toFixed(4);
+    // A gentle float once it has landed
+    if (t > T.s7 + 1.2) $("s7icon").style.transform += ` translateY(${(Math.sin((t - T.s7 - 1.2) * 1.6) * 8).toFixed(2)}px)`;
+    reveal(s7word, t, T.s7 + 0.35, { rise: 60 });
+    reveal(s7tag, t, T.s7 + 0.6, { stag: 0.05, rise: 40 });
+    fade($("s7pill"), t, T.s7 + 1.0, 0.9, Infinity, { rise: 50, scale: 0.08 });
+    fade($("s7foot"), t, T.s7 + 1.4, 0.8, Infinity, { rise: 20 });
+  }
+}
+
+window.seek = (t) => render(t);
+render(0);
+</script>
+</body>
+</html>
