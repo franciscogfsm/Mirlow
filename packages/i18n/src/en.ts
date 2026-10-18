@@ -71,6 +71,13 @@ export const en = {
       waitingUnknown: "It will be back as soon as your phone sends it again.",
       sound: "Sound is still playing",
     },
+    control: {
+      hint: "{device} · click to control",
+      hintUnknown: "Click the picture to control",
+      active: "Controlling {device} · Esc to stop",
+      activeUnknown: "Controlling · Esc to stop",
+      activeShort: "Esc to stop",
+    },
     audio: {
       headline: "Playing sound from {device}",
       headlineUnknown: "Playing sound",
@@ -172,6 +179,24 @@ export const en = {
       compatibility: {
         label: "Compatibility mode",
         description: "Turn on if the picture is black or keeps freezing. Uses a little more power.",
+      },
+      control: {
+        label: "Mouse and keyboard",
+        description: "Work your phone from this PC. It connects over Bluetooth, like a wireless keyboard.",
+        starting: "Starting Bluetooth…",
+        waiting:
+          "On your phone, open Bluetooth settings and tap “{pc}”. If Windows asks whether to pair, allow it.",
+        waitingUnknown:
+          "On your phone, open Bluetooth settings and tap this PC. If Windows asks whether to pair, allow it.",
+        pointer:
+          "On an iPhone, turn on AssistiveTouch (Settings › Accessibility › Touch) to see the pointer.",
+        connected: "Connected to {device}. Click the picture to take control; Esc gives it back.",
+        connectedUnknown: "Phone connected. Click the picture to take control; Esc gives it back.",
+        bluetoothOff: "Bluetooth is off on this PC. Turn it on in Windows settings.",
+        noBluetooth: "This PC has no Bluetooth.",
+        unsupported:
+          "This PC's Bluetooth can't act as a mouse and keyboard. Most Bluetooth 5 USB adapters can.",
+        openBluetooth: "Open Bluetooth settings",
       },
       theme: {
         label: "Appearance",

@@ -7,11 +7,11 @@ import { HelpSheet } from "./components/HelpSheet";
 import { SettingsSheet } from "./components/SettingsSheet";
 import { TitleBar } from "./components/TitleBar";
 import { UpdatePill } from "./components/UpdatePill";
-import { api, type Settings, type Status, type VideoSize } from "./lib/api";
+import { api, type RemoteStatus, type Settings, type Status, type VideoSize } from "./lib/api";
 import { HOME_MIN, HOME_SIZE, MIRROR_BAR, MIRROR_FRAME, MIRROR_MIN } from "./lib/frame";
 import { I18nProvider, resolveLocale, useI18n } from "./lib/i18n";
 import { useDiagnostics } from "./lib/useDiagnostics";
-import { useEngineStatus, useSettings } from "./lib/useEngine";
+import { useEngineStatus, useRemoteStatus, useSettings } from "./lib/useEngine";
 import { ErrorView } from "./views/ErrorView";
 import { MirrorStage } from "./views/MirrorStage";
 import { WaitingView } from "./views/WaitingView";
@@ -102,10 +102,12 @@ async function fitWindowTo(video: VideoSize) {
 
 function Shell({
   status,
+  remote,
   settings,
   onSettingsChange,
 }: {
   status: Status;
+  remote: RemoteStatus | null;
   settings: Settings;
   onSettingsChange: (patch: Partial<Settings>) => void;
 }) {
@@ -124,6 +126,9 @@ function Shell({
   const video = status.phase === "mirroring" || paused ? status.video : null;
   const mirroring = video !== null;
   const videoKey = video ? `${video.width}x${video.height}` : "";
+  const control = mirroring && settings.control && remote?.state === "connected";
+  // The pointer and keys are going to the phone.
+  const [captured, setCaptured] = useState(false);
 
   const toggleFullscreen = useCallback(async () => {
     const next = !(await appWindow.isFullscreen());
@@ -159,6 +164,8 @@ function Shell({
     }
     let timer = 0;
     const wake = () => {
+      // Moving the phone's pointer is not reaching for the controls.
+      if (document.pointerLockElement) return;
       setControlsVisible(true);
       window.clearTimeout(timer);
       timer = window.setTimeout(() => setControlsVisible(false), CONTROLS_IDLE_MS);
@@ -204,6 +211,8 @@ function Shell({
   const label = (() => {
     switch (status.phase) {
       case "mirroring":
+        if (captured) return device ? format(t.control.active, { device }) : t.control.activeUnknown;
+        if (control) return device ? format(t.control.hint, { device }) : t.control.hintUnknown;
         return device ? format(t.mirroring.from, { device }) : t.mirroring.fromUnknown;
       case "paused":
         if (!device) return status.sound ? t.paused.soundOnly : t.status.paused;
@@ -226,7 +235,9 @@ function Shell({
       ? status.sound
         ? t.paused.soundOnly
         : t.status.paused
-      : (device ?? t.mirroring.fromUnknown);
+      : captured
+        ? t.control.activeShort
+        : (device ?? t.mirroring.fromUnknown);
 
   // Keep the notification-area icon's wording in step with the interface.
   const trayStatus =
@@ -283,6 +294,8 @@ function Shell({
                 controlsVisible={controlsVisible}
                 hidden={settingsOpen || helpOpen}
                 pause={paused ? { locked: status.locked, sound: status.sound, device } : null}
+                control={control}
+                onCaptureChange={setCaptured}
                 onToggleFullscreen={() => void toggleFullscreen()}
               />
             )}
@@ -304,6 +317,7 @@ function Shell({
         open={settingsOpen}
         onOpenChange={setSettingsOpen}
         settings={settings}
+        remote={remote}
         onChange={onSettingsChange}
       />
       <HelpSheet open={helpOpen} onOpenChange={setHelpOpen} state={diagnostics} />
@@ -314,6 +328,7 @@ function Shell({
 export function App() {
   const status = useEngineStatus();
   const [settings, updateSettings] = useSettings();
+  const remote = useRemoteStatus();
 
   // Theme and language live on the document, so CSS and assistive technology see them.
   useEffect(() => {
@@ -335,7 +350,7 @@ export function App() {
 
   return (
     <I18nProvider language={settings.language}>
-      <Shell status={status} settings={settings} onSettingsChange={updateSettings} />
+      <Shell status={status} remote={remote} settings={settings} onSettingsChange={updateSettings} />
     </I18nProvider>
   );
 }

@@ -48,6 +48,34 @@ export interface Settings {
   compatibility: boolean;
   theme: ThemeSetting;
   language: LanguageSetting;
+  /** Offer this PC to the phone as a Bluetooth mouse and keyboard. */
+  control: boolean;
+}
+
+/** Mirrors `remote::RemoteState` in the Rust backend. */
+export type RemoteState =
+  | "off"
+  | "starting"
+  | "noBluetooth"
+  | "bluetoothOff"
+  | "unsupported"
+  | "waiting"
+  | "connected";
+
+export interface RemoteStatus {
+  state: RemoteState;
+  /** The connected device's Bluetooth name. */
+  host: string | null;
+  /** The name this PC goes by in the phone's Bluetooth list. */
+  pcName: string;
+}
+
+/** Movement since the last report, and the buttons held now (bit 0 left, 1 right, 2 middle). */
+export interface Pointer {
+  dx: number;
+  dy: number;
+  wheel: number;
+  buttons: number;
 }
 
 /** Mirrors `miracast::AndroidStatus` in the Rust backend. */
@@ -92,7 +120,14 @@ export const api = {
       handler(event.payload),
     ),
   openNetworkSettings: () => invoke<void>("open_network_settings"),
-  openWindowsSettings: (page: "ms-settings:optionalfeatures" | "ms-settings:project") =>
+  getRemoteStatus: () => invoke<RemoteStatus>("get_remote_status"),
+  onRemoteStatus: (handler: (status: RemoteStatus) => void): Promise<UnlistenFn> =>
+    listen<RemoteStatus>("remote:status", (event) => handler(event.payload)),
+  remotePointer: (pointer: Pointer) => invoke<void>("remote_pointer", { pointer }),
+  remoteKeys: (modifiers: number, keys: number[]) => invoke<void>("remote_keys", { modifiers, keys }),
+  openWindowsSettings: (
+    page: "ms-settings:optionalfeatures" | "ms-settings:project" | "ms-settings:bluetooth",
+  ) =>
     invoke<void>("open_windows_settings", { page }),
   setTrayText: (text: { status: string; open: string; quit: string }) =>
     invoke<void>("set_tray_text", text),

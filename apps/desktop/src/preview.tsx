@@ -17,7 +17,15 @@ import { mockIPC, mockWindows } from "@tauri-apps/api/mocks";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
-import type { AndroidStatus, Diagnostics, Phase, Settings, Status } from "./lib/api";
+import type {
+  AndroidStatus,
+  Diagnostics,
+  Phase,
+  RemoteState,
+  RemoteStatus,
+  Settings,
+  Status,
+} from "./lib/api";
 import "./styles.css";
 
 const params = new URLSearchParams(location.search);
@@ -29,6 +37,14 @@ let settings: Settings = {
   compatibility: false,
   theme: (params.get("theme") ?? "system") as Settings["theme"],
   language: (params.get("lang") ?? "system") as Settings["language"],
+  control: params.has("remote"),
+};
+
+// preview.html?remote=waiting (or connected, bluetoothOff, unsupported…) shows mouse and keyboard on.
+const remote: RemoteStatus = {
+  state: (params.get("remote") ?? "off") as RemoteState,
+  host: params.get("remote") === "connected" ? "Ana's iPhone" : null,
+  pcName: settings.name,
 };
 
 const picture = params.get("orientation") === "landscape" ? { width: 2532, height: 1170 } : { width: 1170, height: 2532 };
@@ -70,6 +86,8 @@ mockIPC((command, payload) => {
       return settings;
     case "get_diagnostics":
       return diagnostics;
+    case "get_remote_status":
+      return { ...remote, state: settings.control ? (remote.state === "off" ? "waiting" : remote.state) : "off" };
     case "get_engine_log":
       return "UxPlay 1.74: An Open-Source AirPlay mirroring and audio-streaming server.\n[mirlow] the engine exited unexpectedly";
     case "check_update":

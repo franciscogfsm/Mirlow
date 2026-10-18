@@ -17,6 +17,8 @@ pub struct Settings {
     pub theme: String,
     /// "system", or a language code the interface is translated into.
     pub language: String,
+    /// Offer this PC to the phone as a Bluetooth mouse and keyboard.
+    pub control: bool,
 }
 
 impl Default for Settings {
@@ -27,6 +29,7 @@ impl Default for Settings {
             compatibility: false,
             theme: "system".into(),
             language: "system".into(),
+            control: false,
         }
     }
 }

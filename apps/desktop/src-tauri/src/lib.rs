@@ -2,6 +2,7 @@ mod diagnostics;
 mod engine;
 mod letterbox;
 mod miracast;
+mod remote;
 mod settings;
 mod tray;
 mod updater;
@@ -9,6 +10,7 @@ mod video;
 
 use engine::{Engine, Status};
 use miracast::Miracast;
+use remote::Remote;
 use settings::Settings;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
@@ -38,6 +40,7 @@ fn update_settings(
     state: State<'_, AppState>,
     engine: State<'_, Engine>,
     miracast: State<'_, Miracast>,
+    remote: State<'_, Remote>,
 ) -> Result<Settings, String> {
     let next = settings.normalized();
     let restart = {
@@ -45,6 +48,7 @@ fn update_settings(
         let restart = current.name != next.name
             || current.sound != next.sound
             || current.compatibility != next.compatibility;
+        remote.enable(next.control);
         *current = next.clone();
         restart
     };
@@ -60,6 +64,23 @@ fn update_settings(
 fn restart_engine(app: AppHandle, engine: State<'_, Engine>) {
     miracast::disconnect(&app);
     engine.restart();
+}
+
+#[tauri::command]
+fn get_remote_status(remote: State<'_, Remote>) -> remote::RemoteStatus {
+    remote.status()
+}
+
+/// Movement and clicks for the phone, while the picture has the pointer.
+#[tauri::command]
+fn remote_pointer(pointer: remote::Pointer, remote: State<'_, Remote>) {
+    remote.pointer(pointer);
+}
+
+/// Every key held down now, as HID usages, with the modifier byte.
+#[tauri::command]
+fn remote_keys(modifiers: u8, keys: Vec<u8>, remote: State<'_, Remote>) {
+    remote.keys(modifiers, &keys);
 }
 
 #[tauri::command]
@@ -129,7 +150,7 @@ fn open_network_settings() {
 /// Opens a page of Windows Settings the help sheet points to.
 #[tauri::command]
 fn open_windows_settings(page: &str) {
-    const PAGES: [&str; 2] = ["ms-settings:optionalfeatures", "ms-settings:project"];
+    const PAGES: [&str; 3] = ["ms-settings:optionalfeatures", "ms-settings:project", "ms-settings:bluetooth"];
     if PAGES.contains(&page) {
         diagnostics::open_settings(page);
     }
@@ -166,6 +187,9 @@ pub fn run() {
             update_settings,
             restart_engine,
             get_engine_log,
+            get_remote_status,
+            remote_pointer,
+            remote_keys,
             get_diagnostics,
             fix_all,
             open_network_settings,
@@ -189,6 +213,8 @@ pub fn run() {
                 engine_dir: engine_dir.clone(),
             });
             let engine = Engine::start(handle.clone(), engine_dir, data_dir, settings.clone());
+            let control = settings.lock().unwrap().control;
+            app.manage(Remote::start(handle.clone(), engine.clone(), control));
             app.manage(Miracast::start(handle, settings, engine.clone()));
             app.manage(engine);
             tray::create(app.handle())?;
@@ -199,6 +225,7 @@ pub fn run() {
 
     app.run(|app, event| {
         if let RunEvent::Exit = event {
+            app.state::<Remote>().shutdown();
             app.state::<Miracast>().shutdown();
             app.state::<Engine>().shutdown();
         }

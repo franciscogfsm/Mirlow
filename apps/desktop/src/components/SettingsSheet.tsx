@@ -2,7 +2,7 @@ import { links, localeNames, locales } from "@mirlow/i18n";
 import { getVersion } from "@tauri-apps/api/app";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useEffect, useState, type ReactNode } from "react";
-import type { LanguageSetting, Settings, ThemeSetting } from "../lib/api";
+import { api, type LanguageSetting, type RemoteStatus, type Settings, type ThemeSetting } from "../lib/api";
 import { useI18n } from "../lib/i18n";
 import { Segmented, Switch } from "./controls";
 import { Sheet } from "./Sheet";
@@ -31,11 +31,19 @@ function Row({
   );
 }
 
-function LinkButton({ href, children }: { href: string; children: ReactNode }) {
+function LinkButton({
+  href,
+  onClick,
+  children,
+}: {
+  href?: string;
+  onClick?: () => void;
+  children: ReactNode;
+}) {
   return (
     <button
       type="button"
-      onClick={() => void openUrl(href)}
+      onClick={onClick ?? (() => href && void openUrl(href))}
       className="cursor-pointer rounded-sm text-soft underline decoration-line-strong underline-offset-[3px] transition-colors hover:text-ink"
     >
       {children}
@@ -43,15 +51,61 @@ function LinkButton({ href, children }: { href: string; children: ReactNode }) {
   );
 }
 
+/** What to do next for mouse and keyboard, given where Bluetooth stands. */
+function RemoteNote({ remote }: { remote: RemoteStatus }) {
+  const { t, format } = useI18n();
+  const c = t.settings.control;
+  const pc = remote.pcName;
+  const device = remote.host;
+  let lines: string[];
+  let action: ReactNode = null;
+  switch (remote.state) {
+    case "off":
+    case "starting":
+      lines = [c.starting];
+      break;
+    case "waiting":
+      lines = [pc ? format(c.waiting, { pc }) : c.waitingUnknown, c.pointer];
+      break;
+    case "connected":
+      lines = [device ? format(c.connected, { device }) : c.connectedUnknown, c.pointer];
+      break;
+    case "bluetoothOff":
+      lines = [c.bluetoothOff];
+      action = (
+        <LinkButton onClick={() => void api.openWindowsSettings("ms-settings:bluetooth")}>
+          {c.openBluetooth}
+        </LinkButton>
+      );
+      break;
+    case "noBluetooth":
+      lines = [c.noBluetooth];
+      break;
+    case "unsupported":
+      lines = [c.unsupported];
+      break;
+  }
+  return (
+    <div className="mt-3 space-y-1.5 rounded-xl bg-raised/60 px-3.5 py-3 text-[12.5px] leading-snug text-soft">
+      {lines.map((line) => (
+        <p key={line}>{line}</p>
+      ))}
+      {action && <p>{action}</p>}
+    </div>
+  );
+}
+
 export function SettingsSheet({
   open,
   onOpenChange,
   settings,
+  remote,
   onChange,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   settings: Settings;
+  remote: RemoteStatus | null;
   onChange: (patch: Partial<Settings>) => void;
 }) {
   const { t, format } = useI18n();
@@ -112,6 +166,23 @@ export function SettingsSheet({
           onCheckedChange={(compatibility) => onChange({ compatibility })}
         />
       </Row>
+
+      <div className="border-b border-line py-4">
+        <div className="flex items-center justify-between gap-5">
+          <div className="min-w-0">
+            <label htmlFor="setting-control" className="block text-[14px] font-medium">
+              {s.control.label}
+            </label>
+            <p className="mt-0.5 text-[12.5px] leading-snug text-soft">{s.control.description}</p>
+          </div>
+          <Switch
+            id="setting-control"
+            checked={settings.control}
+            onCheckedChange={(control) => onChange({ control })}
+          />
+        </div>
+        {settings.control && remote && <RemoteNote remote={remote} />}
+      </div>
 
       <Row label={s.theme.label}>
         <Segmented<ThemeSetting>

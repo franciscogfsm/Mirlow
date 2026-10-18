@@ -74,6 +74,13 @@ export const pt: Dictionary = {
       waitingUnknown: "A imagem volta assim que o telemóvel a enviar de novo.",
       sound: "O som continua a tocar",
     },
+    control: {
+      hint: "{device} · clique para controlar",
+      hintUnknown: "Clique na imagem para controlar",
+      active: "A controlar {device} · Esc para parar",
+      activeUnknown: "A controlar · Esc para parar",
+      activeShort: "Esc para parar",
+    },
     audio: {
       headline: "A reproduzir o som de {device}",
       headlineUnknown: "A reproduzir som",
@@ -178,6 +185,24 @@ export const pt: Dictionary = {
         label: "Modo de compatibilidade",
         description:
           "Ative se a imagem ficar preta ou bloquear. Consome um pouco mais de energia.",
+      },
+      control: {
+        label: "Rato e teclado",
+        description: "Use o telemóvel a partir deste PC. Liga-se por Bluetooth, como um teclado sem fios.",
+        starting: "A iniciar o Bluetooth…",
+        waiting:
+          "No telemóvel, abra as definições de Bluetooth e toque em “{pc}”. Se o Windows perguntar se quer emparelhar, aceite.",
+        waitingUnknown:
+          "No telemóvel, abra as definições de Bluetooth e toque neste PC. Se o Windows perguntar se quer emparelhar, aceite.",
+        pointer:
+          "Num iPhone, ative o AssistiveTouch (Definições › Acessibilidade › Toque) para ver o cursor.",
+        connected: "Ligado a {device}. Clique na imagem para controlar; Esc devolve o controlo.",
+        connectedUnknown: "Telemóvel ligado. Clique na imagem para controlar; Esc devolve o controlo.",
+        bluetoothOff: "O Bluetooth está desligado neste PC. Ligue-o nas definições do Windows.",
+        noBluetooth: "Este PC não tem Bluetooth.",
+        unsupported:
+          "O Bluetooth deste PC não consegue funcionar como rato e teclado. A maioria dos adaptadores USB Bluetooth 5 consegue.",
+        openBluetooth: "Abrir definições de Bluetooth",
       },
       theme: {
         label: "Aspeto",

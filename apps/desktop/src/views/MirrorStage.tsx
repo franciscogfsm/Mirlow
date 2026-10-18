@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { api, type Rect, type VideoSize } from "../lib/api";
 import { MIRROR_FRAME } from "../lib/frame";
 import { useI18n } from "../lib/i18n";
+import { useRemoteControl } from "../lib/useRemoteControl";
 
 /** Space kept clear at the top of a full-screen stage while the controls show. */
 const CONTROLS_HEIGHT = 56;
@@ -124,6 +125,9 @@ function PausedPanel({ pause, large, roomy }: { pause: PauseInfo; large: boolean
  *
  * While the picture is paused (the phone was locked) the native window is
  * hidden, and the rectangle shows what happened instead.
+ *
+ * When the phone is paired as a Bluetooth mouse and keyboard (`control`),
+ * clicking the picture hands the pointer and keys to the phone until Esc.
  */
 export function MirrorStage({
   video,
@@ -131,6 +135,8 @@ export function MirrorStage({
   controlsVisible,
   hidden,
   pause,
+  control,
+  onCaptureChange,
   onToggleFullscreen,
 }: {
   video: VideoSize;
@@ -141,9 +147,15 @@ export function MirrorStage({
   hidden: boolean;
   /** Set while the picture has stopped. */
   pause: PauseInfo | null;
+  /** A phone is connected over Bluetooth and can be worked from here. */
+  control: boolean;
+  onCaptureChange: (captured: boolean) => void;
   onToggleFullscreen: () => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const pictureRef = useRef<HTMLDivElement>(null);
+  const { captured, capture } = useRemoteControl(pictureRef, control && !hidden);
+  useEffect(() => onCaptureChange(captured), [captured]);
   const [area, setArea] = useState<Box | null>(null);
   const [settled, setSettled] = useState(false);
   const aspect = video.width / video.height;
@@ -237,7 +249,11 @@ export function MirrorStage({
     >
       {picture && area && (
         <motion.div
-          data-tauri-drag-region
+          ref={pictureRef}
+          // A picture that can be worked is not a handle to drag the window by.
+          data-tauri-drag-region={control ? undefined : true}
+          onClick={control ? capture : undefined}
+          onDoubleClick={control ? (event) => event.stopPropagation() : undefined}
           className="absolute overflow-hidden bg-black shadow-[0_18px_50px_-12px_rgba(0,0,0,0.55)]"
           style={{
             left: picture.left - area.left,
