@@ -26,6 +26,19 @@ const MAX_FAILURES: usize = 4;
 const FAILURE_WINDOW: Duration = Duration::from_secs(60);
 const LOG_LINES: usize = 300;
 
+/// Where the sound goes while the phone is worked from here, and the picture
+/// is shown the moment it arrives (`-vsync no`). The sound is then played as
+/// it arrives too, which on its own lets it fall behind: Windows' audio
+/// output holds 200 ms by default, and since the phone's clock and the sound
+/// card's never run at quite the same rate, sound piles up in front of it,
+/// later and later, up to a second. So the output holds 60 ms, and no more
+/// than 100 ms may wait in front of it: past that, the oldest is let go,
+/// a few milliseconds every few minutes, and the sound stays with the picture.
+const LIVE_AUDIO: &str = concat!(
+    "queue max-size-time=100000000 max-size-buffers=0 max-size-bytes=0 leaky=downstream",
+    " ! wasapi2sink low-latency=true buffer-time=60000 latency-time=10000",
+);
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Phase {
@@ -476,12 +489,14 @@ impl Supervisor {
         }
         if !settings.sound {
             command.args(["-as", "0"]);
+        } else if settings.control {
+            command.args(["-as", LIVE_AUDIO]);
         }
         if settings.control {
             // Each frame as soon as it is decoded, rather than held back to
             // line up with the sound: the phone's pointer then answers the
-            // mouse sooner. Videos may play with their sound a little out of
-            // step, which is the price, and only while this is on.
+            // mouse sooner. The sound is played as it arrives too, kept from
+            // falling behind by `LIVE_AUDIO`.
             command.args(["-vsync", "no"]);
         }
 
