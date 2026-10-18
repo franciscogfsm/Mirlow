@@ -31,6 +31,7 @@ export function TitleBar({
   label,
   compactLabel,
   tone,
+  release,
   mirroring,
   fullscreen,
   onToggleFullscreen,
@@ -41,6 +42,8 @@ export function TitleBar({
   /** A shorter wording for when the window is narrow, as it is around a phone held upright. */
   compactLabel?: string;
   tone: "idle" | "live" | "warn";
+  /** Set while the mouse and keys are going to the phone: how to get them back. */
+  release?: string;
   mirroring: boolean;
   fullscreen: boolean;
   onToggleFullscreen: () => void;
@@ -52,6 +55,7 @@ export function TitleBar({
   const compact = useCompact();
   const slim = mirroring && !fullscreen;
   const text = compact && compactLabel ? compactLabel : label;
+  const key = release ? `release:${release}` : text;
   const dot = slim
     ? tone === "warn"
       ? "bg-warn"
@@ -77,22 +81,43 @@ export function TitleBar({
       <div data-tauri-drag-region className="flex min-w-0 items-center gap-2">
         <Mark size={slim ? 16 : 20} gradient className="pointer-events-none shrink-0" />
         <AnimatePresence mode="wait" initial={false}>
-          <motion.span
-            key={text}
-            data-tauri-drag-region
-            className={`flex min-w-0 items-center gap-2 font-medium text-soft ${slim ? "text-[12px]" : "text-[12.5px]"}`}
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.25 }}
-            role="status"
-            aria-live="polite"
-          >
-            <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} />
-            <span className="truncate" title={label}>
-              {text}
-            </span>
-          </motion.span>
+          {release ? (
+            <motion.span
+              key={key}
+              data-tauri-drag-region
+              className={`flex min-w-0 items-center gap-2 rounded-full bg-white/10 py-0.5 pl-1 pr-2.5 font-medium ${
+                slim ? "text-[12px]" : "text-[12.5px]"
+              }`}
+              initial={{ opacity: 0, scale: 0.92 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              transition={{ type: "spring", stiffness: 420, damping: 30 }}
+              role="status"
+              aria-live="polite"
+            >
+              <kbd className="rounded-md border border-white/25 bg-white/15 px-1.5 font-sans text-[11px] font-semibold leading-[18px] text-white shadow-[0_1px_0_rgba(255,255,255,0.15)]">
+                Esc
+              </kbd>
+              <span className="truncate text-white/85">{release}</span>
+            </motion.span>
+          ) : (
+            <motion.span
+              key={key}
+              data-tauri-drag-region
+              className={`flex min-w-0 items-center gap-2 font-medium text-soft ${slim ? "text-[12px]" : "text-[12.5px]"}`}
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.25 }}
+              role="status"
+              aria-live="polite"
+            >
+              <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} />
+              <span className="truncate" title={label}>
+                {text}
+              </span>
+            </motion.span>
+          )}
         </AnimatePresence>
       </div>
 

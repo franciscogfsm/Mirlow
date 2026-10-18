@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { api, type Rect, type VideoSize } from "../lib/api";
 import { MIRROR_FRAME } from "../lib/frame";
 import { useI18n } from "../lib/i18n";
-import { useRemoteControl } from "../lib/useRemoteControl";
+import { pointerScale, useRemoteControl } from "../lib/useRemoteControl";
 
 /** Space kept clear at the top of a full-screen stage while the controls show. */
 const CONTROLS_HEIGHT = 56;
@@ -136,6 +136,7 @@ export function MirrorStage({
   hidden,
   pause,
   control,
+  pointerSpeed,
   onCaptureChange,
   onToggleFullscreen,
 }: {
@@ -149,13 +150,12 @@ export function MirrorStage({
   pause: PauseInfo | null;
   /** A phone is connected over Bluetooth and can be worked from here. */
   control: boolean;
+  pointerSpeed: number;
   onCaptureChange: (captured: boolean) => void;
   onToggleFullscreen: () => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const pictureRef = useRef<HTMLDivElement>(null);
-  const { captured, capture } = useRemoteControl(pictureRef, control && !hidden);
-  useEffect(() => onCaptureChange(captured), [captured]);
   const [area, setArea] = useState<Box | null>(null);
   const [settled, setSettled] = useState(false);
   const aspect = video.width / video.height;
@@ -213,6 +213,13 @@ export function MirrorStage({
       );
     }
   }
+
+  const { captured, capture } = useRemoteControl(
+    pictureRef,
+    control && !hidden,
+    pointerScale(pointerSpeed, video.width, picture?.width ?? 0),
+  );
+  useEffect(() => onCaptureChange(captured), [captured]);
 
   const radius = fullscreen ? 0 : WINDOWED_RADIUS;
   const visible = settled && !hidden && uncovered && picture !== null;

@@ -41,19 +41,37 @@ pub enum RemoteState {
     Connected,
 }
 
+/// Whether this PC can be a Bluetooth mouse and keyboard at all. Checked on
+/// its own, whether or not the feature is turned on, so Settings can say.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum Support {
+    Checking,
+    Supported,
+    /// The adapter is there, and switched off; nothing is known beyond that.
+    BluetoothOff,
+    NoBluetooth,
+    /// The adapter cannot act as a peripheral, or Windows would not publish
+    /// the service.
+    Unsupported,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RemoteStatus {
     pub state: RemoteState,
+    pub support: Support,
     /// The connected device's Bluetooth name.
     pub host: Option<String>,
     /// The name this PC goes by in the phone's Bluetooth list.
     pub pc_name: String,
 }
 
-/// Input for the phone, as the interface reports it.
-#[derive(Debug, Clone, Copy, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[cfg(windows)]
+mod input;
+
+/// Movement and buttons for the phone, as the input thread reads them.
+#[derive(Debug, Clone, Copy)]
 pub struct Pointer {
     pub dx: i32,
     pub dy: i32,
@@ -69,12 +87,15 @@ enum Command {
     Keys(u8, [u8; 6]),
     /// Something changed on the Bluetooth side; look again.
     Recheck,
-    Shutdown,
+    /// Let go of the phone and stop; says so on the sender when done.
+    Shutdown(Sender<()>),
 }
 
 pub struct Remote {
     commands: Sender<Command>,
     status: Arc<Mutex<RemoteStatus>>,
+    #[cfg(windows)]
+    input: input::Input,
 }
 
 impl Remote {
@@ -84,6 +105,7 @@ impl Remote {
         let (commands, inbox) = mpsc::channel();
         let status = Arc::new(Mutex::new(RemoteStatus {
             state: RemoteState::Off,
+            support: Support::Checking,
             host: None,
             pc_name: pc_name(),
         }));
@@ -98,9 +120,16 @@ impl Remote {
         #[cfg(not(windows))]
         {
             let _ = (app, engine, inbox);
-            status.lock().unwrap().state = RemoteState::Unsupported;
+            let mut status = status.lock().unwrap();
+            status.state = RemoteState::Unsupported;
+            status.support = Support::Unsupported;
         }
-        let remote = Self { commands, status };
+        let remote = Self {
+            #[cfg(windows)]
+            input: input::Input::start(commands.clone()),
+            commands,
+            status,
+        };
         remote.enable(enabled);
         remote
     }
@@ -113,20 +142,24 @@ impl Remote {
         let _ = self.commands.send(Command::Enable(enabled));
     }
 
-    pub fn pointer(&self, pointer: Pointer) {
-        let _ = self.commands.send(Command::Pointer(pointer));
+    /// The picture has taken the pointer, or let it go. While it has it,
+    /// the mouse and keyboard are read straight from Windows and go to the
+    /// phone, the mouse's movement multiplied by `scale`.
+    pub fn capture(&self, captured: bool, scale: f64) {
+        #[cfg(windows)]
+        self.input.capture(captured, scale);
+        #[cfg(not(windows))]
+        let _ = (captured, scale);
     }
 
-    pub fn keys(&self, modifiers: u8, keys: &[u8]) {
-        let mut held = [0; 6];
-        for (slot, key) in held.iter_mut().zip(keys) {
-            *slot = *key;
-        }
-        let _ = self.commands.send(Command::Keys(modifiers, held));
-    }
-
+    /// Lets go of the phone and stops, as Mirlow quits. Waits for that to
+    /// be done (within reason), or the app would be gone before the phone
+    /// was let go.
     pub fn shutdown(&self) {
-        let _ = self.commands.send(Command::Shutdown);
+        let (done, finished) = mpsc::channel();
+        if self.commands.send(Command::Shutdown(done)).is_ok() {
+            let _ = finished.recv_timeout(std::time::Duration::from_secs(3));
+        }
     }
 }
 
@@ -135,19 +168,19 @@ fn pc_name() -> String {
     std::env::var("COMPUTERNAME").unwrap_or_default().trim().to_string()
 }
 
-fn publish(app: &AppHandle, shared: &Mutex<RemoteStatus>, state: RemoteState, host: Option<String>) {
+/// Changes the status, and tells the interface if that changed anything.
+fn publish(app: &AppHandle, shared: &Mutex<RemoteStatus>, change: impl FnOnce(&mut RemoteStatus)) {
     let mut status = shared.lock().unwrap();
-    if status.state == state && status.host == host {
-        return;
+    let before = status.clone();
+    change(&mut status);
+    if *status != before {
+        let _ = app.emit(STATUS_EVENT, status.clone());
     }
-    status.state = state;
-    status.host = host;
-    let _ = app.emit(STATUS_EVENT, status.clone());
 }
 
 #[cfg(windows)]
 mod peripheral {
-    use super::{publish, Command, Pointer, RemoteState, RemoteStatus};
+    use super::{publish, Command, Pointer, RemoteState, RemoteStatus, Support};
     use crate::engine::Engine;
     use std::collections::HashMap;
     use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender};
@@ -159,12 +192,16 @@ mod peripheral {
         GattCharacteristicProperties, GattLocalCharacteristic, GattLocalCharacteristicParameters,
         GattLocalDescriptorParameters, GattLocalService, GattProtectionLevel, GattReadRequestedEventArgs,
         GattServiceProvider, GattServiceProviderAdvertisementStatus, GattServiceProviderAdvertisingParameters,
-        GattWriteOption, GattWriteRequestedEventArgs,
+        GattSession, GattWriteOption, GattWriteRequestedEventArgs,
     };
-    use windows::Devices::Bluetooth::{BluetoothAdapter, BluetoothConnectionStatus, BluetoothError, BluetoothLEDevice};
+    use windows::Devices::Bluetooth::{
+        BluetoothAdapter, BluetoothConnectionStatus, BluetoothError, BluetoothLEDevice,
+        BluetoothLEPreferredConnectionParameters, BluetoothLEPreferredConnectionParametersRequest,
+    };
     use windows::Devices::Radios::{Radio, RadioState};
     use windows::Foundation::TypedEventHandler;
     use windows::Security::Cryptography::CryptographicBuffer;
+    use windows::Win32::System::Threading::{GetCurrentThread, SetThreadPriority, THREAD_PRIORITY_ABOVE_NORMAL};
     use windows::Win32::System::WinRT::{RoInitialize, RO_INIT_MULTITHREADED};
 
     /// The Bluetooth SIG's numbers for the HID over GATT profile.
@@ -253,24 +290,41 @@ mod peripheral {
         properties.0 & flag.0 != 0
     }
 
+    /// Looks at the Bluetooth adapter without publishing anything: is there
+    /// one, is it on, and can it play the part of a mouse. Returns its radio
+    /// whatever the answer, to hear it being switched on or off.
+    fn examine() -> (Option<Radio>, Result<()>) {
+        let Ok(adapter) = BluetoothAdapter::GetDefaultAsync().and_then(|found| found.get()) else {
+            return (None, Err(Failure::NoBluetooth));
+        };
+        let radio = adapter.GetRadioAsync().and_then(|radio| radio.get()).ok();
+        if radio.as_ref().and_then(|radio| radio.State().ok()) == Some(RadioState::Off) {
+            // An adapter that is off says nothing true about what it can do.
+            return (radio, Err(Failure::BluetoothOff));
+        }
+        let capable = adapter.IsLowEnergySupported().unwrap_or(false)
+            && adapter.IsPeripheralRoleSupported().unwrap_or(false);
+        (radio, if capable { Ok(()) } else { Err(Failure::Unsupported) })
+    }
+
+    fn support(failure: &Failure) -> Support {
+        match failure {
+            Failure::NoBluetooth => Support::NoBluetooth,
+            Failure::BluetoothOff => Support::BluetoothOff,
+            Failure::Unsupported | Failure::Refused(..) | Failure::Windows(_) => Support::Unsupported,
+        }
+    }
+
     /// The published service, and the two characteristics input goes out on.
     struct Published {
         provider: GattServiceProvider,
         keyboard: GattLocalCharacteristic,
         mouse: GattLocalCharacteristic,
-        radio: Option<(Radio, i64)>,
     }
 
     impl Published {
         fn create(outbox: &Sender<Command>) -> Result<Self> {
-            let adapter = BluetoothAdapter::GetDefaultAsync()?.get().map_err(|_| Failure::NoBluetooth)?;
-            let radio = adapter.GetRadioAsync().and_then(|radio| radio.get()).ok();
-            if radio.as_ref().and_then(|radio| radio.State().ok()) == Some(RadioState::Off) {
-                return Err(Failure::BluetoothOff);
-            }
-            if !adapter.IsLowEnergySupported()? || !adapter.IsPeripheralRoleSupported()? {
-                return Err(Failure::Unsupported);
-            }
+            examine().1?;
 
             let created = GattServiceProvider::CreateAsync(uuid16(HID_SERVICE))?.get()?;
             check("the HID service", created.Error()?)?;
@@ -323,24 +377,7 @@ mod peripheral {
             parameters.SetIsConnectable(true)?;
             provider.StartAdvertisingWithParameters(&parameters)?;
 
-            // Hear the radio being switched off. Only now, so a failed
-            // attempt leaves nothing listening behind it.
-            let radio = radio.and_then(|radio| {
-                let outbox = outbox.clone();
-                let token = radio
-                    .StateChanged(&TypedEventHandler::new(move |_, _| {
-                        let _ = outbox.send(Command::Recheck);
-                        Ok(())
-                    }))
-                    .ok()?;
-                Some((radio, token))
-            });
-
-            Ok(Self { provider, keyboard, mouse, radio })
-        }
-
-        fn radio_off(&self) -> bool {
-            self.radio.as_ref().and_then(|(radio, _)| radio.State().ok()) == Some(RadioState::Off)
+            Ok(Self { provider, keyboard, mouse })
         }
 
         /// Every device listening for input, by Windows' device id.
@@ -362,9 +399,6 @@ mod peripheral {
 
         fn close(self) {
             let _ = self.provider.StopAdvertising();
-            if let Some((radio, token)) = self.radio {
-                let _ = radio.RemoveStateChanged(token);
-            }
         }
     }
 
@@ -474,6 +508,53 @@ mod peripheral {
     struct Host {
         device: BluetoothLEDevice,
         token: i64,
+        /// Heard when the link's pace changes (Windows 11 only).
+        pace_token: Option<i64>,
+        /// Windows' request for the quickest link the phone allows. It lasts
+        /// only as long as it is kept.
+        quick: Option<BluetoothLEPreferredConnectionParametersRequest>,
+    }
+
+    impl Host {
+        /// Stops listening to the phone and lets go of the link. Windows keeps
+        /// a Bluetooth link up while anything on the PC holds on to it, so
+        /// nothing here may: the session is told not to keep the connection,
+        /// then everything is closed, and Windows ends the link.
+        fn forget(self) {
+            let _ = self.device.RemoveConnectionStatusChanged(self.token);
+            if let Some(token) = self.pace_token {
+                let _ = self.device.RemoveConnectionParametersChanged(token);
+            }
+            if let Some(quick) = self.quick {
+                let _ = quick.Close();
+            }
+            let session = self
+                .device
+                .BluetoothDeviceId()
+                .and_then(|id| GattSession::FromDeviceIdAsync(&id))
+                .and_then(|found| found.get());
+            if let Ok(session) = session {
+                let _ = session.SetMaintainConnection(false);
+                let _ = session.Close();
+            }
+            let _ = self.device.Close();
+        }
+
+        /// Asks for the shortest connection interval the phone will take:
+        /// every interval is a moment input waits for its turn on the air.
+        fn hurry(&mut self) -> Option<&'static str> {
+            let quick = BluetoothLEPreferredConnectionParameters::ThroughputOptimized()
+                .and_then(|parameters| self.device.RequestPreferredConnectionParameters(&parameters))
+                .ok()?;
+            let answer = match quick.Status().map(|status| status.0) {
+                Ok(1) => "asked the phone for a quicker link",
+                Ok(2) => "the phone is gone, so no quicker link",
+                Ok(3) => "Windows would not ask for a quicker link",
+                _ => "could not ask for a quicker link",
+            };
+            self.quick = Some(quick);
+            Some(answer)
+        }
     }
 
     struct Worker {
@@ -482,6 +563,8 @@ mod peripheral {
         status: std::sync::Arc<Mutex<RemoteStatus>>,
         outbox: Sender<Command>,
         enabled: bool,
+        /// The adapter's radio, listened to for being switched on or off.
+        radio: Option<(Radio, i64)>,
         published: Option<Published>,
         /// The last reason it could not be published, to log each one once.
         failure: Option<String>,
@@ -505,6 +588,8 @@ mod peripheral {
     ) {
         unsafe {
             let _ = RoInitialize(RO_INIT_MULTITHREADED);
+            // Input waits on nothing else: a busy PC should not hold up a click.
+            let _ = SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_ABOVE_NORMAL);
         }
         let mut worker = Worker {
             app,
@@ -512,6 +597,7 @@ mod peripheral {
             status,
             outbox,
             enabled: false,
+            radio: None,
             published: None,
             failure: None,
             retry_at: None,
@@ -522,6 +608,7 @@ mod peripheral {
             sent_at: Instant::now(),
             pace: DEFAULT_PACE,
         };
+        worker.probe();
         loop {
             let command = match worker.wait() {
                 Some(wait) => match inbox.recv_timeout(wait) {
@@ -539,8 +626,12 @@ mod peripheral {
                 Some(Command::Pointer(pointer)) => worker.pointer(pointer),
                 Some(Command::Keys(modifiers, keys)) => worker.keys(modifiers, keys),
                 Some(Command::Recheck) => worker.recheck(),
-                Some(Command::Shutdown) => {
+                Some(Command::Shutdown(done)) => {
                     worker.close();
+                    if let Some((radio, token)) = worker.radio.take() {
+                        let _ = radio.RemoveStateChanged(token);
+                    }
+                    let _ = done.send(());
                     break;
                 }
                 None => worker.tick(),
@@ -560,8 +651,50 @@ mod peripheral {
                 .and_then(|id| self.hosts.get(id))
                 .and_then(|host| host.device.Name().ok())
                 .map(|name| name.to_string())
-                .filter(|name| !name.is_empty());
-            publish(&self.app, &self.status, state, if state == RemoteState::Connected { host } else { None });
+                .filter(|name| !name.is_empty())
+                .filter(|_| state == RemoteState::Connected);
+            publish(&self.app, &self.status, |status| {
+                status.state = state;
+                status.host = host;
+            });
+        }
+
+        fn set_support(&self, support: Support) {
+            publish(&self.app, &self.status, |status| status.support = support);
+        }
+
+        /// Finds out whether this PC can do it, without publishing anything.
+        /// Runs at start, whenever the radio is switched on or off, and every
+        /// few seconds while there is no radio to listen to.
+        fn probe(&mut self) {
+            let (radio, verdict) = examine();
+            if self.radio.is_none() {
+                self.radio = radio.and_then(|radio| {
+                    let outbox = self.outbox.clone();
+                    let token = radio
+                        .StateChanged(&TypedEventHandler::new(move |_, _| {
+                            let _ = outbox.send(Command::Recheck);
+                            Ok(())
+                        }))
+                        .ok()?;
+                    Some((radio, token))
+                });
+            }
+            self.set_support(match &verdict {
+                Ok(()) => Support::Supported,
+                Err(failure) => support(failure),
+            });
+            if self.enabled {
+                self.open();
+            } else if verdict.is_err() && self.radio.is_none() {
+                // Nothing to listen to, so look again later: an adapter may
+                // be plugged in.
+                self.retry_at = Some(Instant::now() + RETRY);
+            }
+        }
+
+        fn radio_off(&self) -> bool {
+            self.radio.as_ref().and_then(|(radio, _)| radio.State().ok()) == Some(RadioState::Off)
         }
 
         /// How long to wait for the next command before there is something
@@ -582,7 +715,11 @@ mod peripheral {
             }
             if self.retry_at.is_some_and(|at| Instant::now() >= at) {
                 self.retry_at = None;
-                self.open();
+                if self.enabled {
+                    self.open();
+                } else {
+                    self.probe();
+                }
             }
         }
 
@@ -607,11 +744,13 @@ mod peripheral {
             match Published::create(&self.outbox) {
                 Ok(published) => {
                     self.note("this PC is now a Bluetooth keyboard and mouse");
+                    self.set_support(Support::Supported);
                     self.failure = None;
                     self.published = Some(published);
                     self.recheck();
                 }
                 Err(failure) => {
+                    self.set_support(support(&failure));
                     let (state, reason) = match failure {
                         Failure::NoBluetooth => (RemoteState::NoBluetooth, "there is no Bluetooth adapter".to_string()),
                         Failure::BluetoothOff => (RemoteState::BluetoothOff, "Bluetooth is off".to_string()),
@@ -634,27 +773,38 @@ mod peripheral {
             }
         }
 
+        /// Lets go of every key and button, takes the keyboard and mouse off
+        /// the air, and lets go of the phone, which then disconnects.
         fn close(&mut self) {
             self.release();
+            // The service first: with it gone the phone has nothing left here
+            // to use, and the link has no reason to stay.
+            if let Some(published) = self.published.take() {
+                published.close();
+            }
+            if self.connected.is_some() {
+                self.note("letting go of the phone");
+            }
             for (_, host) in self.hosts.drain() {
-                let _ = host.device.RemoveConnectionStatusChanged(host.token);
+                host.forget();
             }
             self.connected = None;
             self.retry_at = None;
             self.advertising = None;
-            if let Some(published) = self.published.take() {
-                published.close();
-            }
         }
 
         /// Works out who is connected after Windows said something changed.
         fn recheck(&mut self) {
-            let Some(published) = &self.published else { return };
-            if published.radio_off() {
+            let Some(published) = &self.published else {
+                // Not published: the radio may have come on, so ask again.
+                self.probe();
+                return;
+            };
+            if self.radio_off() {
                 self.note("Bluetooth was switched off");
                 self.close();
                 self.set(RemoteState::BluetoothOff);
-                self.retry_at = Some(Instant::now() + RETRY);
+                self.set_support(Support::BluetoothOff);
                 return;
             }
             let advertising = published.provider.AdvertisementStatus().ok();
@@ -680,7 +830,14 @@ mod peripheral {
                 })) else {
                     continue;
                 };
-                self.hosts.insert(id.clone(), Host { device, token });
+                let outbox = self.outbox.clone();
+                let pace_token = device
+                    .ConnectionParametersChanged(&TypedEventHandler::new(move |_, _| {
+                        let _ = outbox.send(Command::Recheck);
+                        Ok(())
+                    }))
+                    .ok();
+                self.hosts.insert(id.clone(), Host { device, token, pace_token, quick: None });
             }
             // Windows keeps a paired phone among the subscribers after it
             // walks away, so only one that is actually connected counts.
@@ -691,15 +848,27 @@ mod peripheral {
                     .is_some_and(|status| status == BluetoothConnectionStatus::Connected)
             });
             if live != self.connected {
-                match live.as_ref().and_then(|id| self.hosts.get(id)) {
+                match live.as_ref().and_then(|id| self.hosts.get_mut(id)) {
                     Some(host) => {
                         let name = host.device.Name().map(|name| name.to_string()).unwrap_or_default();
-                        self.pace = pace(&host.device);
-                        self.note(format!("{name} connected (sending every {} ms)", self.pace.as_millis()));
+                        let hurried = host.hurry();
+                        self.note(format!("{name} connected"));
+                        if let Some(hurried) = hurried {
+                            self.note(hurried);
+                        }
                     }
                     None => self.note("the phone disconnected"),
                 }
                 self.connected = live;
+            }
+            // Movement goes out once per connection interval: sooner only
+            // queues up, later only waits.
+            if let Some(host) = self.connected.as_ref().and_then(|id| self.hosts.get(id)) {
+                let pace = pace(&host.device);
+                if pace != self.pace {
+                    self.note(format!("sending every {:.2} ms", pace.as_secs_f64() * 1000.0));
+                    self.pace = pace;
+                }
             }
             self.set(if self.connected.is_some() { RemoteState::Connected } else { RemoteState::Waiting });
         }
@@ -786,7 +955,7 @@ mod peripheral {
             .filter(|&interval| interval > 0)
             // In units of 1.25 ms.
             .map(|interval| Duration::from_micros(interval as u64 * 1250))
-            .map(|pace| pace.clamp(Duration::from_millis(8), Duration::from_millis(50)))
+            .map(|pace| pace.clamp(Duration::from_micros(7500), Duration::from_millis(50)))
             .unwrap_or(DEFAULT_PACE)
     }
 }

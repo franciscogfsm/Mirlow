@@ -163,14 +163,17 @@ function Shell({
       return;
     }
     let timer = 0;
-    const wake = () => {
-      // Moving the phone's pointer is not reaching for the controls.
-      if (document.pointerLockElement) return;
+    const show = () => {
       setControlsVisible(true);
       window.clearTimeout(timer);
       timer = window.setTimeout(() => setControlsVisible(false), CONTROLS_IDLE_MS);
     };
-    wake();
+    const wake = () => {
+      // Moving the phone's pointer is not reaching for the controls.
+      if (!document.pointerLockElement) show();
+    };
+    // Shown once more as control starts or ends, so the way out is seen.
+    show();
     window.addEventListener("pointermove", wake);
     window.addEventListener("pointerdown", wake);
     window.addEventListener("keydown", wake);
@@ -180,7 +183,7 @@ function Shell({
       window.removeEventListener("pointerdown", wake);
       window.removeEventListener("keydown", wake);
     };
-  }, [mirroring, fullscreen]);
+  }, [mirroring, fullscreen, captured]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -213,6 +216,7 @@ function Shell({
       case "mirroring":
         if (captured) return device ? format(t.control.active, { device }) : t.control.activeUnknown;
         if (control) return device ? format(t.control.hint, { device }) : t.control.hintUnknown;
+        if (settings.control) return device ? format(t.control.pair, { device }) : t.control.pairUnknown;
         return device ? format(t.mirroring.from, { device }) : t.mirroring.fromUnknown;
       case "paused":
         if (!device) return status.sound ? t.paused.soundOnly : t.status.paused;
@@ -265,6 +269,7 @@ function Shell({
           label={label}
           compactLabel={compactLabel}
           tone={tone}
+          release={captured ? t.control.release : undefined}
           mirroring={mirroring}
           fullscreen={fullscreen}
           onToggleFullscreen={() => void toggleFullscreen()}
@@ -295,6 +300,7 @@ function Shell({
                 hidden={settingsOpen || helpOpen}
                 pause={paused ? { locked: status.locked, sound: status.sound, device } : null}
                 control={control}
+                pointerSpeed={settings.pointerSpeed}
                 onCaptureChange={setCaptured}
                 onToggleFullscreen={() => void toggleFullscreen()}
               />
@@ -343,7 +349,7 @@ export function App() {
   // so it never flashes empty.
   const ready = status !== null && settings !== null;
   useEffect(() => {
-    if (ready) void getCurrentWindow().show();
+    if (ready) void api.reveal();
   }, [ready]);
 
   if (!status || !settings) return null;

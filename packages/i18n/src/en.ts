@@ -77,6 +77,9 @@ export const en = {
       active: "Controlling {device} · Esc to stop",
       activeUnknown: "Controlling · Esc to stop",
       activeShort: "Esc to stop",
+      pair: "{device} · pair over Bluetooth to control",
+      pairUnknown: "Pair over Bluetooth to control",
+      release: "gives your mouse back",
     },
     audio: {
       headline: "Playing sound from {device}",
@@ -182,21 +185,34 @@ export const en = {
       },
       control: {
         label: "Mouse and keyboard",
-        description: "Work your phone from this PC. It connects over Bluetooth, like a wireless keyboard.",
+        description:
+          "Work your phone from this PC. It connects over Bluetooth, like a wireless keyboard. The picture is shown live for the least delay, so videos may play with their sound slightly out of step.",
+        checking: "Checking this PC's Bluetooth…",
+        supported: "Works on this PC.",
         starting: "Starting Bluetooth…",
-        waiting:
-          "On your phone, open Bluetooth settings and tap “{pc}”. If Windows asks whether to pair, allow it.",
-        waitingUnknown:
-          "On your phone, open Bluetooth settings and tap this PC. If Windows asks whether to pair, allow it.",
-        pointer:
-          "On an iPhone, turn on AssistiveTouch (Settings › Accessibility › Touch) to see the pointer.",
-        connected: "Connected to {device}. Click the picture to take control; Esc gives it back.",
-        connectedUnknown: "Phone connected. Click the picture to take control; Esc gives it back.",
+        waitingTitle: "Waiting for your phone",
+        connectedTitle: "Connected to {device}",
+        connectedTitleUnknown: "Phone connected",
+        steps: {
+          pair: "On your phone, open Settings › Bluetooth and tap “{pc}”.",
+          pairUnknown: "On your phone, open Settings › Bluetooth and tap this PC.",
+          confirm:
+            "Windows then shows a pairing notification with a code, usually at the bottom of the screen. Click it and allow it. Only the first time.",
+          pointer: "iPhone only: turn on AssistiveTouch, or you won't see the pointer. On the iPhone, tap:",
+          pointerPath: ["Settings", "Accessibility", "Touch", "AssistiveTouch", "On"],
+          pointerSiri: "Quicker: hold the side button and say “Turn on AssistiveTouch”.",
+          use: "While mirroring, click the picture to control your phone. Press Esc to get your mouse back.",
+        },
+        stuck: "Connected but nothing happens? On the phone, tap ⓘ next to this PC, choose Forget This Device, and pair again.",
         bluetoothOff: "Bluetooth is off on this PC. Turn it on in Windows settings.",
         noBluetooth: "This PC has no Bluetooth.",
         unsupported:
           "This PC's Bluetooth can't act as a mouse and keyboard. Most Bluetooth 5 USB adapters can.",
         openBluetooth: "Open Bluetooth settings",
+        speed: "Pointer speed",
+        slower: "Slower",
+        faster: "Faster",
+        speedHint: "In the middle, the phone's pointer keeps pace with your PC's cursor.",
       },
       theme: {
         label: "Appearance",

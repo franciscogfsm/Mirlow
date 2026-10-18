@@ -79,9 +79,9 @@
     background: #0c0c0c; border: 1.5px solid rgba(255,255,255,.12);
     box-shadow: inset 0 1.5px 0 rgba(255,255,255,.14), 0 60px 120px -30px rgba(0,0,0,1), 0 0 0 1px rgba(0,0,0,.6);
   }
-  #win .bar { position: absolute; left: 0; right: 0; top: 0; height: 56px; display: flex; align-items: center; padding: 0 24px; gap: 12px; color: var(--soft); font-size: 20px; font-weight: 500; }
-  #win .ctl { margin-left: auto; display: flex; gap: 30px; color: var(--faint); }
-  #win .content { position: absolute; left: 0; right: 0; top: 56px; bottom: 0; }
+  .pcwin .bar { position: absolute; left: 0; right: 0; top: 0; height: 56px; display: flex; align-items: center; padding: 0 24px; gap: 12px; color: var(--soft); font-size: 20px; font-weight: 500; }
+  .pcwin .ctl { margin-left: auto; display: flex; gap: 30px; color: var(--faint); }
+  .pcwin .content { position: absolute; left: 0; right: 0; top: 56px; bottom: 0; }
   #stageBlack { position: absolute; inset: 0; background: #000; }
   #monitorStand { left: 470px; top: 900px; width: 140px; height: 0; }
 
@@ -98,6 +98,9 @@
   .ps .card { position: relative; width: 100%; flex-shrink: 0; aspect-ratio: 1 / 1.08; }
   .ps .dots { display: flex; justify-content: center; gap: 1.8cqw; margin-top: 4.5cqw; }
   .ps .dots i { display: block; height: 1.6cqw; border-radius: 9px; background: #000; }
+  .ps .sbar { margin-top: 3.5cqw; height: 9.5cqw; border-radius: 3cqw; background: rgba(0,0,0,.06); display: flex; align-items: center; gap: 1.8cqw; padding: 0 3cqw; font-size: 4.3cqw; color: rgba(0,0,0,.42); white-space: pre; }
+  .ps .sbar .q { color: #0a0a0a; font-weight: 500; }
+  .ps .sbar .caret { display: block; width: .55cqw; height: 5.2cqw; margin: 0 -1.4cqw 0 -1.4cqw; background: #0a7aff; border-radius: 1px; opacity: 0; }
 
   /* Control centre (on the phone) */
   #cc { position: absolute; inset: 0; background: rgba(8,8,8,.74); backdrop-filter: blur(24px) saturate(1.1); container-type: inline-size; color: #fff; }
@@ -130,6 +133,20 @@
   .feat .fs { font-size: 29px; color: var(--soft); margin-top: 6px; letter-spacing: -0.01em; }
 
   .pill { display: inline-flex; align-items: center; gap: 18px; border-radius: 999px; }
+
+  /* Control scene: the PC's mouse and keyboard work the phone */
+  #cwin { left: 140px; top: 400px; width: 800px; height: 1000px; border-radius: 30px; overflow: hidden;
+    background: #000; border: 1.5px solid rgba(255,255,255,.12);
+    box-shadow: inset 0 1.5px 0 rgba(255,255,255,.14), 0 60px 120px -30px rgba(0,0,0,1), 0 0 0 1px rgba(0,0,0,.6); }
+  #cwin .bar { background: #0c0c0c; }
+  #cmirror { position: absolute; left: 211px; top: 84px; width: 377px; height: 840px; border-radius: 22px; overflow: hidden; }
+  .chint { position: absolute; left: 0; right: 0; bottom: 20px; display: flex; justify-content: center; }
+  .chint .pill { gap: 12px; padding: 12px 24px; font-size: 21px; font-weight: 600; color: var(--ink); background: rgba(26,26,26,.82); border: 1px solid rgba(255,255,255,.14); }
+  #keys { left: 0; width: 100%; top: 1446px; display: flex; justify-content: center; gap: 14px; }
+  .key { width: 86px; height: 86px; border-radius: 24px; display: flex; align-items: center; justify-content: center; font-size: 38px; font-weight: 600; }
+  #cursor { width: 46px; height: 46px; margin: -3px 0 0 -4px; z-index: 40; filter: drop-shadow(0 6px 10px rgba(0,0,0,.5)); }
+  #apointer { width: 40px; height: 40px; margin: -20px 0 0 -20px; border-radius: 50%; background: rgba(105,105,105,.6); border: 2.5px solid rgba(255,255,255,.8); box-shadow: 0 4px 14px rgba(0,0,0,.35); z-index: 35; }
+  #cripple { width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%; border: 3px solid #fff; z-index: 34; }
 
   /* Camera: a slow push-in per chapter; the backdrop stays put. */
   #cam { position: absolute; inset: 0; transform-origin: 540px 900px; }
@@ -177,7 +194,7 @@
 
   <!-- 4. Demo -->
   <div id="s4" class="layer">
-    <div id="win" class="abs">
+    <div id="win" class="abs pcwin">
       <div class="bar">
         <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M5 17.5V11a3.5 3.5 0 0 1 7 0v4.5M12 11a3.5 3.5 0 0 1 7 0v6.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
         Mirlow
@@ -222,6 +239,24 @@
         <path d="M5 17.5V11a3.5 3.5 0 0 1 7 0v4.5M12 11a3.5 3.5 0 0 1 7 0v6.5" stroke="url(#mg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     </div>
+  </div>
+
+  <!-- C. Control the phone from the PC -->
+  <div id="sc" class="layer">
+    <div id="scRe" class="h abs" style="top:780px;font-size:116px"></div>
+    <div id="scCap1" class="h abs" style="top:170px;font-size:76px"></div>
+    <div id="scCap2" class="h abs" style="top:210px;font-size:84px"></div>
+    <div id="scCap3" class="h abs" style="top:170px;font-size:72px"></div>
+    <div id="cwin" class="abs pcwin">
+      <div class="bar"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M5 17.5V11a3.5 3.5 0 0 1 7 0v4.5M12 11a3.5 3.5 0 0 1 7 0v6.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg> Mirlow <span class="ctl"><span>&#8212;</span><span>&#9633;</span><span>&#10005;</span></span></div>
+      <div id="cmirror"></div>
+      <div id="chintA" class="chint"><div class="pill">iPhone &middot; click to control</div></div>
+      <div id="chintB" class="chint"><div class="pill">Controlling iPhone &middot; Esc to stop</div></div>
+    </div>
+    <div id="keys" class="abs"></div>
+    <div id="cripple" class="abs"></div>
+    <div id="apointer" class="abs"></div>
+    <div id="cursor" class="abs"><svg width="46" height="46" viewBox="0 0 24 24"><path d="M2 1.5v17.2l4.6-4.4 3.1 7 3-1.3-3-6.8h6.4z" fill="#fff" stroke="#000" stroke-width="1.2" stroke-linejoin="round"/></svg></div>
   </div>
 
   <!-- 5. Features -->
@@ -324,7 +359,8 @@ function phoneScreen(host) {
     <div class="status"><span>9:41</span><span style="display:flex;gap:1.4cqw;align-items:center"><i style="display:block;width:4.6cqw;height:2.6cqw;border-radius:9px;background:#0a0a0a;opacity:.85"></i><i style="display:block;width:6.4cqw;height:3.2cqw;border-radius:30%;border:1px solid #0a0a0a"></i></span></div>
     <p style="color:rgba(0,0,0,.45);font-size:4.2cqw;margin-top:8cqw">Tuesday</p>
     <p style="font-weight:650;letter-spacing:-.03em;font-size:9.4cqw;line-height:1.05">Albums</p>
-    <div style="overflow:hidden;margin-top:6cqw;border-radius:7cqw"><div class="track">
+    <div class="sbar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" style="width:4.4cqw;height:4.4cqw;flex-shrink:0"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 4.5 4.5"/></svg><span class="q"></span><i class="caret"></i><span class="ph">Search</span></div>
+    <div class="cards" style="overflow:hidden;margin-top:4.5cqw;border-radius:7cqw"><div class="track">
       ${CARDS.map((c) => `<div class="card"><div style="position:absolute;inset:0;background:${c.art}"></div>
         <div style="position:absolute;left:0;right:0;bottom:0;color:#fff;padding:14cqw 6cqw 5.5cqw;background:linear-gradient(to top,rgba(0,0,0,.7),transparent)">
         <p style="font-weight:650;font-size:6.4cqw;line-height:1.1">${c.title}</p><p style="opacity:.7;font-size:3.9cqw">${c.meta}</p></div></div>`).join("")}
@@ -334,7 +370,8 @@ function phoneScreen(host) {
       ${[62, 78, 48].map((w, i) => `<div style="display:flex;align-items:center;gap:3.6cqw"><i style="display:block;flex-shrink:0;width:10cqw;height:10cqw;border-radius:28%;background:rgba(0,0,0,.1)"></i>
         <span style="flex:1;display:flex;flex-direction:column;gap:1.8cqw"><i style="display:block;height:2.3cqw;border-radius:9px;background:rgba(0,0,0,.75);width:${w}%"></i><i style="display:block;height:1.9cqw;border-radius:9px;background:rgba(0,0,0,.15);width:${w - 22 + i * 6}%"></i></span></div>`).join("")}
     </div></div></div>`;
-  return { track: host.querySelector(".track"), dots: [...host.querySelectorAll(".dots i")] };
+  const q = (sel) => host.querySelector(sel);
+  return { track: q(".track"), dots: [...host.querySelectorAll(".dots i")], cards: q(".cards"), sbar: q(".sbar"), q: q(".q"), ph: q(".ph"), caret: q(".caret") };
 }
 function setCards(ps, pos) {
   ps.track.style.transform = `translateX(${(-pos * 100).toFixed(3)}%)`;
@@ -392,8 +429,8 @@ $("phoneScreen").insertAdjacentHTML("beforeend", `
 
 // The three things the voice names, each landing on its first word.
 const FEATS = [
-  ["Full screen", "One key fills the whole monitor", '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>', at("feats", "Full")],
-  ["Private", "Stays on your network. No accounts.", '<rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>', at("feats", "It")],
+  ["Full screen", "One key fills the whole monitor", '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>', at("feats", "full")],
+  ["Private", "Stays on your network. No accounts.", '<rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>', at("feats", "private")],
   ["iPhone, iPad and Android", "Nothing to install on the phone", '<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18h2"/>', at("feats", "iPhone")],
 ];
 $("s5").insertAdjacentHTML("beforeend", FEATS.map(([a, b, ic], i) => `
@@ -403,6 +440,35 @@ $("s5").insertAdjacentHTML("beforeend", FEATS.map(([a, b, ic], i) => `
   </div>`).join(""));
 const feats = [...document.querySelectorAll(".feat")];
 const s5h = words($("s5h"), "And you *get:*");
+
+// The control scene: the PC cursor clicks into the picture, then the iPhone's own pointer takes over.
+const ctlPs = phoneScreen($("cmirror"));
+const scRe = words($("scRe"), "The part nobody | *expects.*");
+const scCap1 = words($("scCap1"), "Control your *iPhone* | from your *PC.*");
+const scCap2 = words($("scCap2"), "*Click.* *Scroll.* *Type.*");
+const scCap3 = words($("scCap3"), "A real Bluetooth mouse. | *Almost* *no* *delay.*");
+const TYPED = "Lisbon";
+$("keys").innerHTML = TYPED.toUpperCase().split("").map((k) => `<div class="key glass">${k}</div>`).join("");
+const keyEls = [...$("keys").children];
+const CT = {
+  click: at("ctlB", "mouse"),
+  tap: at("ctlC", "Click") + 0.05,
+  drag: at("ctlC", "Scroll"),
+  focus: at("ctlC", "Type") + 0.1,
+  type0: at("ctlC", "Type") + 0.3,
+  gap: 0.13,
+};
+CT.typed = CT.type0 + TYPED.length * CT.gap;
+// Piecewise path through [time, x, y] keys, eased between each pair.
+function path(keys, t) {
+  if (t <= keys[0][0]) return { x: keys[0][1], y: keys[0][2] };
+  for (let i = 1; i < keys.length; i++) {
+    const [t1, x1, y1] = keys[i];
+    if (t <= t1) { const [t0, x0, y0] = keys[i - 1]; const k = EIO(clamp((t - t0) / (t1 - t0))); return { x: lerp(x0, x1, k), y: lerp(y0, y1, k) }; }
+  }
+  const l = keys[keys.length - 1];
+  return { x: l[1], y: l[2] };
+}
 
 const s6q = words($("s6qt"), "What's the *catch?*");
 $("s6a").innerHTML = "Free.".split("").map((c) => `<span class="w">${c}</span>`).join("");
@@ -453,7 +519,7 @@ MIRROR.x = WIN.x + WIN.w / 2 - MIRROR.w / 2;
 MIRROR.y = WIN.y + WIN.bar + (WIN.h - WIN.bar) / 2 - MIRROR.h / 2;
 
 // ---------- timeline ----------
-const CUTS = [0, T.s2, T.s3, T.s4, T.s5, T.s6, T.s7, T.end];
+const CUTS = [0, T.s2, T.s3, T.s4, T.sc, T.scw, T.s5, T.s6, T.s7, T.end];
 
 function render(t) {
   // Backdrop: the grid moves one cell per chapter; light drifts slowly.
@@ -551,10 +617,10 @@ function render(t) {
   }
 
   // ---- 4. Demo
-  const s4 = t > T.s4 - 0.1 && t < T.s5 + 0.5;
+  const s4 = t > T.s4 - 0.1 && t < T.sc + 0.5;
   show($("s4"), s4);
   if (s4) {
-    const out = p(t, T.s5 - 0.45, 0.5, EI);
+    const out = p(t, T.sc - 0.45, 0.5, EI);
     const wk = p(t, T.s4 + 0.1, 0.9);
     css($("win"), { opacity: (wk * (1 - out)).toFixed(3), transform: `translateY(${((1 - wk) * 30 - out * 40).toFixed(2)}px)`, filter: out > 0.01 ? `blur(${(out * 12).toFixed(2)}px)` : "none" });
     const mk = p(t, T.mirror, 0.5);
@@ -623,11 +689,97 @@ function render(t) {
     setCards(mirrorPs, pos);
 
     // Step captions, each on its line of the voice
-    const steps = [[$("st1"), T.s4 + 0.2, VO.step2 - 0.05], [$("st2"), VO.step2 - 0.05, T.mirror + 0.05], [$("st3"), T.mirror + 0.4, T.s5 - 0.45]];
+    const steps = [[$("st1"), T.s4 + 0.2, VO.step2 - 0.05], [$("st2"), VO.step2 - 0.05, T.mirror + 0.05], [$("st3"), T.mirror + 0.4, T.sc - 0.45]];
     steps.forEach(([el, a, b]) => {
       const k = p(t, a + 0.08, 0.6);
       const e = p(t, b - 0.05, 0.4, EI);
       css(el, { opacity: (k * (1 - e)).toFixed(3), transform: `translateY(${((1 - k) * 40 - e * 30).toFixed(2)}px)`, filter: (1 - k) * 12 + e * 10 > 0.05 ? `blur(${((1 - k) * 12 + e * 10).toFixed(2)}px)` : "none" });
+    });
+  }
+
+  // ---- C. Control the phone with the PC's mouse and keyboard
+  const scOn = t > T.sc - 0.1 && t < T.s5 + 0.5;
+  show($("sc"), scOn);
+  if (scOn) {
+    reveal(scRe, t, VO.ctlA - 0.05, { stag: 0.07, exit: T.scw - 0.4 });
+    const out = p(t, T.s5 - 0.45, 0.5, EI);
+    const blurOut = out > 0.01 ? `blur(${(out * 12).toFixed(2)}px)` : "none";
+    const wk = p(t, T.scw, 0.9);
+    css($("cwin"), { opacity: (wk * (1 - out)).toFixed(3), transform: `translateY(${((1 - wk) * 70 - out * 40).toFixed(2)}px) scale(${(0.94 + 0.06 * wk).toFixed(4)})`, filter: blurOut });
+    reveal(scCap1, t, VO.ctlB - 0.05, { exit: VO.ctlC - 0.45 });
+    ["Click", "Scroll", "Type"].forEach((w, i) => reveal([scCap2[i]], t, at("ctlC", w) - 0.08, { exit: VO.ctlD - 0.45 }));
+    reveal(scCap3, t, VO.ctlD - 0.05, { stag: 0.05, exit: T.s5 - 0.45 });
+
+    // Where things are inside the mirrored picture
+    const CM = rect($("cmirror")), cards = rect(ctlPs.cards), sb = rect(ctlPs.sbar);
+    const mid = { x: CM.x + CM.w * 0.5, y: CM.y + CM.h * 0.42 };
+    const card = { x: cards.x + cards.w * 0.55, y: cards.y + cards.h * 0.5 };
+    const field = { x: sb.x + sb.w * 0.3, y: sb.y + sb.h / 2 };
+
+    // Hint pill: "click to control", then "Controlling" once the click lands
+    const hk = p(t, T.scw + 0.7, 0.5) * (1 - out);
+    const sw = p(t, CT.click + 0.06, 0.3);
+    const bump = 1 + 0.06 * Math.sin(Math.PI * clamp((t - CT.click - 0.06) / 0.35));
+    css($("chintA"), { opacity: (hk * (1 - sw)).toFixed(3), transform: `translateY(${((1 - hk) * 16).toFixed(2)}px)` });
+    css($("chintB"), { opacity: (hk * sw).toFixed(3), transform: `scale(${bump.toFixed(4)})` });
+
+    // The PC's cursor comes in, clicks the picture, and is handed to the phone
+    const cin = p(t, T.scw + 0.9, 1.1, EIO);
+    const gone = p(t, CT.click + 0.12, 0.2);
+    const from = { x: 930, y: 1560 };
+    const press = (a, d = 0.22) => Math.sin(Math.PI * clamp((t - a + 0.08) / d));
+    css($("cursor"), {
+      left: `${lerp(from.x, mid.x, cin)}px`, top: `${lerp(from.y, mid.y, cin) - Math.sin(Math.PI * cin) * 90}px`,
+      opacity: (clamp((t - T.scw - 0.9) / 0.2) * (1 - gone) * (1 - out)).toFixed(3),
+      transform: `scale(${(1 - 0.15 * press(CT.click)).toFixed(4)})`,
+    });
+
+    // The phone's pointer: to the album, swipe it, up to search; then quick, light moves while he talks about delay
+    const ptr = path([
+      [CT.click + 0.15, mid.x, mid.y],
+      [CT.tap - 0.12, card.x, card.y],
+      [CT.drag + 0.05, card.x, card.y],
+      [CT.drag + 0.6, card.x - 170, card.y],
+      [CT.focus - 0.06, field.x, field.y],
+      [CT.typed + 0.35, field.x, field.y],
+      [CT.typed + 0.85, card.x + 70, card.y - 90],
+      [CT.typed + 1.3, card.x - 90, card.y + 30],
+      [CT.typed + 1.75, card.x + 40, card.y + 150],
+      [CT.typed + 2.25, mid.x, mid.y + 40],
+    ], t);
+    const held = t > CT.drag && t < CT.drag + 0.6 ? 1 : 0;
+    const ps = 1 - 0.2 * Math.max(press(CT.tap), press(CT.focus), held);
+    css($("apointer"), { left: `${ptr.x}px`, top: `${ptr.y}px`, opacity: (p(t, CT.click + 0.1, 0.2) * (1 - out)).toFixed(3), transform: `scale(${ps.toFixed(4)})` });
+
+    // Ripples: the click into the picture, the tap on the album, the tap on search
+    let rk = -1, rp = mid;
+    for (const [a, pt] of [[CT.click, mid], [CT.tap, card], [CT.focus, field]]) if (t >= a && t < a + 0.55) { rk = (t - a) / 0.55; rp = pt; }
+    css($("cripple"), { left: `${rp.x}px`, top: `${rp.y}px`, opacity: rk >= 0 ? ((1 - rk) * 0.75).toFixed(3) : 0, transform: `scale(${(1 + EO(clamp(rk)) * 1.5).toFixed(4)})` });
+
+    // The phone answers: the album dips, the row swipes, search fills in and jumps back to Lisbon
+    ctlPs.cards.style.transform = `scale(${(1 - 0.03 * press(CT.tap, 0.3)).toFixed(4)})`;
+    setCards(ctlPs, p(t, CT.drag + 0.05, 0.6, EIO) - p(t, CT.typed + 0.15, 0.7, EIO));
+    const n = TYPED.split("").filter((_, i) => t >= CT.type0 + i * CT.gap).length;
+    ctlPs.q.textContent = TYPED.slice(0, n);
+    ctlPs.ph.style.display = n ? "none" : "";
+    const focused = t >= CT.focus;
+    ctlPs.sbar.style.background = focused ? "rgba(0,0,0,.1)" : "";
+    const typing = t < CT.typed + 0.2;
+    ctlPs.caret.style.opacity = focused ? (typing || Math.floor((t - CT.focus) * 2.2) % 2 === 0 ? 1 : 0) : 0;
+
+    // Keycaps under the window, one per letter as it is typed
+    keyEls.forEach((el, i) => {
+      const kt = CT.type0 + i * CT.gap;
+      const pop = spring(t, kt - 0.06, 16, 9);
+      const down = Math.sin(Math.PI * clamp((t - kt + 0.02) / 0.2));
+      const e = p(t, T.s5 - 0.45 + i * 0.02, 0.45, EI);
+      css(el, {
+        opacity: (clamp((t - kt + 0.06) / 0.1) * (1 - e)).toFixed(3),
+        transform: `translateY(${(down * 7 + (1 - clamp(pop, 0, 1.2)) * 40 - e * 30).toFixed(2)}px) scale(${(0.7 + 0.3 * clamp(pop, 0, 1.15)).toFixed(4)})`,
+        background: `rgba(255,255,255,${(0.06 + 0.5 * down).toFixed(3)})`,
+        color: down > 0.5 ? "#0a0a0a" : "#fafafa",
+        filter: e > 0.01 ? `blur(${(e * 12).toFixed(2)}px)` : "none",
+      });
     });
   }
 

@@ -25,6 +25,7 @@ import type {
   RemoteStatus,
   Settings,
   Status,
+  Support,
 } from "./lib/api";
 import "./styles.css";
 
@@ -38,11 +39,14 @@ let settings: Settings = {
   theme: (params.get("theme") ?? "system") as Settings["theme"],
   language: (params.get("lang") ?? "system") as Settings["language"],
   control: params.has("remote"),
+  pointerSpeed: 5,
 };
 
-// preview.html?remote=waiting (or connected, bluetoothOff, unsupported…) shows mouse and keyboard on.
+// preview.html?remote=waiting (or connected, bluetoothOff, unsupported…) shows mouse and keyboard on;
+// &support=unsupported (or noBluetooth, bluetoothOff, checking) what this PC can do.
 const remote: RemoteStatus = {
   state: (params.get("remote") ?? "off") as RemoteState,
+  support: (params.get("support") ?? "supported") as Support,
   host: params.get("remote") === "connected" ? "Ana's iPhone" : null,
   pcName: settings.name,
 };

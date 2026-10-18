@@ -33,7 +33,7 @@ fn get_settings(state: State<'_, AppState>) -> Settings {
 }
 
 /// Saves new settings. The engine is restarted only if a setting it reads at
-/// launch (name, sound, decoding) changed.
+/// launch (name, sound, decoding, live picture for mouse and keyboard) changed.
 #[tauri::command]
 fn update_settings(
     settings: Settings,
@@ -47,7 +47,8 @@ fn update_settings(
         let mut current = state.settings.lock().unwrap();
         let restart = current.name != next.name
             || current.sound != next.sound
-            || current.compatibility != next.compatibility;
+            || current.compatibility != next.compatibility
+            || current.control != next.control;
         remote.enable(next.control);
         *current = next.clone();
         restart
@@ -71,16 +72,11 @@ fn get_remote_status(remote: State<'_, Remote>) -> remote::RemoteStatus {
     remote.status()
 }
 
-/// Movement and clicks for the phone, while the picture has the pointer.
+/// The picture has taken the pointer, or let it go. While it has it, the
+/// mouse goes to the phone, its movement multiplied by `scale`.
 #[tauri::command]
-fn remote_pointer(pointer: remote::Pointer, remote: State<'_, Remote>) {
-    remote.pointer(pointer);
-}
-
-/// Every key held down now, as HID usages, with the modifier byte.
-#[tauri::command]
-fn remote_keys(modifiers: u8, keys: Vec<u8>, remote: State<'_, Remote>) {
-    remote.keys(modifiers, &keys);
+fn remote_capture(captured: bool, scale: f64, remote: State<'_, Remote>) {
+    remote.capture(captured, scale);
 }
 
 #[tauri::command]
@@ -168,7 +164,7 @@ pub fn run() {
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             // Opening Mirlow again (from the desktop icon, say) brings back the
             // one that is already running.
-            tray::show_window(app);
+            tray::reveal_window(app);
         }))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
@@ -188,14 +184,14 @@ pub fn run() {
             restart_engine,
             get_engine_log,
             get_remote_status,
-            remote_pointer,
-            remote_keys,
+            remote_capture,
             get_diagnostics,
             fix_all,
             open_network_settings,
             open_windows_settings,
             layout_video,
             tray::set_tray_text,
+            tray::reveal,
             updater::check_update,
             updater::install_update,
         ])
@@ -218,6 +214,18 @@ pub fn run() {
             app.manage(Miracast::start(handle, settings, engine.clone()));
             app.manage(engine);
             tray::create(app.handle())?;
+            // The interface shows the window when it is ready. Should it
+            // never be, the window still appears rather than staying hidden.
+            let handle = app.handle().clone();
+            std::thread::spawn(move || {
+                std::thread::sleep(std::time::Duration::from_secs(5));
+                let hidden = handle
+                    .get_webview_window("main")
+                    .is_some_and(|window| !window.is_visible().unwrap_or(true));
+                if hidden {
+                    tray::reveal_window(&handle);
+                }
+            });
             Ok(())
         })
         .build(tauri::generate_context!())

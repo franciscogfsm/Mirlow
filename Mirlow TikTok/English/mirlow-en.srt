@@ -51,38 +51,53 @@ And that’s it.
 Sound included.
 
 14
-00:00:20,830 --> 00:00:22,265
-Full screen with one key.
+00:00:20,744 --> 00:00:22,557
+And here’s the part nobody expects.
 
 15
-00:00:22,504 --> 00:00:23,940
-It stays on your own network.
+00:00:22,844 --> 00:00:26,013
+You can control your iPhone with your PC’s mouse and keyboard.
 
 16
-00:00:24,179 --> 00:00:26,664
-And it works with iPhone, iPad and Android.
+00:00:26,244 --> 00:00:26,654
+Click.
 
 17
-00:00:27,006 --> 00:00:27,934
-So what’s the catch?
+00:00:26,893 --> 00:00:27,432
+Scroll.
 
 18
-00:00:28,156 --> 00:00:28,837
-There isn’t one.
+00:00:27,683 --> 00:00:28,081
+Type.
 
 19
-00:00:29,076 --> 00:00:29,698
-It’s free.
+00:00:28,694 --> 00:00:32,158
+It pairs like a real Bluetooth mouse, so there’s almost no delay.
 
 20
-00:00:29,937 --> 00:00:32,905
-No trial, no watermark, and it’s open source.
+00:00:32,406 --> 00:00:37,191
+Plus full screen, it stays private, and it works on iPhone, iPad and Android.
 
 21
-00:00:33,094 --> 00:00:33,834
-Search Mirlow.
+00:00:37,556 --> 00:00:38,484
+So what’s the catch?
 
 22
-00:00:34,085 --> 00:00:34,801
-Thank me later.
+00:00:38,706 --> 00:00:39,387
+There isn’t one.
 
+23
+00:00:39,626 --> 00:00:40,248
+It’s free.
+
+24
+00:00:40,487 --> 00:00:43,455
+No trial, no watermark, and it’s open source.
+
+25
+00:00:43,644 --> 00:00:44,384
+Search Mirlow.
+
+26
+00:00:44,635 --> 00:00:45,351
+Thank me later.

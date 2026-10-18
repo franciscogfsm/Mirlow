@@ -12,7 +12,11 @@ LINES = {
     "step2": "On your iPhone, tap Screen Mirroring.",
     "step3": "Pick your PC.",
     "done": "And that's it. Sound included.",
-    "feats": "Full screen with one key. It stays on your own network. And it works with iPhone, iPad and Android.",
+    "ctlA": "And here's the part nobody expects.",
+    "ctlB": "You can control your iPhone with your PC's mouse and keyboard.",
+    "ctlC": "Click. Scroll. Type.",
+    "ctlD": "It pairs like a real Bluetooth mouse, so there's almost no delay.",
+    "feats": "Plus full screen, it stays private, and it works on iPhone, iPad and Android.",
     "catch": "So what's the catch?",
     "free": "There isn't one. It's free. No trial, no watermark, and it's open source.",
     "cta": "Search Mirlow. Thank me later.",
@@ -38,9 +42,17 @@ async def one_(key, text):
     return key, words
 
 async def main():
-    out = {}
+    # With keys on the command line, only those lines are made again.
+    only = sys.argv[2:]
+    try:
+        out = json.load(open("vo/words.json"))
+    except FileNotFoundError:
+        out = {}
     for k, v in LINES.items():
+        if only and k not in only:
+            continue
         out[k] = (await one(k, v))[1]
+    out = {k: out[k] for k in LINES}
     json.dump(out, open("vo/words.json", "w"), indent=1)
     for k, w in out.items():
         print(k, w[-1][2], " ".join(f"{x[0]}@{x[1]}" for x in w))

@@ -74,10 +74,11 @@ const BEAT = 0.5;
 for (let t = T.s2; t < T.s7 - 0.2; t += BEAT) {
   if (t > T.s3 - 0.2 && t < T.s3 + 0.9) continue;
   if (t > T.s6 - 0.2 && t < FREE - 0.05) continue;
+  if (t > T.sc - 0.2 && t < T.scw - 0.05) continue;
   kick(t, 0.32);
   hat(t + BEAT / 2, 0.06);
 }
-[T.s2, T.s3, T.s4, T.s5, T.s6, T.s7].forEach((c) => whoosh(c));
+[T.s2, T.s3, T.s4, T.sc, T.scw, T.s5, T.s6, T.s7].forEach((c) => whoosh(c));
 // Hook: the button pops in, then gets pressed on "PC".
 pop(at("hook", "button") - 0.02, 0.1);
 click(at("hook", "PC"), 0.16); chime(at("hook", "PC") + 0.05, 0.03);
@@ -86,7 +87,20 @@ click(at("hook", "PC"), 0.16); chime(at("hook", "PC") + 0.05, 0.03);
 boom(T.s3, 0.55); chime(T.s3 + 0.35);
 click(T.tap1); click(T.tap2); chime(T.tap2 + 0.4, 0.045);
 whoosh(T.mirror + 0.6, 0.8, 0.07);
-[at("feats", "Full"), at("feats", "It"), at("feats", "iPhone")].forEach((t) => pop(t - 0.1, 0.07));
+[at("feats", "full"), at("feats", "private"), at("feats", "iPhone")].forEach((t) => pop(t - 0.1, 0.07));
+// Control scene: the beat holds its breath for the re-hook, then lands with the window.
+riser(T.sc + 0.3, T.scw - 0.05, 0.045);
+boom(T.scw - 0.05, 0.5);
+click(at("ctlB", "mouse"), 0.17);
+click(at("ctlC", "Click") + 0.05, 0.12);
+whoosh(at("ctlC", "Scroll") + 0.45, 0.5, 0.05);
+click(at("ctlC", "Type") + 0.1, 0.1);
+// A soft mechanical key per letter.
+function key(at, gain = 0.07) {
+  const s = Math.floor(at * SR); let lp = 0;
+  for (let j = 0; j < 0.06 * SR; j++) { const x = j / SR; lp += 0.35 * (rnd() - lp); add(s + j, (lp * Math.exp(-x * 120) + Math.sin(2 * Math.PI * 1700 * x) * Math.exp(-x * 260) * 0.5) * gain, 0.15); }
+}
+for (let i = 0; i < 6; i++) key(at("ctlC", "Type") + 0.3 + i * 0.13);
 riser(T.s6 + 0.2, FREE - 0.05, 0.05);
 click(at("free", "one") - 0.02, 0.1);
 boom(FREE - 0.1, 0.75);

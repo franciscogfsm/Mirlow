@@ -39,6 +39,8 @@ windows = { version = "0.61", features = [
   "Media_Core",
   "Media_Miracast",
   "Media_Playback",
+  "Win32_Media",
+  "Win32_UI_Input",
   "Security_Cryptography",
   "Storage_Streams",
   "System",

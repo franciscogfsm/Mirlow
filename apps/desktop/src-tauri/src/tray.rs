@@ -24,6 +24,27 @@ pub fn show_window(app: &AppHandle) {
     }
 }
 
+/// Shows the main window in front of everything, as Mirlow opens. Windows
+/// lets a newly started program open its window behind the one in use, where
+/// it looks as if Mirlow only went to the notification area; being on top for
+/// a moment puts it where it can be seen.
+pub fn reveal_window(app: &AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.show();
+        let _ = window.unminimize();
+        let _ = window.set_always_on_top(true);
+        let _ = window.set_focus();
+        let _ = window.set_always_on_top(false);
+    }
+}
+
+/// Shows the main window as Mirlow opens. The interface does it once it has
+/// something to show; this is for when it never does.
+#[tauri::command]
+pub fn reveal(app: AppHandle) {
+    reveal_window(&app);
+}
+
 pub fn create(app: &AppHandle) -> tauri::Result<()> {
     // Placeholder text; the interface replaces it with the user's language
     // as soon as it loads (see `set_tray_text`).

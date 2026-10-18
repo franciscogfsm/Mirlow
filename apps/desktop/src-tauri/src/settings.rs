@@ -19,6 +19,9 @@ pub struct Settings {
     pub language: String,
     /// Offer this PC to the phone as a Bluetooth mouse and keyboard.
     pub control: bool,
+    /// How far the phone's pointer goes for a move of the mouse, 1 to 10.
+    /// At 5 it keeps pace with the PC's own cursor over the picture.
+    pub pointer_speed: u8,
 }
 
 impl Default for Settings {
@@ -30,6 +33,7 @@ impl Default for Settings {
             theme: "system".into(),
             language: "system".into(),
             control: false,
+            pointer_speed: 5,
         }
     }
 }
@@ -72,6 +76,7 @@ impl Settings {
         if !matches!(self.language.as_str(), "system" | "en" | "pt") {
             self.language = "system".into();
         }
+        self.pointer_speed = self.pointer_speed.clamp(1, 10);
         self
     }
 

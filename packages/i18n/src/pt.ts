@@ -80,6 +80,9 @@ export const pt: Dictionary = {
       active: "A controlar {device} · Esc para parar",
       activeUnknown: "A controlar · Esc para parar",
       activeShort: "Esc para parar",
+      pair: "{device} · emparelhe por Bluetooth para controlar",
+      pairUnknown: "Emparelhe por Bluetooth para controlar",
+      release: "devolve-lhe o rato",
     },
     audio: {
       headline: "A reproduzir o som de {device}",
@@ -188,21 +191,34 @@ export const pt: Dictionary = {
       },
       control: {
         label: "Rato e teclado",
-        description: "Use o telemóvel a partir deste PC. Liga-se por Bluetooth, como um teclado sem fios.",
+        description:
+          "Use o telemóvel a partir deste PC. Liga-se por Bluetooth, como um teclado sem fios. A imagem é mostrada em direto para o menor atraso possível, por isso os vídeos podem ficar com o som ligeiramente dessincronizado.",
+        checking: "A verificar o Bluetooth deste PC…",
+        supported: "Funciona neste PC.",
         starting: "A iniciar o Bluetooth…",
-        waiting:
-          "No telemóvel, abra as definições de Bluetooth e toque em “{pc}”. Se o Windows perguntar se quer emparelhar, aceite.",
-        waitingUnknown:
-          "No telemóvel, abra as definições de Bluetooth e toque neste PC. Se o Windows perguntar se quer emparelhar, aceite.",
-        pointer:
-          "Num iPhone, ative o AssistiveTouch (Definições › Acessibilidade › Toque) para ver o cursor.",
-        connected: "Ligado a {device}. Clique na imagem para controlar; Esc devolve o controlo.",
-        connectedUnknown: "Telemóvel ligado. Clique na imagem para controlar; Esc devolve o controlo.",
+        waitingTitle: "À espera do telemóvel",
+        connectedTitle: "Ligado a {device}",
+        connectedTitleUnknown: "Telemóvel ligado",
+        steps: {
+          pair: "No telemóvel, abra Definições › Bluetooth e toque em “{pc}”.",
+          pairUnknown: "No telemóvel, abra Definições › Bluetooth e toque neste PC.",
+          confirm:
+            "O Windows mostra então uma notificação de emparelhamento com um código, normalmente no fundo do ecrã. Clique nela e aceite. Só da primeira vez.",
+          pointer: "Só no iPhone: ative o AssistiveTouch, senão não vê o cursor. No iPhone, toque em:",
+          pointerPath: ["Definições", "Acessibilidade", "Toque", "AssistiveTouch", "Ativar"],
+          pointerSiri: "Mais rápido: mantenha o botão lateral premido e diga “Ativa o AssistiveTouch”.",
+          use: "Durante a projeção, clique na imagem para controlar o telemóvel. Prima Esc para recuperar o rato.",
+        },
+        stuck: "Ligado mas nada acontece? No telemóvel, toque em ⓘ ao lado deste PC, escolha Esquecer este dispositivo e emparelhe de novo.",
         bluetoothOff: "O Bluetooth está desligado neste PC. Ligue-o nas definições do Windows.",
         noBluetooth: "Este PC não tem Bluetooth.",
         unsupported:
           "O Bluetooth deste PC não consegue funcionar como rato e teclado. A maioria dos adaptadores USB Bluetooth 5 consegue.",
         openBluetooth: "Abrir definições de Bluetooth",
+        speed: "Velocidade do cursor",
+        slower: "Mais lento",
+        faster: "Mais rápido",
+        speedHint: "No meio, o cursor do telemóvel acompanha o cursor do PC.",
       },
       theme: {
         label: "Aspeto",

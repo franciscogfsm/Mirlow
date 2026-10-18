@@ -462,6 +462,13 @@ impl Supervisor {
         if !settings.sound {
             command.args(["-as", "0"]);
         }
+        if settings.control {
+            // Each frame as soon as it is decoded, rather than held back to
+            // line up with the sound: the phone's pointer then answers the
+            // mouse sooner. Videos may play with their sound a little out of
+            // step, which is the price, and only while this is on.
+            command.args(["-vsync", "no"]);
+        }
 
         // The engine must find only the libraries and plugins shipped with it.
         let system_root = std::env::var("SystemRoot").unwrap_or_else(|_| r"C:\Windows".into());
