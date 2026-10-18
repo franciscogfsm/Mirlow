@@ -1,0 +1,88 @@
+1
+00:00:00,244 --> 00:00:03,118
+Your iPhone has a button that can put its screen on your PC.
+
+2
+00:00:03,358 --> 00:00:04,675
+Almost nobody uses it.
+
+3
+00:00:04,944 --> 00:00:05,578
+No cable.
+
+4
+00:00:05,817 --> 00:00:06,863
+No app on your phone.
+
+5
+00:00:07,102 --> 00:00:07,783
+No account.
+
+6
+00:00:08,022 --> 00:00:08,915
+No subscription.
+
+7
+00:00:09,094 --> 00:00:09,728
+Just this.
+
+8
+00:00:10,544 --> 00:00:11,390
+It’s called Mirlow.
+
+9
+00:00:12,594 --> 00:00:14,042
+Open Mirlow on your PC.
+
+10
+00:00:14,144 --> 00:00:16,193
+On your iPhone, tap Screen Mirroring.
+
+11
+00:00:16,256 --> 00:00:17,043
+Pick your PC.
+
+12
+00:00:17,594 --> 00:00:18,204
+And that’s it.
+
+13
+00:00:18,443 --> 00:00:19,254
+Sound included.
+
+14
+00:00:20,830 --> 00:00:22,265
+Full screen with one key.
+
+15
+00:00:22,504 --> 00:00:23,940
+It stays on your own network.
+
+16
+00:00:24,179 --> 00:00:26,664
+And it works with iPhone, iPad and Android.
+
+17
+00:00:27,006 --> 00:00:27,934
+So what’s the catch?
+
+18
+00:00:28,156 --> 00:00:28,837
+There isn’t one.
+
+19
+00:00:29,076 --> 00:00:29,698
+It’s free.
+
+20
+00:00:29,937 --> 00:00:32,905
+No trial, no watermark, and it’s open source.
+
+21
+00:00:33,094 --> 00:00:33,834
+Search Mirlow.
+
+22
+00:00:34,085 --> 00:00:34,801
+Thank me later.
+
