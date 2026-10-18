@@ -221,6 +221,7 @@ export function MirrorStage({
     pictureRef,
     control && !hidden,
     pointerScale(pointerSpeed, video, picture?.width ?? 0, android),
+    !android,
   );
   useEffect(() => onCaptureChange(captured), [captured]);
 

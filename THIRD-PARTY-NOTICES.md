@@ -36,6 +36,16 @@ generated at build time into `engine/THIRD-PARTY-RUNTIME.md`, which is
 installed with the app and attached to every release. The licence texts for
 those packages are installed in `engine/licenses/`.
 
+## Android over Wi-Fi
+
+**scrcpy** — <https://github.com/Genymobile/scrcpy> — Apache-2.0. Mirlow
+ships the unmodified Windows release of scrcpy, of the version pinned in
+`scripts/fetch-scrcpy.ps1`, installed in `scrcpy/` with its `LICENSE.txt`. It
+includes scrcpy's server for the phone (Apache-2.0), **adb** from the Android
+SDK Platform-Tools (Apache-2.0), **SDL** (zlib), **FFmpeg** (LGPL-2.1-or-later)
+and **libusb** (LGPL-2.1-or-later), as built by the scrcpy project; how they
+are built is in scrcpy's repository, under `app/deps/`.
+
 ## Desktop application
 
 The Mirlow window is built with [Tauri](https://tauri.app) (MIT or Apache-2.0),
@@ -57,8 +67,9 @@ package everything — is in the Mirlow repository:
 Each release is tagged, so the source for any installer can be checked out by
 its version number. The sources of the MSYS2-packaged libraries are published
 by MSYS2 (<https://github.com/msys2/MINGW-packages>, with source archives at
-<https://repo.msys2.org/mingw/sources/>), and FFmpeg's by the FFmpeg project
-(<https://ffmpeg.org/releases/>). If you cannot obtain any of them
+<https://repo.msys2.org/mingw/sources/>), FFmpeg's by the FFmpeg project
+(<https://ffmpeg.org/releases/>), and scrcpy's, with the scripts that build the
+libraries it ships, by the scrcpy project (<https://github.com/Genymobile/scrcpy>). If you cannot obtain any of them
 there, open an issue on the Mirlow repository and we will provide the source
 for the versions we distributed, for at least three years after that release.
 

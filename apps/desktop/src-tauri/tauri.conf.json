@@ -45,6 +45,7 @@
     ],
     "resources": {
       "resources/engine/": "engine/",
+      "resources/scrcpy/": "scrcpy/",
       "../../../LICENSE": "licenses/LICENSE.txt",
       "../../../THIRD-PARTY-NOTICES.md": "licenses/THIRD-PARTY-NOTICES.md"
     },

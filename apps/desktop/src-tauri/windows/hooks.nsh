@@ -20,6 +20,12 @@
   Pop $0
   nsExec::Exec 'netsh advfirewall firewall add rule name="Mirlow" dir=in action=allow program="$INSTDIR\${MAINBINARYNAME}.exe" enable=yes profile=any description="Lets your Android phone mirror to this PC with Mirlow."'
   Pop $0
+  ; Android phones paired for mirroring over Wi-Fi announce themselves on the
+  ; network; adb, which finds them, has to hear those announcements.
+  nsExec::Exec 'netsh advfirewall firewall delete rule name=all program="$INSTDIR\scrcpy\adb.exe"'
+  Pop $0
+  nsExec::Exec 'netsh advfirewall firewall add rule name="Mirlow" dir=in action=allow program="$INSTDIR\scrcpy\adb.exe" enable=yes profile=any description="Lets Mirlow find your Android phone for mirroring over Wi-Fi."'
+  Pop $0
   ; Android phones need Windows' Wireless Display feature, which is not
   ; installed by default. It comes from Windows Update and can take minutes,
   ; so it installs in the background and the installer does not wait. Mirlow
@@ -39,5 +45,7 @@
   nsExec::Exec 'netsh advfirewall firewall delete rule name=all program="$INSTDIR\engine\bin\mirlow-engine.exe"'
   Pop $0
   nsExec::Exec 'netsh advfirewall firewall delete rule name=all program="$INSTDIR\${MAINBINARYNAME}.exe"'
+  Pop $0
+  nsExec::Exec 'netsh advfirewall firewall delete rule name=all program="$INSTDIR\scrcpy\adb.exe"'
   Pop $0
 !macroend

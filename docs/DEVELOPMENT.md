@@ -32,6 +32,7 @@ npm install                               # JavaScript dependencies for everythi
 
 .\scripts\build-engine.ps1 -InstallDeps   # build the engine (installs MSYS2 packages first)
 .\scripts\build-engine.ps1                # rebuild the engine later
+.\scripts\fetch-scrcpy.ps1                # download scrcpy, for Android over Wi-Fi
 
 npm run dev:desktop                       # run the app with hot reload
 npm run dev:web                           # run the website at http://localhost:5184
@@ -46,6 +47,11 @@ builds it with CMake and Ninja, and assembles a self-contained runtime (the
 engine, the GStreamer plugins it uses, every DLL those need, and their licence
 texts) in `apps/desktop/src-tauri/resources/engine`. That folder is generated
 and not committed.
+
+`fetch-scrcpy.ps1` downloads the pinned scrcpy release, checks it against its
+checksum, and puts it in `apps/desktop/src-tauri/resources/scrcpy` (also not
+committed). The app needs that folder to build; `build-installer.ps1` fetches
+it by itself.
 
 ### If the repository is in a synced folder
 

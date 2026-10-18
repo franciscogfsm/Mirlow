@@ -84,6 +84,13 @@ export const pt: Dictionary = {
       pairUnknown: "Emparelhe por Bluetooth para controlar",
       release: "devolve-lhe o rato",
     },
+    wifi: {
+      ready: "Pronto por Wi‑Fi",
+      mirror: "Projetar {device}",
+      setUp: "Sem atraso, com rato e teclado: configure a projeção por Wi‑Fi",
+      hint: "{device} · clique e escreva na imagem",
+      hintUnknown: "Clique e escreva na imagem",
+    },
     audio: {
       headline: "A reproduzir o som de {device}",
       headlineUnknown: "A reproduzir som",
@@ -207,7 +214,7 @@ export const pt: Dictionary = {
           pointer: "Ative o AssistiveTouch, senão não vê o cursor. No iPhone, toque em:",
           pointerPath: ["Definições", "Acessibilidade", "Toque", "AssistiveTouch", "Ativar"],
           pointerSiri: "Mais rápido: mantenha o botão lateral premido e diga “Ativa o AssistiveTouch”.",
-          use: "Durante a projeção, clique na imagem para controlar o telemóvel. Prima Esc para recuperar o rato.",
+          use: "Durante a projeção, clique na imagem para controlar o telemóvel. Mantenha Ctrl premido e role para fazer zoom nas apps que o permitem, como o Safari. Prima Esc para recuperar o rato.",
         },
         stuck: "Ligado mas nada acontece? No telemóvel, toque em ⓘ ao lado deste PC, escolha Esquecer este dispositivo e emparelhe de novo.",
         phone: "Telemóvel",
@@ -231,6 +238,38 @@ export const pt: Dictionary = {
         slower: "Mais lento",
         faster: "Mais rápido",
         speedHint: "No meio, o cursor do telemóvel acompanha o cursor do PC.",
+      },
+      wifi: {
+        label: "Android por Wi‑Fi",
+        description:
+          "Projete um telemóvel Android quase sem atraso, com som, e use-o com o rato e o teclado. Android 11 ou mais recente, Pixel incluído.",
+        unavailable: "Esta cópia do Mirlow foi criada sem esta funcionalidade.",
+        none: "Nenhum telemóvel ligado. No telemóvel, ative a Depuração sem fios. O telemóvel e este PC têm de estar na mesma rede Wi‑Fi.",
+        mirror: "Projetar",
+        mirroring: "A projetar",
+        setUp: "Configurar um telemóvel",
+        setUpAnother: "Configurar outro telemóvel",
+        steps: {
+          developer:
+            "Ative as Opções de programador: em Definições › Acerca do telemóvel, toque sete vezes em Número de compilação. Num Samsung, está em Informações do software.",
+          wireless:
+            "Abra as Opções de programador (em Definições › Sistema, ou no fim das Definições), ative a Depuração sem fios e permita-a nesta rede.",
+          scan: "Toque em Sincronizar dispositivo com código QR e leia este código.",
+        },
+        codeLabel:
+          "Não consegue ler? Toque em Sincronizar dispositivo com código de sincronização e escreva aqui os seis algarismos.",
+        codePlaceholder: "Código",
+        pair: "Sincronizar",
+        waiting: "À espera de que o telemóvel leia o código…",
+        searching: "À procura do telemóvel…",
+        pairing: "A sincronizar…",
+        paired: "Sincronizado. O telemóvel aparece aqui dentro de momentos.",
+        refused: "Não resultou. Verifique o código e tente de novo.",
+        notFound: "O telemóvel não apareceu. Confirme que ele e este PC estão na mesma rede Wi‑Fi.",
+        retry: "Tentar de novo",
+        cancel: "Cancelar",
+        tip: "Da próxima vez, ative a Depuração sem fios e clique em Projetar. Mais rápido ainda: adicione o mosaico às Definições rápidas, em Opções de programador › Mosaicos de programador para definições rápidas.",
+        shortcuts: "Na imagem, o botão direito volta atrás e o botão do meio vai para o ecrã principal.",
       },
       theme: {
         label: "Aspeto",

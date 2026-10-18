@@ -1,8 +1,10 @@
+mod awake;
 mod diagnostics;
 mod engine;
 mod letterbox;
 mod miracast;
 mod remote;
+mod scrcpy;
 mod settings;
 mod tray;
 mod updater;
@@ -11,6 +13,7 @@ mod video;
 use engine::{Engine, Status};
 use miracast::Miracast;
 use remote::Remote;
+use scrcpy::Scrcpy;
 use settings::Settings;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
@@ -42,9 +45,12 @@ fn update_settings(
     miracast: State<'_, Miracast>,
     remote: State<'_, Remote>,
 ) -> Result<Settings, String> {
-    let next = settings.normalized();
+    let mut next = settings.normalized();
     let restart = {
         let mut current = state.settings.lock().unwrap();
+        // Android over Wi-Fi is switched by its own commands, which pairing
+        // also uses; settings sent from before a pairing must not undo it.
+        next.android_wifi = current.android_wifi;
         let restart = current.name != next.name
             || current.sound != next.sound
             || current.compatibility != next.compatibility
@@ -64,7 +70,60 @@ fn update_settings(
 #[tauri::command]
 fn restart_engine(app: AppHandle, engine: State<'_, Engine>) {
     miracast::disconnect(&app);
+    scrcpy::stop(&app);
     engine.restart();
+}
+
+#[tauri::command]
+fn get_android_link(scrcpy: State<'_, Scrcpy>) -> scrcpy::Link {
+    scrcpy.link()
+}
+
+/// Turns Android over Wi-Fi on or off, and saves that.
+fn set_android_wifi(state: &AppState, scrcpy: &Scrcpy, enabled: bool) {
+    let saved = {
+        let mut settings = state.settings.lock().unwrap();
+        if settings.android_wifi == enabled {
+            None
+        } else {
+            settings.android_wifi = enabled;
+            Some(settings.clone())
+        }
+    };
+    if let Some(settings) = saved {
+        let _ = settings.save(&state.config_dir);
+        scrcpy.enable(enabled);
+    }
+}
+
+#[tauri::command]
+fn android_enable(enabled: bool, state: State<'_, AppState>, scrcpy: State<'_, Scrcpy>) {
+    set_android_wifi(&state, &scrcpy, enabled);
+}
+
+/// Shows a QR code for an Android phone to scan, and pairs with it.
+#[tauri::command]
+fn android_pair(state: State<'_, AppState>, scrcpy: State<'_, Scrcpy>) {
+    set_android_wifi(&state, &scrcpy, true);
+    scrcpy.pair();
+}
+
+/// Pairs with the Android phone showing `code`.
+#[tauri::command]
+fn android_pair_code(code: String, state: State<'_, AppState>, scrcpy: State<'_, Scrcpy>) {
+    set_android_wifi(&state, &scrcpy, true);
+    scrcpy.pair_with_code(code);
+}
+
+#[tauri::command]
+fn android_cancel_pairing(scrcpy: State<'_, Scrcpy>) {
+    scrcpy.cancel_pairing();
+}
+
+/// Mirrors the paired Android phone connected as `serial`.
+#[tauri::command]
+fn android_mirror(serial: String, scrcpy: State<'_, Scrcpy>) -> Result<(), String> {
+    scrcpy.mirror(&serial)
 }
 
 #[tauri::command]
@@ -75,8 +134,41 @@ fn get_remote_status(remote: State<'_, Remote>) -> remote::RemoteStatus {
 /// The picture has taken the pointer, or let it go. While it has it, the
 /// mouse goes to the phone, its movement multiplied by `scale`.
 #[tauri::command]
-fn remote_capture(captured: bool, scale: f64, remote: State<'_, Remote>) {
-    remote.capture(captured, scale);
+fn remote_capture(captured: bool, scale: f64, zoom: bool, remote: State<'_, Remote>) {
+    remote.capture(captured, scale, zoom);
+}
+
+/// Called when the picture lost the pointer without being asked to (the
+/// phone turned, and the engine's new picture took the focus for a moment).
+/// True when it may take it back: Esc was not pressed, and the focus is with
+/// Mirlow or the engine, not another app. Brings Mirlow forward if need be.
+#[tauri::command]
+fn resume_capture(app: AppHandle, engine: State<'_, Engine>, remote: State<'_, Remote>) -> bool {
+    if remote.escaped_within(std::time::Duration::from_secs(2)) {
+        return false;
+    }
+    #[cfg(windows)]
+    {
+        use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowThreadProcessId};
+        let mut owner = 0u32;
+        // SAFETY: plain queries; the id is written into a local.
+        unsafe { GetWindowThreadProcessId(GetForegroundWindow(), Some(&mut owner)) };
+        let engine_pid = engine.pid();
+        if owner == 0 || (owner != std::process::id() && owner != engine_pid) {
+            return false;
+        }
+        if owner == engine_pid {
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.set_focus();
+            }
+        }
+        true
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = (app, engine);
+        false
+    }
 }
 
 #[tauri::command]
@@ -159,7 +251,30 @@ fn layout_video(app: AppHandle, rect: video::Rect, visible: bool, radius: i32) {
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
+/// Notes why Mirlow stopped, should anything panic. A release build stops at
+/// once when something does, and would otherwise leave no trace of why.
+fn note_panics() {
+    let Some(dir) = std::env::var_os("LOCALAPPDATA").map(|dir| PathBuf::from(dir).join("app.mirlow.desktop")) else {
+        return;
+    };
+    let previous = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        let seconds = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |since| since.as_secs());
+        let thread = std::thread::current().name().unwrap_or("unnamed").to_string();
+        let line = format!("{seconds} Mirlow {} [{thread}] {info}\n", env!("CARGO_PKG_VERSION"));
+        let _ = std::fs::create_dir_all(&dir);
+        if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open(dir.join("crash.log")) {
+            use std::io::Write;
+            let _ = file.write_all(line.as_bytes());
+        }
+        previous(info);
+    }));
+}
+
 pub fn run() {
+    note_panics();
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             // Opening Mirlow again (from the desktop icon, say) brings back the
@@ -182,9 +297,16 @@ pub fn run() {
             get_settings,
             update_settings,
             restart_engine,
+            get_android_link,
+            android_enable,
+            android_pair,
+            android_pair_code,
+            android_cancel_pairing,
+            android_mirror,
             get_engine_log,
             get_remote_status,
             remote_capture,
+            resume_capture,
             get_diagnostics,
             fix_all,
             open_network_settings,
@@ -211,6 +333,9 @@ pub fn run() {
             let engine = Engine::start(handle.clone(), engine_dir, data_dir, settings.clone());
             let control = settings.lock().unwrap().control;
             app.manage(Remote::start(handle.clone(), engine.clone(), control));
+            awake::start(engine.clone());
+            let scrcpy_dir = scrcpy::locate(resource_dir.as_deref());
+            app.manage(Scrcpy::start(handle.clone(), engine.clone(), settings.clone(), scrcpy_dir));
             app.manage(Miracast::start(handle, settings, engine.clone()));
             app.manage(engine);
             tray::create(app.handle())?;
@@ -234,6 +359,7 @@ pub fn run() {
     app.run(|app, event| {
         if let RunEvent::Exit = event {
             app.state::<Remote>().shutdown();
+            app.state::<Scrcpy>().shutdown();
             app.state::<Miracast>().shutdown();
             app.state::<Engine>().shutdown();
         }

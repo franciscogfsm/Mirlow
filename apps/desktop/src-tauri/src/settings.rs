@@ -22,6 +22,8 @@ pub struct Settings {
     /// How far the phone's pointer goes for a move of the mouse, 1 to 10.
     /// At 5 it keeps pace with the PC's own cursor over the picture.
     pub pointer_speed: u8,
+    /// Look for Android phones paired for mirroring over Wi-Fi with scrcpy.
+    pub android_wifi: bool,
 }
 
 impl Default for Settings {
@@ -34,6 +36,7 @@ impl Default for Settings {
             language: "system".into(),
             control: false,
             pointer_speed: 5,
+            android_wifi: false,
         }
     }
 }

@@ -19,6 +19,8 @@ export interface Client {
   model: string;
   /** A code to type on the device to let it connect, while it waits for one. */
   pin: string | null;
+  /** The picture takes the mouse and keyboard itself (an Android phone over Wi-Fi). */
+  direct?: boolean;
 }
 
 export interface VideoSize {
@@ -52,6 +54,39 @@ export interface Settings {
   control: boolean;
   /** How far the phone's pointer goes for a move of the mouse, 1 to 10. */
   pointerSpeed: number;
+  /** Look for Android phones paired for mirroring over Wi-Fi. Switched with `androidEnable`. */
+  androidWifi: boolean;
+}
+
+/** An Android phone connected over Wi-Fi, ready to mirror. Mirrors `scrcpy::Phone`. */
+export interface Phone {
+  serial: string;
+  name: string;
+}
+
+/** A QR code: `size` rows of `size` modules, "1" dark and "0" light. */
+export interface Qr {
+  size: number;
+  modules: string;
+}
+
+/** Mirrors `scrcpy::Pairing`. */
+export type Pairing =
+  | { state: "idle" }
+  | { state: "waiting"; qr: Qr }
+  | { state: "searching" }
+  | { state: "pairing" }
+  | { state: "paired" }
+  | { state: "refused" }
+  | { state: "notFound" };
+
+/** Android over Wi-Fi, as `scrcpy::Link` reports it. */
+export interface AndroidLink {
+  enabled: boolean;
+  available: boolean;
+  phones: Phone[];
+  pairing: Pairing;
+  mirroring: string | null;
 }
 
 /** Mirrors `remote::RemoteState` in the Rust backend. */
@@ -120,11 +155,23 @@ export const api = {
       handler(event.payload),
     ),
   openNetworkSettings: () => invoke<void>("open_network_settings"),
+  getAndroidLink: () => invoke<AndroidLink>("get_android_link"),
+  onAndroidLink: (handler: (link: AndroidLink) => void): Promise<UnlistenFn> =>
+    listen<AndroidLink>("android:link", (event) => handler(event.payload)),
+  androidEnable: (enabled: boolean) => invoke<void>("android_enable", { enabled }),
+  /** Shows a QR code for the phone to scan; the link reports how pairing goes. */
+  androidPair: () => invoke<void>("android_pair"),
+  androidPairCode: (code: string) => invoke<void>("android_pair_code", { code }),
+  androidCancelPairing: () => invoke<void>("android_cancel_pairing"),
+  androidMirror: (serial: string) => invoke<void>("android_mirror", { serial }),
   getRemoteStatus: () => invoke<RemoteStatus>("get_remote_status"),
   onRemoteStatus: (handler: (status: RemoteStatus) => void): Promise<UnlistenFn> =>
     listen<RemoteStatus>("remote:status", (event) => handler(event.payload)),
   /** The picture has taken the pointer, or let it go; the backend reads the mouse itself meanwhile. */
-  remoteCapture: (captured: boolean, scale: number) => invoke<void>("remote_capture", { captured, scale }),
+  remoteCapture: (captured: boolean, scale: number, zoom: boolean) =>
+    invoke<void>("remote_capture", { captured, scale, zoom }),
+  /** The picture lost the pointer by accident: may it take it back? Brings Mirlow forward if so. */
+  resumeCapture: () => invoke<boolean>("resume_capture"),
   openWindowsSettings: (
     page: "ms-settings:optionalfeatures" | "ms-settings:project" | "ms-settings:bluetooth",
   ) =>

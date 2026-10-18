@@ -24,6 +24,7 @@ tauri-plugin-single-instance = "2"
 tauri-plugin-updater = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+qrcodegen = "1.8"
 
 [target.'cfg(windows)'.dependencies]
 windows-numerics = "0.2"
@@ -40,7 +41,9 @@ windows = { version = "0.61", features = [
   "Media_Miracast",
   "Media_Playback",
   "Win32_Media",
+  "Win32_UI_Accessibility",
   "Win32_UI_Input",
+  "Win32_UI_Input_KeyboardAndMouse",
   "Security_Cryptography",
   "Storage_Streams",
   "System",
@@ -55,6 +58,7 @@ windows = { version = "0.61", features = [
   "Win32_Security",
   "Win32_System_JobObjects",
   "Win32_System_LibraryLoader",
+  "Win32_System_Power",
   "Win32_System_Registry",
   "Win32_System_Threading",
   "Win32_System_SystemInformation",

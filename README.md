@@ -161,6 +161,7 @@ git clone --recurse-submodules https://github.com/franciscogfsm/mirlow
 cd mirlow
 npm install
 .\scripts\build-engine.ps1 -InstallDeps   # once: builds the AirPlay engine
+.\scripts\fetch-scrcpy.ps1                # once: scrcpy, for Android over Wi-Fi
 npm run dev:desktop                       # the app
 npm run dev:web                           # the website, at http://localhost:5184
 ```

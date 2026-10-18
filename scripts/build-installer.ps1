@@ -31,6 +31,9 @@ if (-not (Test-Path $engineExe)) {
     throw "The engine has not been built yet. Run this script with -Engine, or run scripts\build-engine.ps1."
 }
 
+# scrcpy, which mirrors and controls Android phones over Wi-Fi.
+& (Join-Path $PSScriptRoot 'fetch-scrcpy.ps1')
+
 # The runtime's bin folder holds only executables and DLLs. Anything else was
 # left behind by running the engine from there (drivers create cache folders
 # in the working directory) and must not be shipped.

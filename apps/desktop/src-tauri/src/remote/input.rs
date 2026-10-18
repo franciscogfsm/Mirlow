@@ -13,12 +13,20 @@
 //! the interface. It tells this thread when capturing starts and stops, and
 //! how fast the phone's pointer should go. Esc stays with the web view: it is
 //! how the person gets their mouse back.
+//!
+//! Slow, careful movement is slowed down further, so the pointer can be put on
+//! a small target (or a game aimed) to the point; anything quicker moves at the
+//! speed set, without the acceleration that would make it hard to predict.
+//!
+//! An iPhone takes no pinch from a mouse, so Ctrl and the wheel, which zoom
+//! on a PC, reach it as ⌘+ and ⌘−: the keys its apps zoom with.
 
 use super::{Command, Pointer};
 use std::cell::RefCell;
-use std::sync::atomic::{AtomicIsize, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicIsize, AtomicU64, Ordering};
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 use windows::core::w;
 use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
 use windows::Win32::Media::{timeBeginPeriod, timeEndPeriod};
@@ -43,33 +51,67 @@ const WM_CAPTURE: u32 = WM_APP + 1;
 /// One notch of a wheel, in the units Windows reports it in.
 const NOTCH: f64 = 120.0;
 
+/// How fast the hand moves, in mouse counts per millisecond, below which the
+/// pointer slows down for precision, and at which it is back to full speed.
+/// About 1 and 6 cm a second on an 800 DPI mouse.
+const CAREFUL: f64 = 0.3;
+const BRISK: f64 = 2.0;
+/// The pointer's speed, as a share of the speed set, at its most careful.
+const FINEST: f64 = 0.45;
+/// How quickly the hand's speed is followed. Shorter follows every jitter.
+const SETTLE_MS: f64 = 12.0;
+/// A pause this long starts a new movement.
+const STILL_MS: f64 = 60.0;
+
 const VK_LWIN: u32 = 0x5B;
 const VK_RWIN: u32 = 0x5C;
 /// HID's bits for the left and right GUI keys: ⌘ on an iPhone.
 const LEFT_GUI: u8 = 0x08;
 const RIGHT_GUI: u8 = 0x80;
+/// Both Ctrl keys, in the same layout.
+const CTRL: u8 = 0x01 | 0x10;
+/// The keypad's + and −, which are the same keys on every keyboard layout.
+const KEYPAD_PLUS: u8 = 0x57;
+const KEYPAD_MINUS: u8 = 0x56;
 
 pub struct Input {
     window: Arc<AtomicIsize>,
     /// How far the phone's pointer goes per count of the mouse, as f64 bits.
     scale: Arc<AtomicU64>,
+    /// Ctrl and the wheel zoom the phone rather than scroll it.
+    zoom: Arc<AtomicBool>,
+    /// When Esc was last pressed while capturing, in milliseconds since `epoch`.
+    escaped: Arc<AtomicU64>,
+    epoch: Instant,
 }
 
 impl Input {
     pub fn start(commands: Sender<Command>) -> Self {
         let window = Arc::new(AtomicIsize::new(0));
         let scale = Arc::new(AtomicU64::new(1f64.to_bits()));
-        let (slot, shared) = (window.clone(), scale.clone());
+        let zoom = Arc::new(AtomicBool::new(false));
+        let escaped = Arc::new(AtomicU64::new(0));
+        let epoch = Instant::now();
+        let shared = Shared { scale: scale.clone(), zoom: zoom.clone(), escaped: escaped.clone(), epoch };
+        let slot = window.clone();
         let _ = std::thread::Builder::new()
             .name("remote-input".into())
             .spawn(move || run(commands, slot, shared));
-        Self { window, scale }
+        Self { window, scale, zoom, escaped, epoch }
+    }
+
+    /// Whether Esc was pressed in the last `within`: the person let go of
+    /// the phone on purpose, so the pointer must not be taken back.
+    pub fn escaped_within(&self, within: Duration) -> bool {
+        let at = self.escaped.load(Ordering::Relaxed);
+        at != 0 && (self.epoch.elapsed().as_millis() as u64).saturating_sub(at) < within.as_millis() as u64
     }
 
     /// Starts or stops reading input for the phone. Called again with a new
     /// `scale` while capturing, it only changes the pointer's speed.
-    pub fn capture(&self, captured: bool, scale: f64) {
+    pub fn capture(&self, captured: bool, scale: f64, zoom: bool) {
         self.scale.store(scale.to_bits(), Ordering::Relaxed);
+        self.zoom.store(zoom, Ordering::Relaxed);
         let window = self.window.load(Ordering::SeqCst);
         if window != 0 {
             unsafe {
@@ -84,9 +126,17 @@ impl Input {
     }
 }
 
+/// What the interface's side shares with the input thread.
+struct Shared {
+    scale: Arc<AtomicU64>,
+    zoom: Arc<AtomicBool>,
+    escaped: Arc<AtomicU64>,
+    epoch: Instant,
+}
+
 struct State {
     commands: Sender<Command>,
-    scale: Arc<AtomicU64>,
+    shared: Shared,
     captured: bool,
     /// Keeps the Windows key from opening Start while it is the phone's ⌘.
     hook: Option<HHOOK>,
@@ -95,6 +145,10 @@ struct State {
     x: f64,
     y: f64,
     wheel: f64,
+    /// How fast the hand is moving, in counts per millisecond, and when the
+    /// mouse last moved.
+    speed: f64,
+    moved_at: Option<Instant>,
     /// Where an absolute pointing device last was (remote desktops, pens).
     position: Option<(i32, i32)>,
     modifiers: u8,
@@ -106,7 +160,7 @@ thread_local! {
     static STATE: RefCell<Option<State>> = const { RefCell::new(None) };
 }
 
-fn run(commands: Sender<Command>, slot: Arc<AtomicIsize>, scale: Arc<AtomicU64>) {
+fn run(commands: Sender<Command>, slot: Arc<AtomicIsize>, shared: Shared) {
     unsafe {
         // Nothing here takes long, and everything waits on it.
         let _ = SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
@@ -138,13 +192,15 @@ fn run(commands: Sender<Command>, slot: Arc<AtomicIsize>, scale: Arc<AtomicU64>)
         STATE.with(|cell| {
             *cell.borrow_mut() = Some(State {
                 commands,
-                scale,
+                shared,
                 captured: false,
                 hook: None,
                 buttons: 0,
                 x: 0.0,
                 y: 0.0,
                 wheel: 0.0,
+                speed: 0.0,
+                moved_at: None,
                 position: None,
                 modifiers: 0,
                 keys: Vec::new(),
@@ -254,6 +310,8 @@ impl State {
             self.x = 0.0;
             self.y = 0.0;
             self.wheel = 0.0;
+            self.speed = 0.0;
+            self.moved_at = None;
             self.position = None;
         }
         self.captured = captured;
@@ -319,14 +377,60 @@ impl State {
             self.wheel += data as i16 as f64 / NOTCH;
         }
 
-        let scale = f64::from_bits(self.scale.load(Ordering::Relaxed));
+        let scale = f64::from_bits(self.shared.scale.load(Ordering::Relaxed)) * self.precision(dx, dy);
         self.x += dx * scale;
         self.y += dy * scale;
         let (x, y, wheel) = (self.x.trunc(), self.y.trunc(), self.wheel.trunc());
         self.x -= x;
         self.y -= y;
         self.wheel -= wheel;
-        self.pointer(x as i32, y as i32, wheel as i32, self.buttons != before);
+        let zooming = wheel != 0.0 && self.modifiers & CTRL != 0 && self.shared.zoom.load(Ordering::Relaxed);
+        if zooming {
+            self.pointer(x as i32, y as i32, 0, self.buttons != before);
+            self.zoom(wheel as i32);
+        } else {
+            self.pointer(x as i32, y as i32, wheel as i32, self.buttons != before);
+        }
+    }
+
+    /// How much of the speed set the pointer moves at for this movement:
+    /// less while the hand moves slowly, all of it once it moves briskly.
+    fn precision(&mut self, dx: f64, dy: f64) -> f64 {
+        let distance = dx.hypot(dy);
+        if distance == 0.0 {
+            return 1.0;
+        }
+        let now = Instant::now();
+        let elapsed = self.moved_at.map_or(f64::INFINITY, |at| now.duration_since(at).as_secs_f64() * 1000.0);
+        self.moved_at = Some(now);
+        if elapsed > STILL_MS {
+            // The first report of a movement has no report before it to time
+            // it by; taken as one of the slowest mice's, every 8 ms, a flick
+            // still starts quick and a nudge careful.
+            self.speed = distance / 8.0;
+        } else {
+            // Between reports, not per report: a mouse reports 125 to 8000
+            // times a second, and a slow hand sends a count every few ms.
+            let elapsed = elapsed.max(0.125);
+            let follow = (elapsed / SETTLE_MS).min(1.0);
+            self.speed += (distance / elapsed - self.speed) * follow;
+        }
+        let t = ((self.speed - CAREFUL) / (BRISK - CAREFUL)).clamp(0.0, 1.0);
+        FINEST + (1.0 - FINEST) * t * t * (3.0 - 2.0 * t)
+    }
+
+    /// Zooms in (`steps` above 0) or out by that many notches of the wheel:
+    /// ⌘ and the keypad's + or −, pressed and let go, with Ctrl let go for
+    /// the moment, then the keys as they really are held.
+    fn zoom(&self, steps: i32) {
+        let key = if steps > 0 { KEYPAD_PLUS } else { KEYPAD_MINUS };
+        let modifiers = (self.modifiers & !CTRL) | LEFT_GUI;
+        for _ in 0..steps.unsigned_abs().min(8) {
+            for keys in [[0; 6], [key, 0, 0, 0, 0, 0], [0; 6]] {
+                let _ = self.commands.send(Command::Keys(modifiers, keys));
+            }
+        }
+        self.send_keys();
     }
 
     fn keyboard(&mut self, key: RAWKEYBOARD) {
@@ -336,6 +440,11 @@ impl State {
             return;
         }
         let down = flags & RI_KEY_BREAK == 0;
+        if key.MakeCode == 0x01 && down {
+            // Esc: the web view lets go of the pointer; noted so it stays let go.
+            let now = (self.shared.epoch.elapsed().as_millis() as u64).max(1);
+            self.shared.escaped.store(now, Ordering::Relaxed);
+        }
         let Some(usage) = usage(key.MakeCode, flags & RI_KEY_E0 != 0) else { return };
         match usage {
             Usage::Modifier(bit) => self.modifier(bit, down),

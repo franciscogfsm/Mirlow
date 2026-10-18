@@ -5,6 +5,7 @@ import { GlassButton } from "../components/controls";
 import { Signal, type SignalMode } from "../components/Signal";
 import { api, type Status } from "../lib/api";
 import { useI18n } from "../lib/i18n";
+import { useAndroidLink } from "../lib/useEngine";
 import type { DiagnosticsState, Issue } from "../lib/useDiagnostics";
 
 type Device = "iphone" | "android";
@@ -130,14 +131,20 @@ export function WaitingView({
   status,
   onRename,
   onOpenHelp,
+  onSetUpAndroid,
   diagnostics,
 }: {
   status: Status;
   onRename: () => void;
   onOpenHelp: () => void;
+  /** Opens the settings onto pairing an Android phone over Wi-Fi. */
+  onSetUpAndroid: () => void;
   diagnostics: DiagnosticsState;
 }) {
   const { t, format } = useI18n();
+  const link = useAndroidLink();
+  // Paired Android phones on the network, one click from mirroring.
+  const phones = link?.enabled && !link.mirroring ? link.phones : [];
   const [phone, setPhone] = useState<Device>(savedDevice);
   const chooseDevice = (next: Device) => {
     setPhone(next);
@@ -245,6 +252,23 @@ export function WaitingView({
                   {status.name}
                 </LiquidGlass>
 
+                {phones.length > 0 && (
+                  <div className="mt-5 flex flex-col items-center gap-2">
+                    <p className="text-[12px] font-medium uppercase tracking-[0.08em] text-faint">
+                      {t.wifi.ready}
+                    </p>
+                    {phones.map((phone) => (
+                      <GlassButton
+                        key={phone.serial}
+                        tone="accent"
+                        onClick={() => void api.androidMirror(phone.serial).catch(() => {})}
+                      >
+                        {format(t.wifi.mirror, { device: phone.name })}
+                      </GlassButton>
+                    ))}
+                  </div>
+                )}
+
                 <DeviceSwitch value={phone} onChange={chooseDevice} />
 
                 <ol className="mt-5 space-y-2 text-left text-[13.5px] text-soft">
@@ -262,6 +286,15 @@ export function WaitingView({
                 ) : (
                   <p className="mt-5 max-w-[300px] text-[12px] text-faint">
                     {phone === "android" ? t.waiting.androidHint : t.waiting.hint}
+                    {phone === "android" && link?.available && phones.length === 0 && (
+                      <button
+                        type="button"
+                        onClick={onSetUpAndroid}
+                        className="mt-2 block w-full cursor-pointer rounded-sm text-soft underline decoration-line-strong underline-offset-[3px] transition-colors hover:text-ink"
+                      >
+                        {t.wifi.setUp}
+                      </button>
+                    )}
                   </p>
                 )}
               </>

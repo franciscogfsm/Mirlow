@@ -807,6 +807,7 @@ mod receiver {
                 self.note(format!("{name} is connecting"));
             }
             // The newest device takes over, whichever way it connects.
+            crate::scrcpy::stop(&self.app);
             if self.engine.has_client() {
                 self.engine.restart();
             }
@@ -814,6 +815,7 @@ mod receiver {
                 name: if name.trim().is_empty() { "Android".into() } else { name.trim().to_string() },
                 model: "Android".into(),
                 pin,
+                direct: false,
             };
             self.connection = Some(connection);
             self.client = Some(client.clone());
@@ -902,9 +904,9 @@ mod receiver {
                 let _ = stage.visual.SetBrush(None);
             }
             self.connection = None;
-            if self.client.take().is_some() {
+            if let Some(client) = self.client.take() {
                 self.note("disconnected");
-                self.engine.set_guest(None);
+                self.engine.end_guest(&client);
             }
         }
 
@@ -918,7 +920,12 @@ mod receiver {
                 .and_then(|uri| MediaSource::CreateFromUri(&uri));
             match source {
                 Ok(source) => {
-                    let client = Client { name: "Android (rehearsal)".into(), model: "Android".into(), pin: None };
+                    let client = Client {
+                        name: "Android (rehearsal)".into(),
+                        model: "Android".into(),
+                        pin: None,
+                        direct: false,
+                    };
                     self.client = Some(client.clone());
                     self.engine.set_guest(Some(Guest { client, video: None }));
                     self.play(source);

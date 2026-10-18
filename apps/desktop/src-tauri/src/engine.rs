@@ -68,6 +68,9 @@ pub struct Client {
     pub model: String,
     /// A code to type on the device to let it connect, while it waits for one.
     pub pin: Option<String>,
+    /// The picture itself takes the mouse and keyboard and passes them to the
+    /// device (an Android phone over Wi-Fi, through scrcpy).
+    pub direct: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -205,6 +208,18 @@ impl Engine {
     pub fn set_guest(&self, guest: Option<Guest>) {
         *self.shared.guest.lock().unwrap() = guest;
         self.shared.publish();
+    }
+
+    /// Clears the device mirroring outside the engine, if it is still `client`:
+    /// one way of connecting must not end a device that came in another way
+    /// since.
+    pub fn end_guest(&self, client: &Client) {
+        let mut guest = self.shared.guest.lock().unwrap();
+        if guest.as_ref().is_some_and(|guest| guest.client == *client) {
+            *guest = None;
+            drop(guest);
+            self.shared.publish();
+        }
     }
 
     /// True while a device is connected to the engine itself.
@@ -546,12 +561,18 @@ impl Supervisor {
             }),
             "client" => {
                 let (model, name) = rest.split_once('\t').unwrap_or(("", rest));
-                let client = Client { name: name.trim().to_string(), model: model.trim().to_string(), pin: None };
+                let client = Client {
+                    name: name.trim().to_string(),
+                    model: model.trim().to_string(),
+                    pin: None,
+                    direct: false,
+                };
                 // Mirlow may be tucked away in the notification area: come
                 // forward now, so the connection is seen from its first moment.
                 crate::tray::show_window(&self.shared.app);
                 // The newest device takes over, whichever way it connects.
                 crate::miracast::disconnect(&self.shared.app);
+                crate::scrcpy::stop(&self.shared.app);
                 let audio_only = self.session.audio_only;
                 self.update(|status| {
                     status.client = Some(client);
@@ -826,7 +847,7 @@ pub fn locate(resource_dir: Option<&Path>) -> PathBuf {
 
 /// A Windows job object that kills the engine if the app dies without
 /// stopping it, so a crash never leaves a receiver advertised on the network.
-struct ProcessJob {
+pub(crate) struct ProcessJob {
     #[cfg(windows)]
     handle: Option<windows::Win32::Foundation::HANDLE>,
 }
@@ -836,7 +857,7 @@ unsafe impl Send for ProcessJob {}
 
 impl ProcessJob {
     #[cfg(windows)]
-    fn new() -> Self {
+    pub(crate) fn new() -> Self {
         use windows::Win32::System::JobObjects::{
             CreateJobObjectW, JobObjectExtendedLimitInformation, SetInformationJobObject,
             JOBOBJECT_EXTENDED_LIMIT_INFORMATION, JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
@@ -859,7 +880,7 @@ impl ProcessJob {
     }
 
     #[cfg(windows)]
-    fn assign(&self, child: &Child) {
+    pub(crate) fn assign(&self, child: &Child) {
         use std::os::windows::io::AsRawHandle;
         use windows::Win32::Foundation::HANDLE;
         use windows::Win32::System::JobObjects::AssignProcessToJobObject;
@@ -871,12 +892,12 @@ impl ProcessJob {
     }
 
     #[cfg(not(windows))]
-    fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {}
     }
 
     #[cfg(not(windows))]
-    fn assign(&self, _child: &Child) {}
+    pub(crate) fn assign(&self, _child: &Child) {}
 }
 
 #[cfg(test)]

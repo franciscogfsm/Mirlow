@@ -144,12 +144,25 @@ impl Remote {
 
     /// The picture has taken the pointer, or let it go. While it has it,
     /// the mouse and keyboard are read straight from Windows and go to the
-    /// phone, the mouse's movement multiplied by `scale`.
-    pub fn capture(&self, captured: bool, scale: f64) {
+    /// phone, the mouse's movement multiplied by `scale`. With `zoom`, Ctrl
+    /// and the wheel zoom instead of scrolling (an iPhone's ⌘+ and ⌘−).
+    pub fn capture(&self, captured: bool, scale: f64, zoom: bool) {
         #[cfg(windows)]
-        self.input.capture(captured, scale);
+        self.input.capture(captured, scale, zoom);
         #[cfg(not(windows))]
-        let _ = (captured, scale);
+        let _ = (captured, scale, zoom);
+    }
+
+    /// Whether Esc was pressed in the last `within` while the phone had the
+    /// keyboard: the person let go on purpose.
+    pub fn escaped_within(&self, within: std::time::Duration) -> bool {
+        #[cfg(windows)]
+        return self.input.escaped_within(within);
+        #[cfg(not(windows))]
+        {
+            let _ = within;
+            false
+        }
     }
 
     /// Lets go of the phone and stops, as Mirlow quits. Waits for that to

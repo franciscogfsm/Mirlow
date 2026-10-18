@@ -13,6 +13,8 @@ apps/desktop/src-tauri/gen/
 # The engine runtime is produced by scripts/build-engine.ps1 (hundreds of
 # binaries); it is rebuilt, not committed.
 apps/desktop/src-tauri/resources/engine/
+# scrcpy, for Android over Wi-Fi, is downloaded by scripts/fetch-scrcpy.ps1.
+apps/desktop/src-tauri/resources/scrcpy/
 
 # Local environment
 .env

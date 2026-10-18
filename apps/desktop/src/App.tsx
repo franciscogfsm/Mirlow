@@ -10,6 +10,7 @@ import { UpdateGate } from "./components/UpdateGate";
 import { api, type RemoteStatus, type Settings, type Status, type VideoSize } from "./lib/api";
 import { HOME_MIN, HOME_SIZE, MIRROR_BAR, MIRROR_FRAME, MIRROR_MIN } from "./lib/frame";
 import { I18nProvider, resolveLocale, useI18n } from "./lib/i18n";
+import { requestSetup } from "./lib/androidSetup";
 import { useDiagnostics } from "./lib/useDiagnostics";
 import { useEngineStatus, useRemoteStatus, useSettings } from "./lib/useEngine";
 import { ErrorView } from "./views/ErrorView";
@@ -126,7 +127,9 @@ function Shell({
   const video = status.phase === "mirroring" || paused ? status.video : null;
   const mirroring = video !== null;
   const videoKey = video ? `${video.width}x${video.height}` : "";
-  const control = mirroring && settings.control && remote?.state === "connected";
+  // An Android phone over Wi-Fi takes clicks and keys on the picture itself.
+  const direct = status.client?.direct === true;
+  const control = mirroring && !direct && settings.control && remote?.state === "connected";
   // The pointer and keys are going to the phone.
   const [captured, setCaptured] = useState(false);
 
@@ -214,6 +217,7 @@ function Shell({
   const label = (() => {
     switch (status.phase) {
       case "mirroring":
+        if (direct) return device ? format(t.wifi.hint, { device }) : t.wifi.hintUnknown;
         if (captured) return device ? format(t.control.active, { device }) : t.control.activeUnknown;
         if (control) return device ? format(t.control.hint, { device }) : t.control.hintUnknown;
         if (settings.control) return device ? format(t.control.pair, { device }) : t.control.pairUnknown;
@@ -311,6 +315,10 @@ function Shell({
                 status={status}
                 onRename={() => setSettingsOpen(true)}
                 onOpenHelp={() => setHelpOpen(true)}
+                onSetUpAndroid={() => {
+                  requestSetup();
+                  setSettingsOpen(true);
+                }}
                 diagnostics={diagnostics}
               />
             )}

@@ -17,7 +17,9 @@ import { mockIPC, mockWindows } from "@tauri-apps/api/mocks";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
+import { requestSetup } from "./lib/androidSetup";
 import type {
+  AndroidLink,
   AndroidStatus,
   Diagnostics,
   Phase,
@@ -40,6 +42,32 @@ let settings: Settings = {
   language: (params.get("lang") ?? "system") as Settings["language"],
   control: params.has("remote"),
   pointerSpeed: 5,
+  androidWifi: params.has("phones"),
+};
+
+// preview.html?phones=Pixel 9,Galaxy S24 shows Android over Wi-Fi on, with those phones ready;
+// &pairing=waiting (or searching, pairing, paired, refused, notFound) shows the setup.
+const qrSize = 29;
+const androidLink: AndroidLink = {
+  enabled: params.has("phones"),
+  available: true,
+  phones: (params.get("phones") ?? "")
+    .split(",")
+    .filter(Boolean)
+    .map((name, index) => ({ serial: `adb-${index}._adb-tls-connect._tcp`, name })),
+  pairing:
+    params.get("pairing") === "waiting" || !params.get("pairing")
+      ? {
+          state: "waiting",
+          qr: {
+            size: qrSize,
+            modules: Array.from({ length: qrSize * qrSize }, (_, i) =>
+              (i * 7919) % 5 < 2 || (i % qrSize < 7 && Math.floor(i / qrSize) < 7) ? "1" : "0",
+            ).join(""),
+          },
+        }
+      : ({ state: params.get("pairing") } as AndroidLink["pairing"]),
+  mirroring: null,
 };
 
 // preview.html?remote=waiting (or connected, bluetoothOff, unsupported…) shows mouse and keyboard on;
@@ -90,6 +118,8 @@ mockIPC((command, payload) => {
       return settings;
     case "get_diagnostics":
       return diagnostics;
+    case "get_android_link":
+      return androidLink;
     case "get_remote_status":
       return { ...remote, state: settings.control ? (remote.state === "off" ? "waiting" : remote.state) : "off" };
     case "get_engine_log":
@@ -119,6 +149,9 @@ mockIPC((command, payload) => {
       return null;
   }
 });
+
+// &setup=1 opens the settings onto pairing a phone (with &sheet=settings).
+if (params.has("setup")) requestSetup();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

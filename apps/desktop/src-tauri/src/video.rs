@@ -8,6 +8,10 @@
 //!
 //! The adopted window is disabled, so the mouse and keyboard keep going to the
 //! interface underneath: double-click, drag and shortcuts all still work.
+//!
+//! scrcpy's window, which shows an Android phone over Wi-Fi, is adopted the
+//! same way but left enabled ([`watch_interactive`]): clicks on it are touches
+//! on the phone, and keys typed into it reach the phone.
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
@@ -28,7 +32,8 @@ pub struct Rect {
 struct Inner {
     /// The adopted window, or 0.
     hwnd: isize,
-    /// True when the window is one of Mirlow's own rather than the engine's.
+    /// True when the window is not the engine's: one of Mirlow's own, or
+    /// scrcpy's. Only its keeper puts it away.
     own: bool,
     rect: Rect,
     /// Corner radius of the picture, in physical pixels.
@@ -74,7 +79,7 @@ pub fn watch(app: &AppHandle, pid: u32) {
             if let Some(hwnd) = platform::find_window(pid) {
                 let Some(parent) = main_hwnd(&app) else { return };
                 let mut inner = video.inner.lock().unwrap();
-                platform::adopt(hwnd, parent);
+                platform::adopt(hwnd, parent, false);
                 inner.hwnd = hwnd;
                 inner.own = false;
                 platform::place(hwnd, inner.rect, inner.radius, inner.shown());
@@ -83,6 +88,65 @@ pub fn watch(app: &AppHandle, pid: u32) {
             thread::sleep(Duration::from_millis(30));
         }
     });
+}
+
+/// Adopts the window of process `pid` when it appears, in place of whatever
+/// picture is there, and leaves it taking the mouse and keyboard itself.
+/// `shown` is then told the window's handle and the size it opened at, before
+/// it was laid out; the window is the caller's to [`release`].
+pub fn watch_interactive(app: &AppHandle, pid: u32, shown: impl FnOnce(isize, i32, i32) + Send + 'static) {
+    let video = app.state::<Video>();
+    let generation = video.generation.fetch_add(1, Ordering::SeqCst) + 1;
+    let app = app.clone();
+    thread::spawn(move || {
+        let deadline = Instant::now() + Duration::from_secs(30);
+        while Instant::now() < deadline {
+            let video = app.state::<Video>();
+            if video.generation.load(Ordering::SeqCst) != generation {
+                return;
+            }
+            if let Some(hwnd) = platform::find_window(pid) {
+                let Some(parent) = main_hwnd(&app) else { return };
+                let (width, height) = platform::size(hwnd).unwrap_or((0, 0));
+                {
+                    let mut inner = video.inner.lock().unwrap();
+                    if inner.hwnd != 0 && inner.hwnd != hwnd && platform::is_window(inner.hwnd) {
+                        platform::place(inner.hwnd, inner.rect, inner.radius, false);
+                    }
+                    platform::adopt(hwnd, parent, true);
+                    inner.hwnd = hwnd;
+                    inner.own = true;
+                    inner.concealed = false;
+                    platform::place(hwnd, inner.rect, inner.radius, inner.shown());
+                }
+                shown(hwnd, width, height);
+                return;
+            }
+            thread::sleep(Duration::from_millis(15));
+        }
+    });
+}
+
+/// The size of window `hwnd` if it is the picture and something other than
+/// Mirlow has resized it since it was laid out. scrcpy does so when the
+/// phone turns, which is how Mirlow learns the picture's new shape.
+pub fn resized(app: &AppHandle, hwnd: isize) -> Option<(i32, i32)> {
+    let video = app.state::<Video>();
+    let inner = video.inner.lock().unwrap();
+    if inner.hwnd != hwnd {
+        return None;
+    }
+    let size = platform::size(hwnd)?;
+    (size != (inner.rect.width.max(1), inner.rect.height.max(1))).then_some(size)
+}
+
+/// Puts the picture back where the layout wants it.
+pub fn replace(app: &AppHandle) {
+    let video = app.state::<Video>();
+    let inner = video.inner.lock().unwrap();
+    if inner.hwnd != 0 && platform::is_window(inner.hwnd) {
+        platform::place(inner.hwnd, inner.rect, inner.radius, inner.shown());
+    }
 }
 
 /// Forgets the engine's video window. The engine closes it itself when
@@ -239,18 +303,32 @@ mod platform {
         (search.found != 0).then_some(search.found)
     }
 
-    /// Turns a top-level window into a borderless, disabled child of `parent`.
-    pub fn adopt(hwnd: isize, parent: isize) {
+    /// The window's size, in physical pixels.
+    pub fn size(hwnd: isize) -> Option<(i32, i32)> {
+        let mut rect = RECT::default();
+        unsafe { GetWindowRect(handle(hwnd), &mut rect).ok()? };
+        Some((rect.right - rect.left, rect.bottom - rect.top))
+    }
+
+    /// Turns a top-level window into a borderless child of `parent`. Unless
+    /// it is `interactive`, it is disabled, so input goes to the interface.
+    pub fn adopt(hwnd: isize, parent: isize, interactive: bool) {
         let hwnd = handle(hwnd);
         unsafe {
             let style = GetWindowLongPtrW(hwnd, GWL_STYLE) as u32;
             let chrome = WS_POPUP | WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU;
-            let style = (style & !chrome.0) | (WS_CHILD | WS_DISABLED | WS_CLIPSIBLINGS).0;
+            let mut style = (style & !(chrome.0 | WS_DISABLED.0)) | (WS_CHILD | WS_CLIPSIBLINGS).0;
+            if !interactive {
+                style |= WS_DISABLED.0;
+            }
             SetWindowLongPtrW(hwnd, GWL_STYLE, style as isize);
 
             let ex_style = GetWindowLongPtrW(hwnd, GWL_EXSTYLE) as u32;
             let edges = WS_EX_APPWINDOW | WS_EX_WINDOWEDGE | WS_EX_CLIENTEDGE | WS_EX_DLGMODALFRAME;
-            let ex_style = (ex_style & !edges.0) | WS_EX_NOACTIVATE.0;
+            let mut ex_style = ex_style & !(edges.0 | WS_EX_NOACTIVATE.0);
+            if !interactive {
+                ex_style |= WS_EX_NOACTIVATE.0;
+            }
             SetWindowLongPtrW(hwnd, GWL_EXSTYLE, ex_style as isize);
 
             let _ = SetParent(hwnd, Some(handle(parent)));
@@ -289,6 +367,9 @@ mod platform {
     pub fn find_window(_pid: u32) -> Option<isize> {
         None
     }
-    pub fn adopt(_hwnd: isize, _parent: isize) {}
+    pub fn size(_hwnd: isize) -> Option<(i32, i32)> {
+        None
+    }
+    pub fn adopt(_hwnd: isize, _parent: isize, _interactive: bool) {}
     pub fn place(_hwnd: isize, _rect: Rect, _radius: i32, _visible: bool) {}
 }

@@ -12,6 +12,7 @@ import {
   type ThemeSetting,
 } from "../lib/api";
 import { useI18n } from "../lib/i18n";
+import { AndroidWifiSetting } from "./AndroidWifi";
 import { Segmented, Switch } from "./controls";
 import { Sheet } from "./Sheet";
 
@@ -307,6 +308,8 @@ export function SettingsSheet({
           onCheckedChange={(compatibility) => onChange({ compatibility })}
         />
       </Row>
+
+      <AndroidWifiSetting />
 
       <div className="border-b border-line py-4">
         <div className="flex items-center justify-between gap-5">
