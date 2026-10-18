@@ -243,12 +243,37 @@ export const en = {
         mirroring: "Mirroring",
         setUp: "Set up a phone",
         setUpAnother: "Set up another phone",
-        steps: {
-          developer:
-            "Turn on Developer options: in Settings › About phone, tap Build number seven times. On a Samsung, it is under Software information.",
-          wireless:
-            "Open Developer options (in Settings › System, or at the end of Settings), turn on Wireless debugging and allow it on this network.",
-          scan: "Tap Pair device with QR code and scan this code.",
+        tutorial: {
+          step: "Step {n} of 3",
+          next: "Next",
+          back: "Back",
+          skip: "Done this before? Skip to the code",
+          developer: {
+            title: "Turn on Developer options",
+            body: "On your phone, open Settings › About phone and tap Build number 7 times, until it says you are a developer. On a Samsung, Build number is under Software information.",
+          },
+          wireless: {
+            title: "Turn on Wireless debugging",
+            body: "Go back to Settings and open Developer options, under System or at the very end. Turn on Wireless debugging and tap Allow. Your phone and this PC need to be on the same Wi‑Fi.",
+          },
+          scan: {
+            title: "Scan the code",
+            body: "Tap the words Wireless debugging to open it, then Pair device with QR code, and point the camera at this code.",
+          },
+          phone: {
+            aboutPhone: "About phone",
+            deviceName: "Device name",
+            model: "Model",
+            androidVersion: "Android version",
+            buildNumber: "Build number",
+            developerOptions: "Developer options",
+            usbDebugging: "USB debugging",
+            wirelessDebugging: "Wireless debugging",
+            stayAwake: "Stay awake",
+            useWireless: "Use wireless debugging",
+            pairQr: "Pair device with QR code",
+            pairCode: "Pair with pairing code",
+          },
         },
         codeLabel: "Can't scan? Tap Pair device with pairing code and type the six digits here.",
         codePlaceholder: "Pairing code",

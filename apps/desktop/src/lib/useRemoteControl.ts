@@ -53,7 +53,8 @@ export function pointerScale(speed: number, video: VideoSize, pictureWidth: numb
 /**
  * Lets the mouse and keyboard work the phone while the pointer is captured by
  * `target`. Clicking the picture captures it; Esc lets go, as it does for any
- * captured pointer. With `zoom`, Ctrl and the wheel zoom the phone's screen.
+ * captured pointer. For an iPhone or iPad (`apple`), Ctrl and the wheel zoom,
+ * and the phone's own pointer acceleration is made up for.
  * A pointer lost any other way (the phone turned, the window resized) is
  * taken back by itself, so control carries on.
  *
@@ -67,14 +68,14 @@ export function useRemoteControl(
   target: RefObject<HTMLElement | null>,
   enabled: boolean,
   scale: number,
-  zoom: boolean,
+  apple: boolean,
 ) {
   const [captured, setCaptured] = useState(false);
   const capturedRef = useRef(false);
   const scaleRef = useRef(scale);
   scaleRef.current = scale;
-  const zoomRef = useRef(zoom);
-  zoomRef.current = zoom;
+  const appleRef = useRef(apple);
+  appleRef.current = apple;
 
   const capture = useCallback(() => {
     const element = target.current;
@@ -84,8 +85,8 @@ export function useRemoteControl(
 
   // A new speed, or a picture resized or turned, takes effect without letting go.
   useEffect(() => {
-    if (captured) void api.remoteCapture(true, scale, zoom);
-  }, [captured, scale, zoom]);
+    if (captured) void api.remoteCapture(true, scale, apple);
+  }, [captured, scale, apple]);
 
   useEffect(() => {
     if (!enabled) {
@@ -119,7 +120,7 @@ export function useRemoteControl(
       if (now === capturedRef.current) return;
       capturedRef.current = now;
       setCaptured(now);
-      void api.remoteCapture(now, scaleRef.current, zoomRef.current);
+      void api.remoteCapture(now, scaleRef.current, appleRef.current);
       window.clearTimeout(timer);
       if (now) {
         released = false;
@@ -167,7 +168,7 @@ export function useRemoteControl(
       window.removeEventListener("keyup", onKey, true);
       window.removeEventListener("blur", onBlur);
       if (target.current && document.pointerLockElement === target.current) document.exitPointerLock();
-      if (capturedRef.current) void api.remoteCapture(false, scaleRef.current, zoomRef.current);
+      if (capturedRef.current) void api.remoteCapture(false, scaleRef.current, appleRef.current);
       capturedRef.current = false;
       setCaptured(false);
     };

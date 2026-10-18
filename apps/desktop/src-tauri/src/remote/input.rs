@@ -15,14 +15,17 @@
 //! how the person gets their mouse back.
 //!
 //! Slow, careful movement is slowed down further, so the pointer can be put on
-//! a small target (or a game aimed) to the point; anything quicker moves at the
-//! speed set, without the acceleration that would make it hard to predict.
+//! a small target (or a game aimed) to the point. An iPhone speeds up quick
+//! movement by itself, more the quicker it is, so the quickest sweeps (across
+//! a phone on its side, above all) are eased off to make up for it: a sweep
+//! then goes as far as the hand does, whatever its pace.
 //!
 //! An iPhone takes no pinch from a mouse, so Ctrl and the wheel, which zoom
 //! on a PC, reach it as ⌘+ and ⌘−: the keys its apps zoom with.
 
 use super::{Command, Pointer};
 use std::cell::RefCell;
+use std::collections::VecDeque;
 use std::sync::atomic::{AtomicBool, AtomicIsize, AtomicU64, Ordering};
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
@@ -53,13 +56,26 @@ const NOTCH: f64 = 120.0;
 
 /// How fast the hand moves, in mouse counts per millisecond, below which the
 /// pointer slows down for precision, and at which it is back to full speed.
-/// About 1 and 6 cm a second on an 800 DPI mouse.
-const CAREFUL: f64 = 0.3;
-const BRISK: f64 = 2.0;
+/// About 0.8 and 4 cm a second on an 800 DPI mouse: only fine adjustments.
+const CAREFUL: f64 = 0.25;
+const BRISK: f64 = 1.2;
 /// The pointer's speed, as a share of the speed set, at its most careful.
-const FINEST: f64 = 0.45;
-/// How quickly the hand's speed is followed. Shorter follows every jitter.
-const SETTLE_MS: f64 = 12.0;
+const FINEST: f64 = 0.5;
+/// The hand's speed is what it moved over this long. Over a fixed stretch of
+/// time, not between reports: Windows hands reports over in bunches when it
+/// is busy, and the gaps between them then say nothing.
+const WINDOW: Duration = Duration::from_millis(32);
+/// How fast, in an iPhone's points per millisecond, the pointer may go before
+/// it is eased off to make up for the iPhone's own acceleration, and from what
+/// speed it is eased off fully, to `TAMED` of the speed set. A quick sweep
+/// across a phone held upright stays under the first; across one on its
+/// side, more than twice as far, it goes well over.
+const BRISK_POINTS: f64 = 0.9;
+const QUICKEST_POINTS: f64 = 3.0;
+const TAMED: f64 = 0.62;
+/// How long the pointer takes to settle into a new pace, so that slowing
+/// down or speeding up is a glide and never a jump.
+const EASE_MS: f64 = 40.0;
 /// A pause this long starts a new movement.
 const STILL_MS: f64 = 60.0;
 
@@ -78,8 +94,9 @@ pub struct Input {
     window: Arc<AtomicIsize>,
     /// How far the phone's pointer goes per count of the mouse, as f64 bits.
     scale: Arc<AtomicU64>,
-    /// Ctrl and the wheel zoom the phone rather than scroll it.
-    zoom: Arc<AtomicBool>,
+    /// The phone is an iPhone or iPad: Ctrl and the wheel zoom it, and its
+    /// acceleration is made up for.
+    apple: Arc<AtomicBool>,
     /// When Esc was last pressed while capturing, in milliseconds since `epoch`.
     escaped: Arc<AtomicU64>,
     epoch: Instant,
@@ -89,15 +106,15 @@ impl Input {
     pub fn start(commands: Sender<Command>) -> Self {
         let window = Arc::new(AtomicIsize::new(0));
         let scale = Arc::new(AtomicU64::new(1f64.to_bits()));
-        let zoom = Arc::new(AtomicBool::new(false));
+        let apple = Arc::new(AtomicBool::new(false));
         let escaped = Arc::new(AtomicU64::new(0));
         let epoch = Instant::now();
-        let shared = Shared { scale: scale.clone(), zoom: zoom.clone(), escaped: escaped.clone(), epoch };
+        let shared = Shared { scale: scale.clone(), apple: apple.clone(), escaped: escaped.clone(), epoch };
         let slot = window.clone();
         let _ = std::thread::Builder::new()
             .name("remote-input".into())
             .spawn(move || run(commands, slot, shared));
-        Self { window, scale, zoom, escaped, epoch }
+        Self { window, scale, apple, escaped, epoch }
     }
 
     /// Whether Esc was pressed in the last `within`: the person let go of
@@ -109,9 +126,9 @@ impl Input {
 
     /// Starts or stops reading input for the phone. Called again with a new
     /// `scale` while capturing, it only changes the pointer's speed.
-    pub fn capture(&self, captured: bool, scale: f64, zoom: bool) {
+    pub fn capture(&self, captured: bool, scale: f64, apple: bool) {
         self.scale.store(scale.to_bits(), Ordering::Relaxed);
-        self.zoom.store(zoom, Ordering::Relaxed);
+        self.apple.store(apple, Ordering::Relaxed);
         let window = self.window.load(Ordering::SeqCst);
         if window != 0 {
             unsafe {
@@ -129,7 +146,7 @@ impl Input {
 /// What the interface's side shares with the input thread.
 struct Shared {
     scale: Arc<AtomicU64>,
-    zoom: Arc<AtomicBool>,
+    apple: Arc<AtomicBool>,
     escaped: Arc<AtomicU64>,
     epoch: Instant,
 }
@@ -145,10 +162,12 @@ struct State {
     x: f64,
     y: f64,
     wheel: f64,
-    /// How fast the hand is moving, in counts per millisecond, and when the
-    /// mouse last moved.
-    speed: f64,
-    moved_at: Option<Instant>,
+    /// The mouse's latest moves and when they came, over the last `WINDOW`.
+    recent: VecDeque<(Instant, f64)>,
+    /// The share of the speed set the pointer moves at, and when it was
+    /// last worked out.
+    gain: f64,
+    gain_at: Option<Instant>,
     /// Where an absolute pointing device last was (remote desktops, pens).
     position: Option<(i32, i32)>,
     modifiers: u8,
@@ -199,8 +218,9 @@ fn run(commands: Sender<Command>, slot: Arc<AtomicIsize>, shared: Shared) {
                 x: 0.0,
                 y: 0.0,
                 wheel: 0.0,
-                speed: 0.0,
-                moved_at: None,
+                recent: VecDeque::new(),
+                gain: FINEST,
+                gain_at: None,
                 position: None,
                 modifiers: 0,
                 keys: Vec::new(),
@@ -310,8 +330,9 @@ impl State {
             self.x = 0.0;
             self.y = 0.0;
             self.wheel = 0.0;
-            self.speed = 0.0;
-            self.moved_at = None;
+            self.recent.clear();
+            self.gain = FINEST;
+            self.gain_at = None;
             self.position = None;
         }
         self.captured = captured;
@@ -377,14 +398,15 @@ impl State {
             self.wheel += data as i16 as f64 / NOTCH;
         }
 
-        let scale = f64::from_bits(self.shared.scale.load(Ordering::Relaxed)) * self.precision(dx, dy);
+        let scale = f64::from_bits(self.shared.scale.load(Ordering::Relaxed));
+        let scale = scale * self.precision(dx, dy, scale);
         self.x += dx * scale;
         self.y += dy * scale;
         let (x, y, wheel) = (self.x.trunc(), self.y.trunc(), self.wheel.trunc());
         self.x -= x;
         self.y -= y;
         self.wheel -= wheel;
-        let zooming = wheel != 0.0 && self.modifiers & CTRL != 0 && self.shared.zoom.load(Ordering::Relaxed);
+        let zooming = wheel != 0.0 && self.modifiers & CTRL != 0 && self.shared.apple.load(Ordering::Relaxed);
         if zooming {
             self.pointer(x as i32, y as i32, 0, self.buttons != before);
             self.zoom(wheel as i32);
@@ -395,28 +417,32 @@ impl State {
 
     /// How much of the speed set the pointer moves at for this movement:
     /// less while the hand moves slowly, all of it once it moves briskly.
-    fn precision(&mut self, dx: f64, dy: f64) -> f64 {
+    fn precision(&mut self, dx: f64, dy: f64, scale: f64) -> f64 {
         let distance = dx.hypot(dy);
         if distance == 0.0 {
-            return 1.0;
+            return self.gain;
         }
         let now = Instant::now();
-        let elapsed = self.moved_at.map_or(f64::INFINITY, |at| now.duration_since(at).as_secs_f64() * 1000.0);
-        self.moved_at = Some(now);
-        if elapsed > STILL_MS {
-            // The first report of a movement has no report before it to time
-            // it by; taken as one of the slowest mice's, every 8 ms, a flick
-            // still starts quick and a nudge careful.
-            self.speed = distance / 8.0;
-        } else {
-            // Between reports, not per report: a mouse reports 125 to 8000
-            // times a second, and a slow hand sends a count every few ms.
-            let elapsed = elapsed.max(0.125);
-            let follow = (elapsed / SETTLE_MS).min(1.0);
-            self.speed += (distance / elapsed - self.speed) * follow;
+        self.recent.push_back((now, distance));
+        while self.recent.front().is_some_and(|&(at, _)| now.duration_since(at) > WINDOW) {
+            self.recent.pop_front();
         }
-        let t = ((self.speed - CAREFUL) / (BRISK - CAREFUL)).clamp(0.0, 1.0);
-        FINEST + (1.0 - FINEST) * t * t * (3.0 - 2.0 * t)
+        let speed = self.recent.iter().map(|&(_, moved)| moved).sum::<f64>() / (WINDOW.as_secs_f64() * 1000.0);
+        let mut target = FINEST + (1.0 - FINEST) * ease(CAREFUL, BRISK, speed);
+        if self.shared.apple.load(Ordering::Relaxed) {
+            // The pointer's own speed on the phone, before easing off.
+            let points = speed * scale;
+            target *= 1.0 - (1.0 - TAMED) * ease(BRISK_POINTS, QUICKEST_POINTS, points);
+        }
+
+        let elapsed = self.gain_at.map_or(f64::INFINITY, |at| now.duration_since(at).as_secs_f64() * 1000.0);
+        self.gain_at = Some(now);
+        if elapsed > STILL_MS {
+            self.gain = target;
+        } else {
+            self.gain += (target - self.gain) * (elapsed / EASE_MS).min(1.0);
+        }
+        self.gain
     }
 
     /// Zooms in (`steps` above 0) or out by that many notches of the wheel:
@@ -473,7 +499,8 @@ impl State {
 
     fn pointer(&self, dx: i32, dy: i32, wheel: i32, clicked: bool) {
         if dx != 0 || dy != 0 || wheel != 0 || clicked {
-            let _ = self.commands.send(Command::Pointer(Pointer { dx, dy, wheel, buttons: self.buttons }));
+            let pointer = Pointer { dx, dy, wheel, buttons: self.buttons, at: Instant::now() };
+            let _ = self.commands.send(Command::Pointer(pointer));
         }
     }
 
@@ -484,6 +511,12 @@ impl State {
         }
         let _ = self.commands.send(Command::Keys(self.modifiers, held));
     }
+}
+
+/// 0 below `from`, 1 above `to`, and a smooth curve between.
+fn ease(from: f64, to: f64, value: f64) -> f64 {
+    let t = ((value - from) / (to - from)).clamp(0.0, 1.0);
+    t * t * (3.0 - 2.0 * t)
 }
 
 enum Usage {

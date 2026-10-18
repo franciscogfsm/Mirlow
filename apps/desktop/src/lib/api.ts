@@ -168,8 +168,8 @@ export const api = {
   onRemoteStatus: (handler: (status: RemoteStatus) => void): Promise<UnlistenFn> =>
     listen<RemoteStatus>("remote:status", (event) => handler(event.payload)),
   /** The picture has taken the pointer, or let it go; the backend reads the mouse itself meanwhile. */
-  remoteCapture: (captured: boolean, scale: number, zoom: boolean) =>
-    invoke<void>("remote_capture", { captured, scale, zoom }),
+  remoteCapture: (captured: boolean, scale: number, apple: boolean) =>
+    invoke<void>("remote_capture", { captured, scale, apple }),
   /** The picture lost the pointer by accident: may it take it back? Brings Mirlow forward if so. */
   resumeCapture: () => invoke<boolean>("resume_capture"),
   openWindowsSettings: (

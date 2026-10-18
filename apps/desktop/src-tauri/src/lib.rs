@@ -134,8 +134,8 @@ fn get_remote_status(remote: State<'_, Remote>) -> remote::RemoteStatus {
 /// The picture has taken the pointer, or let it go. While it has it, the
 /// mouse goes to the phone, its movement multiplied by `scale`.
 #[tauri::command]
-fn remote_capture(captured: bool, scale: f64, zoom: bool, remote: State<'_, Remote>) {
-    remote.capture(captured, scale, zoom);
+fn remote_capture(captured: bool, scale: f64, apple: bool, remote: State<'_, Remote>) {
+    remote.capture(captured, scale, apple);
 }
 
 /// Called when the picture lost the pointer without being asked to (the

@@ -249,12 +249,37 @@ export const pt: Dictionary = {
         mirroring: "A projetar",
         setUp: "Configurar um telemóvel",
         setUpAnother: "Configurar outro telemóvel",
-        steps: {
-          developer:
-            "Ative as Opções de programador: em Definições › Acerca do telemóvel, toque sete vezes em Número de compilação. Num Samsung, está em Informações do software.",
-          wireless:
-            "Abra as Opções de programador (em Definições › Sistema, ou no fim das Definições), ative a Depuração sem fios e permita-a nesta rede.",
-          scan: "Toque em Sincronizar dispositivo com código QR e leia este código.",
+        tutorial: {
+          step: "Passo {n} de 3",
+          next: "Seguinte",
+          back: "Voltar",
+          skip: "Já fez isto antes? Passe para o código",
+          developer: {
+            title: "Ative as Opções de programador",
+            body: "No telemóvel, abra Definições › Acerca do telemóvel e toque 7 vezes em Número de compilação, até dizer que é programador. Num Samsung, o Número de compilação está em Informações do software.",
+          },
+          wireless: {
+            title: "Ative a Depuração sem fios",
+            body: "Volte às Definições e abra as Opções de programador, em Sistema ou mesmo no fim. Ative a Depuração sem fios e toque em Permitir. O telemóvel e este PC têm de estar na mesma rede Wi‑Fi.",
+          },
+          scan: {
+            title: "Leia o código",
+            body: "Toque nas palavras Depuração sem fios para a abrir, depois em Sincronizar dispositivo com código QR, e aponte a câmara para este código.",
+          },
+          phone: {
+            aboutPhone: "Acerca do telemóvel",
+            deviceName: "Nome do dispositivo",
+            model: "Modelo",
+            androidVersion: "Versão do Android",
+            buildNumber: "Número de compilação",
+            developerOptions: "Opções de programador",
+            usbDebugging: "Depuração USB",
+            wirelessDebugging: "Depuração sem fios",
+            stayAwake: "Manter ativo",
+            useWireless: "Utilizar depuração sem fios",
+            pairQr: "Sincronizar com código QR",
+            pairCode: "Sincronizar com código",
+          },
         },
         codeLabel:
           "Não consegue ler? Toque em Sincronizar dispositivo com código de sincronização e escreva aqui os seis algarismos.",

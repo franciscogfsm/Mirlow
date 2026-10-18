@@ -78,6 +78,8 @@ pub struct Pointer {
     pub wheel: i32,
     /// Bit 0 left, bit 1 right, bit 2 middle: the same layout as HID's.
     pub buttons: u8,
+    /// When the mouse moved, which the Bluetooth thread may hear of later.
+    pub at: std::time::Instant,
 }
 
 enum Command {
@@ -144,13 +146,14 @@ impl Remote {
 
     /// The picture has taken the pointer, or let it go. While it has it,
     /// the mouse and keyboard are read straight from Windows and go to the
-    /// phone, the mouse's movement multiplied by `scale`. With `zoom`, Ctrl
-    /// and the wheel zoom instead of scrolling (an iPhone's ⌘+ and ⌘−).
-    pub fn capture(&self, captured: bool, scale: f64, zoom: bool) {
+    /// phone, the mouse's movement multiplied by `scale`. With `apple` (an
+    /// iPhone or iPad), Ctrl and the wheel zoom instead of scrolling, and its
+    /// pointer's acceleration is made up for.
+    pub fn capture(&self, captured: bool, scale: f64, apple: bool) {
         #[cfg(windows)]
-        self.input.capture(captured, scale, zoom);
+        self.input.capture(captured, scale, apple);
         #[cfg(not(windows))]
-        let _ = (captured, scale, zoom);
+        let _ = (captured, scale, apple);
     }
 
     /// Whether Esc was pressed in the last `within` while the phone had the
@@ -195,7 +198,7 @@ fn publish(app: &AppHandle, shared: &Mutex<RemoteStatus>, change: impl FnOnce(&m
 mod peripheral {
     use super::{publish, Command, Pointer, RemoteState, RemoteStatus, Support};
     use crate::engine::Engine;
-    use std::collections::HashMap;
+    use std::collections::{HashMap, VecDeque};
     use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender};
     use std::sync::Mutex;
     use std::time::{Duration, Instant};
@@ -270,6 +273,16 @@ mod peripheral {
     const DEFAULT_PACE: Duration = Duration::from_millis(15);
     /// How often to try again while Bluetooth is off or missing.
     const RETRY: Duration = Duration::from_secs(5);
+    /// The least a report may move, in the phone's units, however slowly the
+    /// hand goes: small leftovers go out at once.
+    const SMALLEST_STEP: f64 = 3.0;
+    /// How much faster than the hand a report may catch up on movement that
+    /// was held up.
+    const CATCH_UP: f64 = 1.5;
+    /// Held-up movement is spread over at most this many reports.
+    const CATCH_UP_REPORTS: f64 = 4.0;
+    /// How long the mouse's moves are kept, to work out the hand's speed.
+    const LOOK_BACK: Duration = Duration::from_millis(100);
 
     enum Failure {
         NoBluetooth,
@@ -504,10 +517,15 @@ mod peripheral {
             self.dx != 0 || self.dy != 0 || self.wheel != 0
         }
 
-        /// The next report, keeping whatever does not fit in one for later.
-        fn take(&mut self) -> [u8; 6] {
-            let dx = self.dx.clamp(-32767, 32767);
-            let dy = self.dy.clamp(-32767, 32767);
+        fn size(&self) -> f64 {
+            (self.dx as f64).hypot(self.dy as f64)
+        }
+
+        /// The next report, moving `dx` and `dy` of what is waiting and
+        /// keeping the rest for later.
+        fn take(&mut self, dx: i32, dy: i32) -> [u8; 6] {
+            let dx = dx.clamp(-32767, 32767);
+            let dy = dy.clamp(-32767, 32767);
             let wheel = self.wheel.clamp(-127, 127);
             self.dx -= dx;
             self.dy -= dy;
@@ -588,7 +606,11 @@ mod peripheral {
         /// The device input goes to, while one is connected.
         connected: Option<String>,
         motion: Motion,
-        sent_at: Instant,
+        /// How far the mouse moved lately, and when, in the phone's units.
+        recent: VecDeque<(Instant, i32, i32)>,
+        /// When the next report of movement is due. Reports keep to a beat,
+        /// each due one link interval after the one before.
+        due: Instant,
         pace: Duration,
     }
 
@@ -618,7 +640,8 @@ mod peripheral {
             hosts: HashMap::new(),
             connected: None,
             motion: Motion::default(),
-            sent_at: Instant::now(),
+            recent: VecDeque::new(),
+            due: Instant::now(),
             pace: DEFAULT_PACE,
         };
         worker.probe();
@@ -714,7 +737,7 @@ mod peripheral {
         /// to do anyway: send merged motion, or try Bluetooth again.
         fn wait(&self) -> Option<Duration> {
             let now = Instant::now();
-            let motion = self.motion.pending().then(|| (self.sent_at + self.pace).saturating_duration_since(now));
+            let motion = self.motion.pending().then(|| self.due.saturating_duration_since(now));
             let retry = self.retry_at.map(|at| at.saturating_duration_since(now));
             match (motion, retry) {
                 (Some(a), Some(b)) => Some(a.min(b)),
@@ -723,7 +746,7 @@ mod peripheral {
         }
 
         fn tick(&mut self) {
-            if self.motion.pending() && self.sent_at.elapsed() >= self.pace {
+            if self.motion.pending() && Instant::now() >= self.due {
                 self.send_motion();
             }
             if self.retry_at.is_some_and(|at| Instant::now() >= at) {
@@ -890,40 +913,90 @@ mod peripheral {
             if self.connected.is_none() {
                 return;
             }
+            if pointer.dx != 0 || pointer.dy != 0 {
+                self.recent.push_back((pointer.at, pointer.dx, pointer.dy));
+                while self.recent.front().is_some_and(|&(at, _, _)| pointer.at.duration_since(at) > LOOK_BACK) {
+                    self.recent.pop_front();
+                }
+            }
             if pointer.buttons != self.motion.buttons {
-                // A click must not be merged away: what moved before it goes
-                // first, then the click on its own.
+                // A click must not be merged away, and must land where the
+                // pointer is: everything that moved before it goes first,
+                // then the click on its own.
                 if self.motion.pending() {
-                    self.send_motion();
+                    self.send_all();
                 }
                 self.motion.buttons = pointer.buttons;
                 self.motion.dx += pointer.dx;
                 self.motion.dy += pointer.dy;
                 self.motion.wheel += pointer.wheel;
-                self.send_motion();
+                self.send_all();
                 return;
             }
             self.motion.dx += pointer.dx;
             self.motion.dy += pointer.dy;
             self.motion.wheel += pointer.wheel;
-            if self.sent_at.elapsed() >= self.pace {
+            if Instant::now() >= self.due {
                 self.send_motion();
             }
         }
 
+        /// Sends the next report of movement, and sets when the one after it
+        /// is due.
+        ///
+        /// The radio carries a report once per link interval. Timed from when
+        /// the last report went (or worse, from when handing it over ended),
+        /// reports drift behind that beat, since Windows' timers only keep to
+        /// the millisecond: now and then the radio has nothing to carry, and
+        /// the next report carries twice as much, a hitch. So each report is
+        /// due one interval after the one before, whenever that one went.
+        ///
+        /// When the radio was busy for a moment, movement piles up meanwhile;
+        /// sent in one report, it would be a jump, and the phone's own
+        /// acceleration would make it larger still. So it is spread over the
+        /// next few reports, a quick glide.
         fn send_motion(&mut self) {
+            let now = Instant::now();
+            let lately: f64 = self
+                .recent
+                .iter()
+                .filter(|&&(at, _, _)| now.saturating_duration_since(at) <= self.pace)
+                .map(|&(_, dx, dy)| (dx as f64).hypot(dy as f64))
+                .sum();
+            let most = (lately * CATCH_UP).max(self.motion.size() / CATCH_UP_REPORTS).max(SMALLEST_STEP);
+            let (mut x, mut y) = (self.motion.dx as f64, self.motion.dy as f64);
+            let size = self.motion.size();
+            if size > most {
+                x *= most / size;
+                y *= most / size;
+            }
+            self.send(x.round() as i32, y.round() as i32);
+            self.due += self.pace;
+            if self.due < now {
+                // Off the beat: the first move after a pause, or the radio
+                // held things up. A new beat starts from here.
+                self.due = now + self.pace;
+            }
+        }
+
+        /// Sends everything that has moved, in one report, off the beat.
+        fn send_all(&mut self) {
+            self.send(self.motion.dx, self.motion.dy);
+        }
+
+        fn send(&mut self, dx: i32, dy: i32) {
             let Some(published) = &self.published else { return };
-            let report = self.motion.take();
+            let report = self.motion.take(dx, dy);
             notify(&published.mouse, &report);
-            self.sent_at = Instant::now();
         }
 
         fn keys(&mut self, modifiers: u8, keys: [u8; 6]) {
             if self.connected.is_none() {
                 return;
             }
+            // Keys act where the pointer is, so it gets there first.
             if self.motion.pending() {
-                self.send_motion();
+                self.send_all();
             }
             let Some(published) = &self.published else { return };
             let mut report = [0u8; 8];
@@ -939,6 +1012,7 @@ mod peripheral {
             }
             if let Some(published) = &self.published {
                 self.motion = Motion::default();
+                self.recent.clear();
                 notify(&published.mouse, &[0; 6]);
                 notify(&published.keyboard, &[0; 8]);
             }
