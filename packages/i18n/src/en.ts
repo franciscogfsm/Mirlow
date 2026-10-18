@@ -198,12 +198,24 @@ export const en = {
           pairUnknown: "On your phone, open Settings › Bluetooth and tap this PC.",
           confirm:
             "Windows then shows a pairing notification with a code, usually at the bottom of the screen. Click it and allow it. Only the first time.",
-          pointer: "iPhone only: turn on AssistiveTouch, or you won't see the pointer. On the iPhone, tap:",
+          pointer: "Turn on AssistiveTouch, or you won't see the pointer. On the iPhone, tap:",
           pointerPath: ["Settings", "Accessibility", "Touch", "AssistiveTouch", "On"],
           pointerSiri: "Quicker: hold the side button and say “Turn on AssistiveTouch”.",
           use: "While mirroring, click the picture to control your phone. Press Esc to get your mouse back.",
         },
         stuck: "Connected but nothing happens? On the phone, tap ⓘ next to this PC, choose Forget This Device, and pair again.",
+        phone: "Phone",
+        iphone: "iPhone",
+        android: {
+          name: "Android",
+          pair: "On your phone, open Settings › Bluetooth (on some phones, Connected devices › Pair new device) and tap “{pc}”.",
+          pairUnknown:
+            "On your phone, open Settings › Bluetooth (on some phones, Connected devices › Pair new device) and tap this PC.",
+          confirm:
+            "Tap Pair on the phone. Windows then shows a pairing notification, usually at the bottom of the screen: click it and allow it. Only the first time.",
+          use: "While mirroring, click the picture to control your phone. The pointer shows up on its own. Right-click goes back, and Esc gives you your mouse back.",
+          stuck: "Connected but nothing happens? On the phone, tap ⚙ next to this PC, choose Unpair or Forget, and pair again.",
+        },
         bluetoothOff: "Bluetooth is off on this PC. Turn it on in Windows settings.",
         noBluetooth: "This PC has no Bluetooth.",
         unsupported:
@@ -240,7 +252,7 @@ export const en = {
     },
     update: {
       available: "Mirlow {version} is here",
-      action: "Update",
+      required: "Updating to the latest version. Mirlow will reopen by itself in a moment.",
       downloading: "Updating… {percent}%",
       installing: "Installing…",
       failed: "Update didn't finish",
@@ -468,7 +480,7 @@ export const en = {
         },
         {
           title: "Updates",
-          body: "While it runs, Mirlow asks GitHub, where its releases are published, whether a newer version is out: shortly after it opens, then every few hours. The request says nothing about you or your PC beyond what any connection does, such as your IP address, which GitHub may log under its own privacy policy. A new version is downloaded only when you choose Update, and installed only if it carries our signature.",
+          body: "While it runs, Mirlow asks GitHub, where its releases are published, whether a newer version is out: shortly after it opens, then every few hours. The request says nothing about you or your PC beyond what any connection does, such as your IP address, which GitHub may log under its own privacy policy. When a newer version is out, Mirlow downloads and installs it straight away, and only if it carries our signature.",
         },
         {
           title: "What stays on your PC",

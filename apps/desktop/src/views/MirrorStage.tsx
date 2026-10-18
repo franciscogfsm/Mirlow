@@ -136,6 +136,7 @@ export function MirrorStage({
   hidden,
   pause,
   control,
+  android,
   pointerSpeed,
   onCaptureChange,
   onToggleFullscreen,
@@ -150,6 +151,8 @@ export function MirrorStage({
   pause: PauseInfo | null;
   /** A phone is connected over Bluetooth and can be worked from here. */
   control: boolean;
+  /** The picture comes from an Android phone, whose pointer moves differently. */
+  android: boolean;
   pointerSpeed: number;
   onCaptureChange: (captured: boolean) => void;
   onToggleFullscreen: () => void;
@@ -217,7 +220,7 @@ export function MirrorStage({
   const { captured, capture } = useRemoteControl(
     pictureRef,
     control && !hidden,
-    pointerScale(pointerSpeed, video.width, picture?.width ?? 0),
+    pointerScale(pointerSpeed, video, picture?.width ?? 0, android),
   );
   useEffect(() => onCaptureChange(captured), [captured]);
 

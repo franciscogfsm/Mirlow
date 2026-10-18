@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { HelpSheet } from "./components/HelpSheet";
 import { SettingsSheet } from "./components/SettingsSheet";
 import { TitleBar } from "./components/TitleBar";
-import { UpdatePill } from "./components/UpdatePill";
+import { UpdateGate } from "./components/UpdateGate";
 import { api, type RemoteStatus, type Settings, type Status, type VideoSize } from "./lib/api";
 import { HOME_MIN, HOME_SIZE, MIRROR_BAR, MIRROR_FRAME, MIRROR_MIN } from "./lib/frame";
 import { I18nProvider, resolveLocale, useI18n } from "./lib/i18n";
@@ -300,6 +300,7 @@ function Shell({
                 hidden={settingsOpen || helpOpen}
                 pause={paused ? { locked: status.locked, sound: status.sound, device } : null}
                 control={control}
+                android={status.client?.model === "Android"}
                 pointerSpeed={settings.pointerSpeed}
                 onCaptureChange={setCaptured}
                 onToggleFullscreen={() => void toggleFullscreen()}
@@ -317,13 +318,14 @@ function Shell({
         </AnimatePresence>
       </main>
 
-      <UpdatePill hidden={mirroring || settingsOpen || helpOpen} />
+      <UpdateGate deferred={mirroring} />
 
       <SettingsSheet
         open={settingsOpen}
         onOpenChange={setSettingsOpen}
         settings={settings}
         remote={remote}
+        android={status.client?.model === "Android"}
         onChange={onSettingsChange}
       />
       <HelpSheet open={helpOpen} onOpenChange={setHelpOpen} state={diagnostics} />

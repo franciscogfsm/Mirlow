@@ -63,10 +63,17 @@ function LinkButton({
  * The way through pairing, one numbered step at a time. The steps a
  * connection proves done are ticked off, so it is plain what comes next.
  */
-function PairingGuide({ remote }: { remote: RemoteStatus }) {
+type Phone = "iphone" | "android";
+
+function PairingGuide({ remote, android }: { remote: RemoteStatus; android: boolean }) {
   const { t, format } = useI18n();
   const c = t.settings.control;
   const connected = remote.state === "connected";
+  // The steps for whichever phone is mirroring, or the iPhone's to begin with.
+  const [phone, setPhone] = useState<Phone>(android ? "android" : "iphone");
+  useEffect(() => {
+    if (android) setPhone("android");
+  }, [android]);
   const title = connected
     ? remote.host
       ? format(c.connectedTitle, { device: remote.host })
@@ -93,24 +100,45 @@ function PairingGuide({ remote }: { remote: RemoteStatus }) {
       <span className="mt-1.5 block text-faint">{c.steps.pointerSiri}</span>
     </>
   );
-  const steps: { text: string; done: boolean; more?: ReactNode }[] = [
-    {
-      text: remote.pcName ? format(c.steps.pair, { pc: remote.pcName }) : c.steps.pairUnknown,
-      done: connected,
-    },
-    { text: c.steps.confirm, done: connected },
-    { text: c.steps.pointer, done: false, more: assistiveTouch },
-    { text: c.steps.use, done: false },
-  ];
+  const steps: { text: string; done: boolean; more?: ReactNode }[] =
+    phone === "iphone"
+      ? [
+          {
+            text: remote.pcName ? format(c.steps.pair, { pc: remote.pcName }) : c.steps.pairUnknown,
+            done: connected,
+          },
+          { text: c.steps.confirm, done: connected },
+          { text: c.steps.pointer, done: false, more: assistiveTouch },
+          { text: c.steps.use, done: false },
+        ]
+      : [
+          {
+            text: remote.pcName ? format(c.android.pair, { pc: remote.pcName }) : c.android.pairUnknown,
+            done: connected,
+          },
+          { text: c.android.confirm, done: connected },
+          { text: c.android.use, done: false },
+        ];
 
   return (
     <div className="mt-3 rounded-xl bg-raised/60 px-3.5 py-3 text-[12.5px] leading-snug" role="status">
-      <p className="flex items-center gap-2 font-medium text-ink">
-        <span
-          className={`h-1.5 w-1.5 shrink-0 rounded-full ${connected ? "bg-mint" : "bg-faint animate-pulse"}`}
+      <div className="flex items-center justify-between gap-3">
+        <p className="flex min-w-0 items-center gap-2 font-medium text-ink">
+          <span
+            className={`h-1.5 w-1.5 shrink-0 rounded-full ${connected ? "bg-mint" : "bg-faint animate-pulse"}`}
+          />
+          {title}
+        </p>
+        <Segmented<Phone>
+          label={c.phone}
+          value={phone}
+          onChange={setPhone}
+          options={[
+            { value: "iphone", label: c.iphone },
+            { value: "android", label: c.android.name },
+          ]}
         />
-        {title}
-      </p>
+      </div>
       <ol className="mt-2.5 space-y-2">
         {steps.map((step, index) => (
           <li key={step.text} className={`flex gap-2.5 ${step.done ? "text-faint" : "text-soft"}`}>
@@ -128,13 +156,13 @@ function PairingGuide({ remote }: { remote: RemoteStatus }) {
           </li>
         ))}
       </ol>
-      {connected && <p className="mt-2.5 text-faint">{c.stuck}</p>}
+      {connected && <p className="mt-2.5 text-faint">{phone === "iphone" ? c.stuck : c.android.stuck}</p>}
     </div>
   );
 }
 
 /** What to do next for mouse and keyboard, given where Bluetooth stands. */
-function RemoteNote({ remote }: { remote: RemoteStatus }) {
+function RemoteNote({ remote, android }: { remote: RemoteStatus; android: boolean }) {
   const { t } = useI18n();
   const c = t.settings.control;
   let lines: string[];
@@ -142,7 +170,7 @@ function RemoteNote({ remote }: { remote: RemoteStatus }) {
   switch (remote.state) {
     case "waiting":
     case "connected":
-      return <PairingGuide remote={remote} />;
+      return <PairingGuide remote={remote} android={android} />;
     case "off":
     case "starting":
       lines = [c.starting];
@@ -210,12 +238,15 @@ export function SettingsSheet({
   onOpenChange,
   settings,
   remote,
+  android,
   onChange,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   settings: Settings;
   remote: RemoteStatus | null;
+  /** An Android phone is mirroring, so its steps come first. */
+  android: boolean;
   onChange: (patch: Partial<Settings>) => void;
 }) {
   const { t, format } = useI18n();
@@ -318,7 +349,7 @@ export function SettingsSheet({
           </div>
         )}
         {remote &&
-          (settings.control ? <RemoteNote remote={remote} /> : <SupportLine support={remote.support} />)}
+          (settings.control ? <RemoteNote remote={remote} android={android} /> : <SupportLine support={remote.support} />)}
       </div>
 
       <Row label={s.theme.label}>

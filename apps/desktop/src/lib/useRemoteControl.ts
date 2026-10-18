@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
-import { api } from "./api";
+import { api, type VideoSize } from "./api";
+
+/** The short side of most Android phones' screens, in pixels. */
+const ANDROID_SHORT_SIDE = 1080;
 
 /**
  * How far the phone's pointer goes for each count of the mouse.
@@ -8,13 +11,20 @@ import { api } from "./api";
  * physical pixel each at Windows' usual pointer speed. At the middle of the
  * speed setting, moving the mouse across the picture moves the phone's
  * pointer across the same part of the phone's screen, as if the PC's own
- * cursor were on it. The phone's pointer moves in points, about three of the
- * picture's pixels each. Each step of the setting either side is a quarter
+ * cursor were on it. Each step of the setting either side is a quarter
  * faster or slower.
+ *
+ * An iPhone's pointer moves in points, about three of the picture's pixels
+ * each. An Android phone's moves in the screen's own pixels, and its picture
+ * arrives scaled to fit Miracast's frame, so the phone's screen is taken to
+ * be as wide as most are: 1080 pixels across its short side.
  */
-export function pointerScale(speed: number, videoWidth: number, pictureWidth: number): number {
+export function pointerScale(speed: number, video: VideoSize, pictureWidth: number, android: boolean): number {
   const physical = pictureWidth * (window.devicePixelRatio || 1);
-  const matched = physical > 0 ? videoWidth / 3 / physical : 1;
+  const across = android
+    ? (video.width * ANDROID_SHORT_SIDE) / Math.max(1, Math.min(video.width, video.height))
+    : video.width / 3;
+  const matched = physical > 0 ? across / physical : 1;
   return matched * Math.pow(1.25, Math.min(10, Math.max(1, speed)) - 5);
 }
 

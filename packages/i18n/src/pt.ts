@@ -204,12 +204,24 @@ export const pt: Dictionary = {
           pairUnknown: "No telemóvel, abra Definições › Bluetooth e toque neste PC.",
           confirm:
             "O Windows mostra então uma notificação de emparelhamento com um código, normalmente no fundo do ecrã. Clique nela e aceite. Só da primeira vez.",
-          pointer: "Só no iPhone: ative o AssistiveTouch, senão não vê o cursor. No iPhone, toque em:",
+          pointer: "Ative o AssistiveTouch, senão não vê o cursor. No iPhone, toque em:",
           pointerPath: ["Definições", "Acessibilidade", "Toque", "AssistiveTouch", "Ativar"],
           pointerSiri: "Mais rápido: mantenha o botão lateral premido e diga “Ativa o AssistiveTouch”.",
           use: "Durante a projeção, clique na imagem para controlar o telemóvel. Prima Esc para recuperar o rato.",
         },
         stuck: "Ligado mas nada acontece? No telemóvel, toque em ⓘ ao lado deste PC, escolha Esquecer este dispositivo e emparelhe de novo.",
+        phone: "Telemóvel",
+        iphone: "iPhone",
+        android: {
+          name: "Android",
+          pair: "No telemóvel, abra Definições › Bluetooth (nalguns telemóveis, Dispositivos ligados › Emparelhar novo dispositivo) e toque em “{pc}”.",
+          pairUnknown:
+            "No telemóvel, abra Definições › Bluetooth (nalguns telemóveis, Dispositivos ligados › Emparelhar novo dispositivo) e toque neste PC.",
+          confirm:
+            "Toque em Emparelhar no telemóvel. O Windows mostra então uma notificação de emparelhamento, normalmente no fundo do ecrã: clique nela e aceite. Só da primeira vez.",
+          use: "Durante a projeção, clique na imagem para controlar o telemóvel. O cursor aparece sozinho. O botão direito volta atrás, e Esc devolve-lhe o rato.",
+          stuck: "Ligado mas nada acontece? No telemóvel, toque em ⚙ ao lado deste PC, escolha Desemparelhar ou Esquecer, e emparelhe de novo.",
+        },
         bluetoothOff: "O Bluetooth está desligado neste PC. Ligue-o nas definições do Windows.",
         noBluetooth: "Este PC não tem Bluetooth.",
         unsupported:
@@ -246,7 +258,7 @@ export const pt: Dictionary = {
     },
     update: {
       available: "Já saiu o Mirlow {version}",
-      action: "Atualizar",
+      required: "A atualizar para a versão mais recente. O Mirlow volta a abrir sozinho daqui a pouco.",
       downloading: "A atualizar… {percent}%",
       installing: "A instalar…",
       failed: "A atualização não terminou",
@@ -475,7 +487,7 @@ export const pt: Dictionary = {
         },
         {
           title: "Atualizações",
-          body: "Enquanto está aberto, o Mirlow pergunta ao GitHub, onde as versões são publicadas, se existe uma versão mais recente: pouco depois de abrir e depois de poucas em poucas horas. O pedido não diz nada sobre si nem sobre o seu PC além do que qualquer ligação revela, como o seu endereço IP, que o GitHub pode registar de acordo com a sua própria política de privacidade. Uma nova versão só é transferida quando escolhe Atualizar, e só é instalada se tiver a nossa assinatura.",
+          body: "Enquanto está aberto, o Mirlow pergunta ao GitHub, onde as versões são publicadas, se existe uma versão mais recente: pouco depois de abrir e depois de poucas em poucas horas. O pedido não diz nada sobre si nem sobre o seu PC além do que qualquer ligação revela, como o seu endereço IP, que o GitHub pode registar de acordo com a sua própria política de privacidade. Quando sai uma versão mais recente, o Mirlow transfere-a e instala-a de imediato, e só se tiver a nossa assinatura.",
         },
         {
           title: "O que fica no seu PC",
