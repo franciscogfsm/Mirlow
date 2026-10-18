@@ -4,6 +4,6 @@
 // checksum and links to the VirusTotal report for it, so publish the site
 // together with the installer this was generated from.
 export const release = {
-  version: "1.7.0",
-  sha256: "6eb32ef3b437198e9538c344901fe441a81a8af7c711ad6629effa45e5235c86",
+  version: "1.8.0",
+  sha256: "6f38e94afa22ded8de5384a853d662c6b0a68d5296a8f8a67ebd0fb4f3e523bd",
 } as const;
