@@ -61,7 +61,7 @@ export function HeroChapter({ t, how }: { t: Site["hero"]; how: Site["how"] }) {
       <div className="grid w-full items-center gap-12 pinned:grid-cols-[minmax(0,6fr)_minmax(0,7fr)] pinned:gap-14">
         <div className="flex flex-col items-center text-center pinned:items-start pinned:text-left">
           <p
-            className="rise mb-6 inline-flex h-8 items-center gap-2 rounded-full border border-line-strong bg-raised/60 pl-3 pr-3.5 text-[13.5px] font-medium"
+            className="rise mb-5 inline-flex h-8 items-center gap-2 rounded-full border border-line-strong bg-raised/60 pl-3 pr-3.5 text-[13.5px] font-medium"
             style={order(0)}
           >
             <Airplay size={15} strokeWidth={1.8} aria-hidden="true" />
@@ -80,7 +80,7 @@ export function HeroChapter({ t, how }: { t: Site["hero"]; how: Site["how"] }) {
             className="rise mt-6 max-w-[500px] text-[clamp(1.02rem,1.3vw,1.16rem)] leading-relaxed text-soft"
             style={order(3)}
           >
-            <strong className="font-medium text-ink">{t.bodyLead}</strong> {t.body}
+            {t.body}
           </p>
 
           <div className="rise mt-9 flex flex-wrap items-center justify-center gap-3 pinned:justify-start" style={order(4)}>
