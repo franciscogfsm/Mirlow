@@ -362,7 +362,9 @@ export const pt: Dictionary = {
       titleLine1: "Qualquer telemóvel",
       titleLine2: "no Windows.",
       titleAccent: "Grátis.",
-      body: "Abra o Mirlow, toque em Projeção do ecrã no iPhone ou em Smart View no Android, e o seu ecrã aparece no PC. Não precisa de instalar nada no telemóvel.",
+      badge: "Recetor AirPlay para Windows",
+      bodyLead: "O Mirlow transforma o PC num recetor AirPlay, como uma Apple TV.",
+      body: "Toque em Projeção do ecrã no iPhone, ou em Smart View no Android, e o seu ecrã aparece no PC. Não precisa de instalar nada no telemóvel.",
       cta: "Transferir para Windows — Grátis",
       ctaShort: "Transferir — Grátis",
       promises: ["100% grátis", "Sem app no telemóvel", "Sem cabos", "Sem conta"],
@@ -418,7 +420,7 @@ export const pt: Dictionary = {
       items: [
         {
           title: "Projeção sem fios",
-          body: "Usa a projeção do ecrã que já vem no iPhone, no iPad ou no telemóvel Android. Sem aplicação, sem cabo.",
+          body: "AirPlay no iPhone, iPad e Mac, Miracast no Android: a projeção do ecrã que o telemóvel já tem. Sem aplicação, sem cabo.",
         },
         {
           title: "Com som",
@@ -469,12 +471,12 @@ export const pt: Dictionary = {
       title: "Convém saber",
       items: [
         {
-          q: "De que preciso?",
-          a: "De um PC com Windows 10 ou 11 (64 bits) e de um iPhone, iPad ou telemóvel Android. O iPhone ou iPad tem de estar na mesma rede do PC, por Wi‑Fi ou por cabo. O telemóvel Android liga‑se diretamente ao PC, por isso o PC precisa de Wi‑Fi.",
+          q: "Como funciona sem aplicação no iPhone?",
+          a: "O iPhone já traz o AirPlay de origem: é o que o botão Projeção do ecrã, na Central de controlo, usa para enviar o ecrã para uma Apple TV. O Mirlow transforma o PC num recetor AirPlay, por isso o PC aparece nessa mesma lista. Os telemóveis Android funcionam da mesma forma com o Miracast, a norma por trás do Smart View.",
         },
         {
-          q: "Tenho de instalar alguma coisa no iPhone?",
-          a: "Não. O Mirlow funciona com o botão Projeção do ecrã que já existe na Central de controlo.",
+          q: "De que preciso?",
+          a: "De um PC com Windows 10 ou 11 (64 bits) e de um iPhone, iPad ou telemóvel Android. O iPhone ou iPad tem de estar na mesma rede do PC, por Wi‑Fi ou por cabo. O telemóvel Android liga‑se diretamente ao PC, por isso o PC precisa de Wi‑Fi.",
         },
         {
           q: "Funciona com Android?",

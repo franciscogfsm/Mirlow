@@ -355,7 +355,9 @@ export const en = {
       titleLine1: "Mirror any phone",
       titleLine2: "to Windows.",
       titleAccent: "For free.",
-      body: "Open Mirlow, tap Screen Mirroring on your iPhone or Smart View on your Android, and your screen is on your PC. Nothing to install on your phone.",
+      badge: "AirPlay receiver for Windows",
+      bodyLead: "Mirlow turns your PC into an AirPlay receiver, like an Apple TV.",
+      body: "Tap Screen Mirroring on your iPhone, or Smart View on your Android, and your screen is on your PC. Nothing to install on your phone.",
       cta: "Download for Windows — Free",
       ctaShort: "Download — Free",
       promises: ["100% free", "No app on your phone", "No cables", "No account"],
@@ -410,7 +412,7 @@ export const en = {
       items: [
         {
           title: "Wireless mirroring",
-          body: "Uses the screen mirroring already built into your iPhone, iPad or Android phone. No app, no cable.",
+          body: "AirPlay on iPhone, iPad and Mac, Miracast on Android: the screen mirroring your phone already has. No app, no cable.",
         },
         {
           title: "Sound included",
@@ -461,12 +463,12 @@ export const en = {
       title: "Good to know",
       items: [
         {
-          q: "What do I need?",
-          a: "A PC with Windows 10 or 11 (64‑bit) and an iPhone, iPad or Android phone. An iPhone or iPad needs to be on the same Wi‑Fi or wired network as the PC. An Android phone connects to the PC directly, so the PC needs Wi‑Fi.",
+          q: "How does it work with no app on my iPhone?",
+          a: "Your iPhone already has AirPlay built in: it's what the Screen Mirroring button in Control Centre uses to send your screen to an Apple TV. Mirlow makes your PC an AirPlay receiver, so it shows up in that same list. Android phones work the same way with Miracast, the standard behind Smart View.",
         },
         {
-          q: "Do I need to install anything on my iPhone?",
-          a: "No. Mirlow works with the Screen Mirroring button that's already in Control Centre.",
+          q: "What do I need?",
+          a: "A PC with Windows 10 or 11 (64‑bit) and an iPhone, iPad or Android phone. An iPhone or iPad needs to be on the same Wi‑Fi or wired network as the PC. An Android phone connects to the PC directly, so the PC needs Wi‑Fi.",
         },
         {
           q: "Does it work with Android?",
