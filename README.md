@@ -9,11 +9,11 @@
 Open Mirlow, tap Screen Mirroring on your iPhone or Smart View on your Android, and your screen is on your PC.<br>
 No app on the phone, no account, no cable.
 
-[![Downloads](https://img.shields.io/github/downloads/franciscogfsm/Mirlow/total?style=flat-square&label=downloads&color=111111)](https://github.com/franciscogfsm/Mirlow/releases)
-[![Latest release](https://img.shields.io/github/v/release/franciscogfsm/Mirlow?style=flat-square&label=release&color=111111)](https://github.com/franciscogfsm/Mirlow/releases/latest)
-[![Stars](https://img.shields.io/github/stars/franciscogfsm/Mirlow?style=flat-square&color=111111)](https://github.com/franciscogfsm/Mirlow/stargazers)
-[![Licence](https://img.shields.io/badge/licence-GPL--3.0-111111?style=flat-square)](LICENSE)
-[![Platform](https://img.shields.io/badge/Windows-10%20%C2%B7%2011-111111?style=flat-square)](#install)
+[![Downloads](https://img.shields.io/github/downloads/franciscogfsm/Mirlow/total?style=flat&label=downloads&color=2EA043)](https://github.com/franciscogfsm/Mirlow/releases)
+[![Latest release](https://img.shields.io/github/v/release/franciscogfsm/Mirlow?style=flat&label=release&color=0969DA)](https://github.com/franciscogfsm/Mirlow/releases/latest)
+[![Stars](https://img.shields.io/github/stars/franciscogfsm/Mirlow?style=flat&color=E3B341)](https://github.com/franciscogfsm/Mirlow/stargazers)
+[![Licence](https://img.shields.io/badge/licence-GPL--3.0-A42E2B?style=flat)](LICENSE)
+[![Platform](https://img.shields.io/badge/Windows-10%20%C2%B7%2011-0078D4?style=flat&logo=windows&logoColor=white)](#install)
 
 ### [Download for Windows](https://github.com/franciscogfsm/Mirlow/releases/latest/download/Mirlow-Setup-x64.exe)
 
