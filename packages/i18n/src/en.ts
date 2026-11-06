@@ -172,6 +172,18 @@ export const en = {
       copyDetails: "Copy details for support",
       copied: "Copied. Paste them in a message.",
     },
+    welcome: {
+      title: "Thank you",
+      body: [
+        "Thank you so much for using Mirlow.",
+        "I'm just a student who wants to make life a little easier for developers and for anyone who needs this. It's free, and it always will be.",
+        "If it helps you, the best thing you could do is share it with someone else. It truly means a lot.",
+      ],
+      signature: "— Francisco",
+      share: "Copy link to share",
+      copied: "Link copied. Thank you!",
+      start: "Let's go",
+    },
     settings: {
       title: "Settings",
       open: "Settings",

@@ -177,6 +177,18 @@ export const pt: Dictionary = {
       copyDetails: "Copiar detalhes para suporte",
       copied: "Copiado. Cole numa mensagem.",
     },
+    welcome: {
+      title: "Obrigado",
+      body: [
+        "Muito obrigado por usares o Mirlow.",
+        "Sou apenas um estudante que quer facilitar um bocadinho a vida a developers e a quem precise disto. É gratuito, e vai continuar a ser.",
+        "Se te for útil, o melhor que podes fazer é partilhá‑lo com mais alguém. Significa mesmo muito.",
+      ],
+      signature: "— Francisco",
+      share: "Copiar link para partilhar",
+      copied: "Link copiado. Obrigado!",
+      start: "Vamos lá",
+    },
     settings: {
       title: "Definições",
       open: "Definições",

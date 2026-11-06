@@ -7,6 +7,7 @@ import { HelpSheet } from "./components/HelpSheet";
 import { SettingsSheet } from "./components/SettingsSheet";
 import { TitleBar } from "./components/TitleBar";
 import { UpdateGate } from "./components/UpdateGate";
+import { WelcomeSheet } from "./components/WelcomeSheet";
 import { api, type RemoteStatus, type Settings, type Status, type VideoSize } from "./lib/api";
 import { HOME_MIN, HOME_SIZE, MIRROR_BAR, MIRROR_FRAME, MIRROR_MIN } from "./lib/frame";
 import { I18nProvider, resolveLocale, useI18n } from "./lib/i18n";
@@ -337,6 +338,7 @@ function Shell({
         onChange={onSettingsChange}
       />
       <HelpSheet open={helpOpen} onOpenChange={setHelpOpen} state={diagnostics} />
+      <WelcomeSheet />
     </div>
   );
 }
