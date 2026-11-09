@@ -196,10 +196,8 @@ export const pt: Dictionary = {
       stuck: "Continua sem funcionar? Pergunte, e terá resposta.",
       whatsNew: {
         title: "Já saiu o Mirlow {version}",
-        body: [
-          "O Mirlow atualizou‑se sozinho. Está tudo pronto.",
-          "O que deve fazer a seguir? Todas as ideias são lidas, e as mais votadas são feitas primeiro.",
-        ],
+        updated: "O Mirlow atualizou‑se sozinho. Está tudo pronto.",
+        ask: "O que deve fazer a seguir? Todas as ideias são lidas, e as mais votadas são feitas primeiro.",
         changes: "Ver as novidades",
         close: "Entendido",
       },

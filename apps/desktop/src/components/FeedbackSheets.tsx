@@ -1,4 +1,4 @@
-import { links } from "@mirlow/i18n";
+import { links, news } from "@mirlow/i18n";
 import { getVersion } from "@tauri-apps/api/app";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useEffect, useRef, useState } from "react";
@@ -35,9 +35,11 @@ const feature = (version: string) => version.split(".").slice(0, 2).join(".");
  * and where to ask for what comes next.
  */
 function WhatsNewSheet() {
-  const { t, format } = useI18n();
+  const { t, format, locale } = useI18n();
   const w = t.feedback.whatsNew;
   const [version, setVersion] = useState<string | null>(null);
+  // Only this release's list: an older one would describe changes the user already had.
+  const items = version && news.version === feature(version) ? news[locale] : [];
 
   useEffect(() => {
     void getVersion().then((current) => {
@@ -58,11 +60,18 @@ function WhatsNewSheet() {
       title={format(w.title, { version: version ?? "" })}
       closeLabel={t.settings.close}
     >
-      <div className="space-y-3 pt-2 text-[14px] leading-relaxed text-soft">
-        {w.body.map((line) => (
-          <p key={line}>{line}</p>
-        ))}
-      </div>
+      {items.length === 0 && <p className="pt-2 text-[14px] leading-relaxed text-soft">{w.updated}</p>}
+      {items.length > 0 && (
+        <ul className="mt-2 space-y-2.5 text-[14px] leading-relaxed">
+          {items.map((item) => (
+            <li key={item} className="flex gap-3">
+              <span className="mt-[0.6em] size-1.5 shrink-0 rounded-full bg-ink" aria-hidden="true" />
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="mt-5 text-[14px] leading-relaxed text-soft">{w.ask}</p>
       <div className="mt-6 flex flex-wrap gap-2">
         <GlassButton tone="accent" onClick={() => void openUrl(links.idea)}>
           {t.feedback.idea}

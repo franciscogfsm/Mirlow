@@ -3,6 +3,8 @@ import { pt } from "./pt";
 
 export type { Dictionary };
 export { links } from "./links";
+/** What the newest feature release changed, shown once after updating. Edit before each minor or major release. */
+export { default as news } from "./news.json";
 
 export const locales = ["en", "pt"] as const;
 export type Locale = (typeof locales)[number];

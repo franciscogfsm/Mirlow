@@ -191,10 +191,8 @@ export const en = {
       stuck: "Still stuck? Ask, and you'll get an answer.",
       whatsNew: {
         title: "Mirlow {version} is here",
-        body: [
-          "Mirlow updated itself. Everything is ready.",
-          "What should it do next? Every idea is read, and the most‑voted ones are built first.",
-        ],
+        updated: "Mirlow updated itself. Everything is ready.",
+        ask: "What should it do next? Every idea is read, and the most‑voted ones are built first.",
         changes: "See what's new",
         close: "Got it",
       },

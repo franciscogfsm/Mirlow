@@ -8,7 +8,8 @@
 #   .\scripts\release.ps1 0.3.0           exactly this version
 #   .\scripts\release.ps1 -All            also commit whatever is uncommitted
 #   .\scripts\release.ps1 -Engine         rebuild the AirPlay engine first
-#   .\scripts\release.ps1 -Notes "..."    release notes (default: generated from commits)
+#   .\scripts\release.ps1 -Notes "..."    release notes (default: news.json for a feature
+#                                         release, generated from commits for a patch)
 #
 # If the build fails, nothing has been committed or pushed. Fix the problem and
 # run it again with the version it printed, e.g. .\scripts\release.ps1 0.1.1
@@ -72,6 +73,21 @@ if ($Version -in 'patch', 'minor', 'major') {
 }
 $tag = "v$Version"
 if (git tag --list $tag) { throw "$tag already exists. Pick another version." }
+
+# A feature release (minor or major) shows users what's new once they update,
+# from packages\i18n\src\news.json. Refuse to ship one without it written.
+$feature = ($Version.Split('.')[0..1]) -join '.'
+$news = Get-Content (Join-Path $repo 'packages\i18n\src\news.json') -Raw -Encoding utf8 | ConvertFrom-Json
+if ($feature -ne (($current.Split('.')[0..1]) -join '.')) {
+    if ($news.version -ne $feature -or $news.en.Count -eq 0 -or $news.pt.Count -eq 0) {
+        throw "Write what's new in $feature first: packages\i18n\src\news.json (version `"$feature`", in English and Portuguese), and commit it."
+    }
+    if (-not $Notes) {
+        $Notes = (@("## What's new") + ($news.en | ForEach-Object { "- $_" }) + @(
+            '', 'Got an idea or a question? [Join the discussion](https://github.com/franciscogfsm/mirlow/discussions).'
+        )) -join "`n"
+    }
+}
 
 Write-Host "Releasing Mirlow $Version (was $current)" -ForegroundColor Cyan
 
