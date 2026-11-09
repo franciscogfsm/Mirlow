@@ -1,6 +1,8 @@
 # The second half of building a release, run on the installer in .\release\
 # once it is final (for a published release: after it has been code-signed,
 # since signing changes the file). Writes:
+#   Mirlow-Update-x64.exe       the same installer, for the updater (kept apart so
+#                               updates do not count as downloads)
 #   latest.json                 what the app's updater reads: the newest version
 #                               and the installer's updater signature
 #   SHA256SUMS.txt              checksums of everything in .\release\
@@ -40,15 +42,19 @@ $signatureFile = "$installer.sig"
 $signature = (Get-Content $signatureFile -Raw).Trim()
 Remove-Item $signatureFile
 
-# The updater's manifest. It points at the installer this release attaches to
-# GitHub, under the same name the website links to.
+# The updater downloads its own copy of the installer, so GitHub's download
+# count of Mirlow-Setup-x64.exe is only people downloading it, not updates.
+# Same bytes, so the same updater signature.
+Copy-Item $installer (Join-Path $release 'Mirlow-Update-x64.exe') -Force
+
+# The updater's manifest, pointing at that copy.
 $manifest = [ordered]@{
     version   = $version
     pub_date  = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
     platforms = [ordered]@{
         'windows-x86_64' = [ordered]@{
             signature = $signature
-            url       = "https://github.com/franciscogfsm/Mirlow/releases/download/v$version/Mirlow-Setup-x64.exe"
+            url       = "https://github.com/franciscogfsm/Mirlow/releases/download/v$version/Mirlow-Update-x64.exe"
         }
     }
 }
