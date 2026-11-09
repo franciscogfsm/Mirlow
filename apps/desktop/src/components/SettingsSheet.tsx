@@ -383,6 +383,9 @@ export function SettingsSheet({
       <footer className="pt-6 text-[12px] leading-relaxed text-soft">
         <p>{s.about.free}</p>
         <p className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
+          <LinkButton href={links.idea}>{t.feedback.idea}</LinkButton>
+          <LinkButton href={links.ask}>{t.feedback.ask}</LinkButton>
+          <LinkButton href={links.bug}>{t.feedback.bug}</LinkButton>
           <LinkButton href={links.repository}>{s.about.source}</LinkButton>
           <LinkButton href={links.licenses}>{s.about.licenses}</LinkButton>
         </p>

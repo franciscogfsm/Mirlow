@@ -72,6 +72,9 @@ export function SiteFrame({
             <Link className="transition-colors hover:text-ink" href={pagePath(locale, "codeSigning")}>
               {t.footer.codeSigning}
             </Link>
+            <a className="transition-colors hover:text-ink" href={links.community}>
+              {t.footer.community}
+            </a>
             <a
               id="contact"
               href={`mailto:${links.email}?subject=${encodeURIComponent(t.contact.subject)}`}

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Ask a question
+    url: https://github.com/franciscogfsm/mirlow/discussions/new?category=q-a
+    about: Stuck on something, or not sure how it works? Ask here.
+  - name: Suggest a feature
+    url: https://github.com/franciscogfsm/mirlow/discussions/new?category=ideas
+    about: Ideas get voted on. The most-voted are built first.

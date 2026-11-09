@@ -4,11 +4,11 @@ import { useI18n } from "../lib/i18n";
 import { GlassButton } from "./controls";
 import { Sheet } from "./Sheet";
 
-const SEEN_KEY = "mirlow.welcomeSeen";
+export const WELCOME_KEY = "mirlow.welcomeSeen";
 
 function seen() {
   try {
-    return localStorage.getItem(SEEN_KEY) === "1";
+    return localStorage.getItem(WELCOME_KEY) === "1";
   } catch {
     return true; // no storage: better never than every launch
   }
@@ -28,7 +28,7 @@ export function WelcomeSheet() {
     setOpen(next);
     if (!next) {
       try {
-        localStorage.setItem(SEEN_KEY, "1");
+        localStorage.setItem(WELCOME_KEY, "1");
       } catch {}
     }
   };
@@ -45,7 +45,7 @@ export function WelcomeSheet() {
         <GlassButton
           tone="accent"
           onClick={() =>
-            void navigator.clipboard.writeText(links.repository).then(() => setCopied(true), () => {})
+            void navigator.clipboard.writeText(links.website).then(() => setCopied(true), () => {})
           }
         >
           {copied ? w.copied : w.share}

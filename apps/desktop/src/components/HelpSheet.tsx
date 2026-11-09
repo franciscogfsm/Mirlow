@@ -1,5 +1,7 @@
 import { Globe, Lock, RotateCw, Shield, ShieldCheck, Smartphone, Wifi, WifiOff } from "lucide-react";
+import { links } from "@mirlow/i18n";
 import { getVersion } from "@tauri-apps/api/app";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { useEffect, useState, type ReactNode } from "react";
 import { api } from "../lib/api";
 import { useI18n } from "../lib/i18n";
@@ -184,6 +186,16 @@ export function HelpSheet({
           </GlassButton>
         </Item>
       </ul>
+
+      <div className="mt-2 rounded-2xl border border-line px-4 py-3.5">
+        <p className="text-[12.5px] text-soft">{t.feedback.stuck}</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <GlassButton tone="accent" onClick={() => void openUrl(links.ask)}>
+            {t.feedback.ask}
+          </GlassButton>
+          <GlassButton onClick={() => void openUrl(links.bug)}>{t.feedback.bug}</GlassButton>
+        </div>
+      </div>
 
       <button
         type="button"

@@ -1,0 +1,30 @@
+name: Report a problem
+description: Something in Mirlow doesn't work as it should.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: dropdown
+    id: phone
+    attributes:
+      label: Phone
+      options: [iPhone or iPad, Android]
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: Mirlow version (Settings, at the bottom), Windows version, phone model and OS version.
+      placeholder: Mirlow 1.10.0, Windows 11 24H2, iPhone 15 on iOS 26
+  - type: textarea
+    id: details
+    attributes:
+      label: Details for support
+      description: In Mirlow, open Help and click "Copy details for support", then paste here.
+      render: text

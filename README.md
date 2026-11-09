@@ -102,8 +102,11 @@ by, or certified by Apple Inc. or Google LLC.
 ## Support the project
 
 If Mirlow is useful to you, [star the repository](https://github.com/franciscogfsm/Mirlow/stargazers)
-so other people can find it, and [open an issue](https://github.com/franciscogfsm/Mirlow/issues)
-when something does not work.
+so other people can find it.
+
+- Stuck? [Ask a question](https://github.com/franciscogfsm/Mirlow/discussions/categories/q-a).
+- Want something new? [Suggest a feature](https://github.com/franciscogfsm/Mirlow/discussions/categories/ideas) and upvote the ones you like. The most-voted are built first.
+- Something broken? [Report a problem](https://github.com/franciscogfsm/Mirlow/issues/new/choose).
 
 ---
 

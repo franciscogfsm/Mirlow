@@ -189,6 +189,34 @@ export const pt: Dictionary = {
       copied: "Link copiado. Obrigado!",
       start: "Vamos lá",
     },
+    feedback: {
+      ask: "Fazer uma pergunta",
+      idea: "Sugerir uma funcionalidade",
+      bug: "Reportar um problema",
+      stuck: "Continua sem funcionar? Pergunte, e terá resposta.",
+      whatsNew: {
+        title: "Já saiu o Mirlow {version}",
+        body: [
+          "O Mirlow atualizou‑se sozinho. Está tudo pronto.",
+          "O que deve fazer a seguir? Todas as ideias são lidas, e as mais votadas são feitas primeiro.",
+        ],
+        changes: "Ver as novidades",
+        close: "Entendido",
+      },
+      love: {
+        title: "Está a gostar do Mirlow?",
+        yes: "Sim!",
+        no: "Nem por isso",
+        yesTitle: "Isso fez‑me o dia",
+        yesBody:
+          "O Mirlow não tem anúncios nem marketing. Só cresce quando pessoas como você o partilham. Uma estrela no GitHub ou um link enviado a um amigo ajuda mais do que imagina.",
+        star: "Dar uma estrela no GitHub",
+        share: "Copiar link para partilhar",
+        copied: "Link copiado. Obrigado!",
+        noTitle: "Lamento",
+        noBody: "Diga‑me o que correu mal ou o que falta, e farei o possível para resolver.",
+      },
+    },
     settings: {
       title: "Definições",
       open: "Definições",
@@ -543,6 +571,7 @@ export const pt: Dictionary = {
       subject: "Mirlow",
     },
     footer: {
+      community: "Perguntas e ideias",
       guides: "Guias",
       privacy: "Privacidade",
       licenses: "Licenças",

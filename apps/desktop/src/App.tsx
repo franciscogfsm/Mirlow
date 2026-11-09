@@ -3,6 +3,7 @@ import { LogicalPosition, LogicalSize } from "@tauri-apps/api/dpi";
 import { currentMonitor, getCurrentWindow } from "@tauri-apps/api/window";
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { FeedbackSheets } from "./components/FeedbackSheets";
 import { HelpSheet } from "./components/HelpSheet";
 import { SettingsSheet } from "./components/SettingsSheet";
 import { TitleBar } from "./components/TitleBar";
@@ -339,6 +340,7 @@ function Shell({
       />
       <HelpSheet open={helpOpen} onOpenChange={setHelpOpen} state={diagnostics} />
       <WelcomeSheet />
+      <FeedbackSheets mirroring={mirroring} />
     </div>
   );
 }

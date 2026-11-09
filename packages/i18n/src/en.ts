@@ -184,6 +184,34 @@ export const en = {
       copied: "Link copied. Thank you!",
       start: "Let's go",
     },
+    feedback: {
+      ask: "Ask a question",
+      idea: "Suggest a feature",
+      bug: "Report a problem",
+      stuck: "Still stuck? Ask, and you'll get an answer.",
+      whatsNew: {
+        title: "Mirlow {version} is here",
+        body: [
+          "Mirlow updated itself. Everything is ready.",
+          "What should it do next? Every idea is read, and the most‑voted ones are built first.",
+        ],
+        changes: "See what's new",
+        close: "Got it",
+      },
+      love: {
+        title: "Enjoying Mirlow?",
+        yes: "Yes!",
+        no: "Not really",
+        yesTitle: "That made my day",
+        yesBody:
+          "Mirlow has no ads and no marketing. It grows only when people like you share it. A star on GitHub or a link sent to a friend helps more than you'd think.",
+        star: "Star on GitHub",
+        share: "Copy link to share",
+        copied: "Link copied. Thank you!",
+        noTitle: "Sorry about that",
+        noBody: "Tell me what went wrong or what's missing, and I'll do my best to fix it.",
+      },
+    },
     settings: {
       title: "Settings",
       open: "Settings",
@@ -535,6 +563,7 @@ export const en = {
       subject: "Mirlow",
     },
     footer: {
+      community: "Questions and ideas",
       guides: "Guides",
       privacy: "Privacy",
       licenses: "Licences",
