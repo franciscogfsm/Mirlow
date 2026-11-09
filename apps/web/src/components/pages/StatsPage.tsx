@@ -5,7 +5,7 @@ import { Wordmark } from "@mirlow/ui";
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 
-/** Written every few hours by .github/workflows/stats.yml (scripts/stats/collect.mjs). */
+/** Written by scripts/stats.ps1 (npm run stats). */
 // Exact case: raw.githubusercontent.com does not follow the repository's renamed spelling.
 const source = "https://raw.githubusercontent.com/franciscogfsm/Mirlow/stats-data/stats.json";
 
@@ -140,8 +140,8 @@ function Feed({ list, empty, badge }: { list: Item[]; empty: string; badge?: (it
 
 /**
  * Everything about how Mirlow is doing, for the maintainer: downloads, stars,
- * and what people are asking for. Reads a file the stats workflow keeps up to
- * date, so the page itself tracks no one.
+ * and what people are asking for. Reads a file that `npm run stats` publishes,
+ * so the page itself tracks no one.
  */
 export function StatsPage() {
   const [state, setState] = useState<State>({ status: "loading" });
@@ -184,8 +184,7 @@ export function StatsPage() {
 
       {state.status === "error" && (
         <p className="mt-8 text-[15px] leading-relaxed text-soft">
-          The numbers aren't there yet. They appear after the “Collect stats” workflow has run once
-          in the repository's Actions tab.
+          The numbers aren't there yet. Run “npm run stats” in the repository to publish them.
         </p>
       )}
 
@@ -246,7 +245,7 @@ export function StatsPage() {
           </Section>
 
           <p className="mt-10 text-[13px] leading-relaxed text-faint">
-            Counted by GitHub and collected every 3 hours. Every download of the installer counts,
+            Counted by GitHub, collected each time “npm run stats” runs. Every download of the installer counts,
             including repeats and automatic updates, so this is an upper bound on the number of people.
           </p>
         </>

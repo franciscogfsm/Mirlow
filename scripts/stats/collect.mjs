@@ -1,6 +1,6 @@
 // Collects Mirlow's public numbers from GitHub into one stats.json, which the
-// website's /stats page reads. Run by .github/workflows/stats.yml every few
-// hours. GitHub only reports running download totals, so the daily numbers come
+// website's /stats page reads. Run by scripts/stats.ps1 (npm run stats). GitHub
+// only reports running download totals, so the daily numbers come
 // from keeping each day's last total in `history`.
 //
 //   GITHUB_TOKEN=... node scripts/stats/collect.mjs <previous stats.json> <output>
