@@ -82,7 +82,9 @@ const [ideas, questions] = await Promise.all([discussions(repo.ideas?.id), discu
 ideas.items.sort((a, b) => b.votes - a.votes || b.created.localeCompare(a.created));
 
 const total = releases.reduce((sum, each) => sum + each.downloads, 0);
-const previous = previousPath && existsSync(previousPath) ? JSON.parse(readFileSync(previousPath, "utf8")) : {};
+// Windows PowerShell saves the previous file with a byte-order mark, which JSON.parse rejects.
+const read = (path) => JSON.parse(readFileSync(path, "utf8").replace(/^﻿/, ""));
+const previous = previousPath && existsSync(previousPath) ? read(previousPath) : {};
 const today = new Date().toISOString().slice(0, 10);
 // One entry per day, holding that day's latest totals.
 const history = (previous.history ?? []).filter((day) => day.date !== today);
