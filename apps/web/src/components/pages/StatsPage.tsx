@@ -9,6 +9,15 @@ import { useEffect, useState, type ReactNode } from "react";
 // Exact case: raw.githubusercontent.com does not follow the repository's renamed spelling.
 const source = "https://raw.githubusercontent.com/franciscogfsm/Mirlow/stats-data/stats.json";
 
+const api = "https://api.github.com/repos/franciscogfsm/Mirlow";
+const installer = "Mirlow-Setup-x64.exe";
+type ApiRelease = {
+  tag_name: string;
+  published_at: string | null;
+  draft: boolean;
+  assets: { name: string; download_count: number }[];
+};
+
 type Item = {
   title: string;
   url: string;
@@ -148,9 +157,37 @@ export function StatsPage() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch(source, { cache: "no-store" })
-      .then((response) => (response.ok ? response.json() : Promise.reject(response.status)))
-      .then((stats: Stats) => !cancelled && setState({ status: "ready", stats }))
+    const json = (url: string) =>
+      fetch(url, { cache: "no-store" }).then((response) =>
+        response.ok ? response.json() : Promise.reject(response.status),
+      );
+    // Downloads and stars are public, so they are read live from GitHub (60 requests an
+    // hour per visitor); feedback and earlier days come from the last published snapshot.
+    Promise.all([
+      json(source) as Promise<Stats>,
+      (json(`${api}/releases?per_page=100`) as Promise<ApiRelease[]>).catch(() => null),
+      (json(api) as Promise<{ stargazers_count: number }>).catch(() => null),
+    ])
+      .then(([stats, releases, repo]) => {
+        if (cancelled) return;
+        if (releases) {
+          stats.releases = releases
+            .filter((each) => !each.draft)
+            .map((each) => ({
+              version: each.tag_name,
+              published: each.published_at,
+              downloads: each.assets.find((asset) => asset.name === installer)?.download_count ?? 0,
+            }));
+          stats.downloads = stats.releases.reduce((sum, each) => sum + each.downloads, 0);
+        }
+        if (repo) stats.stars = repo.stargazers_count;
+        const today = new Date().toISOString().slice(0, 10);
+        stats.history = [
+          ...stats.history.filter((day) => day.date !== today),
+          { date: today, downloads: stats.downloads, stars: stats.stars },
+        ];
+        setState({ status: "ready", stats });
+      })
       .catch(() => !cancelled && setState({ status: "error" }));
     return () => {
       cancelled = true;
@@ -245,7 +282,7 @@ export function StatsPage() {
           </Section>
 
           <p className="mt-10 text-[13px] leading-relaxed text-faint">
-            Counted by GitHub, collected each time “npm run stats” runs. Every download of the installer counts,
+            Downloads and stars are live from GitHub; feedback and past days update when “npm run stats” runs. Every download of the installer counts,
             including repeats and automatic updates, so this is an upper bound on the number of people.
           </p>
         </>
