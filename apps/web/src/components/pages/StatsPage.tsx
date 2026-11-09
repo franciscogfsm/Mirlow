@@ -6,7 +6,8 @@ import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 
 /** Written every few hours by .github/workflows/stats.yml (scripts/stats/collect.mjs). */
-const source = `${links.repository.replace("github.com", "raw.githubusercontent.com")}/stats-data/stats.json`;
+// Exact case: raw.githubusercontent.com does not follow the repository's renamed spelling.
+const source = "https://raw.githubusercontent.com/franciscogfsm/Mirlow/stats-data/stats.json";
 
 type Item = {
   title: string;
