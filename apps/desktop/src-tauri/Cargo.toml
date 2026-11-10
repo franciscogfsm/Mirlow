@@ -43,6 +43,7 @@ windows = { version = "0.61", features = [
   "Win32_Media",
   "Win32_Media_Audio",
   "Win32_Media_MediaFoundation",
+  "Win32_Storage_Xps",
   "Win32_Graphics_Imaging",
   "Win32_System_Com",
   "Win32_System_Com_StructuredStorage",

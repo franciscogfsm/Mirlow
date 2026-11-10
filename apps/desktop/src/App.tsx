@@ -206,12 +206,12 @@ function Shell({
     }
   }, [appWindow, video, mini, fullscreen]);
 
-  // On top of everything while small, and while recording, since whatever
-  // covered the picture would be recorded too.
+  // On top of everything while small. (Recording copies Mirlow's own window,
+  // so windows covering it are left out and it need not stay on top.)
   const recording = recordingSince !== null;
   useEffect(() => {
-    void appWindow.setAlwaysOnTop(mini || recording).catch(() => {});
-  }, [appWindow, mini, recording]);
+    void appWindow.setAlwaysOnTop(mini).catch(() => {});
+  }, [appWindow, mini]);
 
   const show = (text: string, onClick?: () => void, sticky = false) => setNotice({ text, onClick, sticky });
   const reveal = (path: string) => () => void revealItemInDir(path).catch(() => {});

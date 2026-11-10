@@ -2,17 +2,14 @@
 //!
 //! Whatever the phone, the picture is a window inside Mirlow's (see
 //! [`crate::video`]), drawn by the AirPlay engine, Miracast or scrcpy. Rather
-//! than reach into each of those, the picture is copied from the screen where
-//! that window is, which looks the same whichever drew it. Its sound is the
-//! PC's own output, recorded as it plays.
+//! than reach into each of those, Mirlow's window is copied as Windows draws
+//! it, and the picture cut out of that: it looks the same whichever drew it,
+//! and windows on top of Mirlow are left out. Its sound is the PC's own
+//! output, recorded as it plays.
 //!
 //! Recordings are H.264 video and AAC sound in an MP4, encoded by Windows'
 //! own Media Foundation (on the graphics card where there is one), so nothing
 //! has to be bundled for it.
-//!
-//! shortcut: copying from the screen also copies whatever covers the picture,
-//! so Mirlow keeps itself on top while it records; Windows.Graphics.Capture
-//! would not need that, if it ever matters.
 
 mod media;
 
@@ -45,12 +42,12 @@ pub struct Recorder {
 
 /// Saves what the picture shows now as a PNG in Pictures\Mirlow.
 pub fn screenshot(app: &AppHandle) -> Result<PathBuf, String> {
-    let area = crate::video::picture_on_screen(app).ok_or("Nothing is being mirrored.")?;
+    let (window, area) = crate::video::picture_on_screen(app).ok_or("Nothing is being mirrored.")?;
     let dir = app.path().picture_dir().map_err(|error| error.to_string())?.join("Mirlow");
     let path = name_in(&dir, "png")?;
     let (width, height) = (area.2, area.3);
     run_with_com(move || {
-        let pixels = media::opaque(platform::Grabber::new(width, height)?.grab(area)?);
+        let pixels = media::opaque(platform::Grabber::new(width, height)?.grab(window, area)?);
         platform::save_png(&path, width as u32, height as u32, &pixels)?;
         Ok(path)
     })
@@ -64,7 +61,7 @@ pub fn start(app: &AppHandle) -> Result<(), String> {
     if current.is_some() {
         return Ok(());
     }
-    let area = crate::video::picture_on_screen(app).ok_or("Nothing is being mirrored.")?;
+    let (_, area) = crate::video::picture_on_screen(app).ok_or("Nothing is being mirrored.")?;
     let dir = app.path().video_dir().map_err(|error| error.to_string())?.join("Mirlow");
     let path = name_in(&dir, "mp4")?;
     let stop = Arc::new(AtomicBool::new(false));

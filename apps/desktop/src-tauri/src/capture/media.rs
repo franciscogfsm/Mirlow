@@ -16,8 +16,8 @@ pub type Area = (i32, i32, i32, i32);
 
 /// Where the picture is, while there is one.
 pub enum Picture {
-    /// On screen, here.
-    Shown(Area),
+    /// In this top-level window (a handle), at this place on the screen.
+    Shown { window: isize, area: Area },
     /// Still there, but out of sight for now (paused, or a sheet is open).
     Hidden,
     /// Mirroring has ended.
@@ -89,8 +89,8 @@ pub fn record(
         match source() {
             Picture::Gone => break,
             Picture::Hidden => {}
-            Picture::Shown(area) => {
-                let written = grabber.grab(area).and_then(|pixels| encoder.video(&pixels, now, interval));
+            Picture::Shown { window, area } => {
+                let written = grabber.grab(window, area).and_then(|pixels| encoder.video(&pixels, now, interval));
                 if let Err(error) = written {
                     failure = Some(error);
                     break;
@@ -131,12 +131,14 @@ pub mod platform {
     use super::Area;
     use std::path::Path;
     use windows::core::HSTRING;
-    use windows::Win32::Foundation::GENERIC_WRITE;
+    use windows::Win32::Foundation::{GENERIC_WRITE, HWND, RECT};
     use windows::Win32::Graphics::Gdi::{
-        CreateCompatibleDC, CreateDIBSection, DeleteDC, DeleteObject, GetDC, ReleaseDC, SelectObject,
-        SetStretchBltMode, StretchBlt, BITMAPINFO, BITMAPINFOHEADER, BI_RGB, DIB_RGB_COLORS, HALFTONE, HBITMAP, HDC,
-        HGDIOBJ, SRCCOPY,
+        CreateCompatibleBitmap, CreateCompatibleDC, CreateDIBSection, DeleteDC, DeleteObject, GetDC, ReleaseDC,
+        SelectObject, SetStretchBltMode, StretchBlt, BITMAPINFO, BITMAPINFOHEADER, BI_RGB, DIB_RGB_COLORS, HALFTONE,
+        HBITMAP, HDC, HGDIOBJ, SRCCOPY,
     };
+    use windows::Win32::Storage::Xps::{PrintWindow, PRINT_WINDOW_FLAGS};
+    use windows::Win32::UI::WindowsAndMessaging::GetWindowRect;
     use windows::Win32::Graphics::Imaging::{
         CLSID_WICImagingFactory, GUID_ContainerFormatPng, GUID_WICPixelFormat32bppBGRA, IWICImagingFactory,
         WICBitmapEncoderNoCache,
@@ -210,8 +212,12 @@ pub mod platform {
         }
     }
 
-    /// Copies an area of the screen into a picture of a fixed size, scaled to
-    /// fit and centred on black.
+    /// Draw the window as the screen shows it, Direct3D content included.
+    const PW_RENDERFULLCONTENT: PRINT_WINDOW_FLAGS = PRINT_WINDOW_FLAGS(2);
+
+    /// Copies part of a window into a picture of a fixed size, scaled to fit
+    /// and centred on black. The window is copied as it draws itself, not from
+    /// the screen, so whatever covers it is left out.
     pub struct Grabber {
         screen: HDC,
         memory: HDC,
@@ -220,6 +226,10 @@ pub mod platform {
         bits: *mut u8,
         width: i32,
         height: i32,
+        /// The whole window, copied before the picture is cut out of it.
+        window: HDC,
+        /// Its bitmap, what it replaced, and its size.
+        window_bitmap: Option<(HBITMAP, HGDIOBJ, i32, i32)>,
     }
 
     impl Grabber {
@@ -227,6 +237,7 @@ pub mod platform {
             unsafe {
                 let screen = GetDC(None);
                 let memory = CreateCompatibleDC(Some(screen));
+                let window = CreateCompatibleDC(Some(screen));
                 let info = BITMAPINFO {
                     bmiHeader: BITMAPINFOHEADER {
                         biSize: size_of::<BITMAPINFOHEADER>() as u32,
@@ -244,20 +255,53 @@ pub mod platform {
                     Ok(bitmap) if !bits.is_null() => bitmap,
                     _ => {
                         let _ = DeleteDC(memory);
+                        let _ = DeleteDC(window);
                         ReleaseDC(None, screen);
                         return Err("Could not make room for the picture.".into());
                     }
                 };
                 let previous = SelectObject(memory, bitmap.into());
                 SetStretchBltMode(memory, HALFTONE);
-                Ok(Self { screen, memory, bitmap, previous, bits: bits as *mut u8, width, height })
+                Ok(Self {
+                    screen,
+                    memory,
+                    bitmap,
+                    previous,
+                    bits: bits as *mut u8,
+                    width,
+                    height,
+                    window,
+                    window_bitmap: None,
+                })
             }
         }
 
-        /// The area as BGRA pixels, top row first. The alpha bytes are not
-        /// set: see [`super::opaque`].
-        pub fn grab(&mut self, area: Area) -> Result<&[u8], String> {
-            let (x, y, width, height) = area;
+        /// The area of the screen (where it is now) as `window` draws it, as
+        /// BGRA pixels, top row first. The alpha bytes are not set: see
+        /// [`super::opaque`].
+        pub fn grab(&mut self, window: isize, area: Area) -> Result<&[u8], String> {
+            let hwnd = HWND(window as *mut core::ffi::c_void);
+            let mut rect = RECT::default();
+            unsafe { GetWindowRect(hwnd, &mut rect) }.map_err(|_| "The window has gone.")?;
+            let size = (rect.right - rect.left, rect.bottom - rect.top);
+            if self.window_bitmap.map(|(_, _, w, h)| (w, h)) != Some(size) {
+                unsafe {
+                    if let Some((bitmap, previous, ..)) = self.window_bitmap.take() {
+                        SelectObject(self.window, previous);
+                        let _ = DeleteObject(bitmap.into());
+                    }
+                    let bitmap = CreateCompatibleBitmap(self.screen, size.0.max(1), size.1.max(1));
+                    if bitmap.is_invalid() {
+                        return Err("Could not make room for the window.".into());
+                    }
+                    let previous = SelectObject(self.window, bitmap.into());
+                    self.window_bitmap = Some((bitmap, previous, size.0, size.1));
+                }
+            }
+            if !unsafe { PrintWindow(hwnd, self.window, PW_RENDERFULLCONTENT) }.as_bool() {
+                return Err("Could not copy the window.".into());
+            }
+            let (x, y, width, height) = (area.0 - rect.left, area.1 - rect.top, area.2, area.3);
             let length = (self.width * self.height * 4) as usize;
             // SAFETY: the section holds width * height 32-bit pixels.
             let pixels = unsafe { std::slice::from_raw_parts_mut(self.bits, length) };
@@ -271,7 +315,7 @@ pub mod platform {
                     (self.height - fit_height) / 2,
                     fit_width,
                     fit_height,
-                    Some(self.screen),
+                    Some(self.window),
                     x,
                     y,
                     width,
@@ -280,7 +324,7 @@ pub mod platform {
                 )
             };
             if !copied.as_bool() {
-                return Err("Could not copy the picture from the screen.".into());
+                return Err("Could not copy the picture.".into());
             }
             Ok(pixels)
         }
@@ -289,6 +333,11 @@ pub mod platform {
     impl Drop for Grabber {
         fn drop(&mut self) {
             unsafe {
+                if let Some((bitmap, previous, ..)) = self.window_bitmap.take() {
+                    SelectObject(self.window, previous);
+                    let _ = DeleteObject(bitmap.into());
+                }
+                let _ = DeleteDC(self.window);
                 SelectObject(self.memory, self.previous);
                 let _ = DeleteObject(self.bitmap.into());
                 let _ = DeleteDC(self.memory);
@@ -596,7 +645,7 @@ pub mod platform {
         pub fn new(_width: i32, _height: i32) -> Result<Self, String> {
             Err("Not supported here.".into())
         }
-        pub fn grab(&mut self, _area: Area) -> Result<&[u8], String> {
+        pub fn grab(&mut self, _window: isize, _area: Area) -> Result<&[u8], String> {
             Err("Not supported here.".into())
         }
     }
@@ -630,10 +679,93 @@ pub mod platform {
 mod tests {
     use super::platform::{save_png, Com, Encoder, Grabber};
     use super::*;
-    use windows::core::{Interface, HSTRING};
+    use windows::core::HSTRING;
     use windows::Win32::Graphics::Imaging::{CLSID_WICImagingFactory, IWICImagingFactory, WICDecodeMetadataCacheOnDemand};
     use windows::Win32::Media::MediaFoundation::*;
     use windows::Win32::System::Com::{CoCreateInstance, CLSCTX_INPROC_SERVER};
+    use windows::Win32::Foundation::{COLORREF, HWND, LPARAM, LRESULT, RECT, WPARAM};
+    use windows::Win32::Graphics::Gdi::CreateSolidBrush;
+    use windows::Win32::System::LibraryLoader::GetModuleHandleW;
+    use windows::Win32::UI::WindowsAndMessaging::*;
+
+    unsafe extern "system" fn procedure(hwnd: HWND, message: u32, w: WPARAM, l: LPARAM) -> LRESULT {
+        DefWindowProcW(hwnd, message, w, l)
+    }
+
+    /// A window filled with one colour (0x00BBGGRR), drawn and ready to copy.
+    fn window(colour: u32, style: WINDOW_STYLE, ex: WINDOW_EX_STYLE, parent: Option<HWND>, area: Area) -> HWND {
+        unsafe {
+            let instance = GetModuleHandleW(None).unwrap();
+            let class = HSTRING::from(format!("MirlowTest{colour:06x}"));
+            RegisterClassW(&WNDCLASSW {
+                lpfnWndProc: Some(procedure),
+                hInstance: instance.into(),
+                lpszClassName: windows::core::PCWSTR(class.as_ptr()),
+                hbrBackground: CreateSolidBrush(COLORREF(colour)),
+                ..Default::default()
+            });
+            let (x, y, width, height) = area;
+            let hwnd = CreateWindowExW(
+                ex,
+                &class,
+                &class,
+                style | WS_VISIBLE,
+                x,
+                y,
+                width,
+                height,
+                parent,
+                None,
+                Some(instance.into()),
+                None,
+            )
+            .unwrap();
+            let end = std::time::Instant::now() + Duration::from_millis(400);
+            while std::time::Instant::now() < end {
+                let mut message = MSG::default();
+                while PeekMessageW(&mut message, None, 0, 0, PM_REMOVE).as_bool() {
+                    DispatchMessageW(&message);
+                }
+                thread::sleep(Duration::from_millis(5));
+            }
+            hwnd
+        }
+    }
+
+    fn screen_area(hwnd: HWND) -> Area {
+        let mut rect = RECT::default();
+        unsafe { GetWindowRect(hwnd, &mut rect).unwrap() };
+        (rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top)
+    }
+
+    #[test]
+    fn copies_the_picture_even_when_a_window_covers_it() {
+        let _com = Com::new();
+        // As in the app: a picture (red) inside a window with a title bar (white)...
+        let parent = window(0xffffff, WS_OVERLAPPEDWINDOW, WINDOW_EX_STYLE(0), None, (120, 120, 640, 480));
+        let picture = window(0x0000ff, WS_CHILD, WINDOW_EX_STYLE(0), Some(parent), (40, 30, 200, 150));
+        // ...and something on top of all of it (blue).
+        let cover = window(0xff0000, WS_POPUP, WS_EX_TOPMOST, None, (0, 0, 1000, 800));
+
+        let area = screen_area(picture);
+        let pixels = opaque(Grabber::new(area.2, area.3).unwrap().grab(parent.0 as isize, area).unwrap());
+        let at = |x: i32, y: i32| {
+            let index = ((y * area.2 + x) * 4) as usize;
+            (pixels[index], pixels[index + 1], pixels[index + 2])
+        };
+        // Red everywhere, right up to each edge: the picture, exactly, and nothing
+        // of the window around it (white) or on top of it (blue). The scaling
+        // softens the outermost pixels a little; a pixel off would make them white.
+        let (right, bottom) = (area.2 - 1, area.3 - 1);
+        for (x, y) in [(right / 2, 0), (0, bottom / 2), (right, bottom / 2), (right / 2, bottom), (right / 2, bottom / 2)] {
+            let (b, g, r) = at(x, y);
+            assert!(r == 255 && g < 100 && b < 100, "at {x},{y}: {:?}", (b, g, r));
+        }
+        unsafe {
+            let _ = DestroyWindow(cover);
+            let _ = DestroyWindow(parent);
+        }
+    }
 
     fn temp(name: &str) -> PathBuf {
         let path = std::env::temp_dir().join(format!("mirlow-test-{}-{name}", std::process::id()));
@@ -742,14 +874,16 @@ mod tests {
     }
 
     #[test]
-    fn records_the_screen_with_the_pcs_sound() {
+    fn records_a_window_with_the_pcs_sound() {
         let _com = Com::new();
         let path = temp("screen.mp4");
+        let shown = window(0x00ff00, WS_POPUP, WINDOW_EX_STYLE(0), None, (0, 0, 400, 300));
+        let area = screen_area(shown);
         // Timed from the first frame: starting the encoder can take a while.
         let mut started = None;
         let source = move || {
             if started.get_or_insert_with(std::time::Instant::now).elapsed() < Duration::from_millis(1200) {
-                Picture::Shown((0, 0, 400, 300))
+                Picture::Shown { window: shown.0 as isize, area }
             } else {
                 Picture::Gone
             }
@@ -757,6 +891,7 @@ mod tests {
         let stop = AtomicBool::new(false);
         let (width, height) = fitted(400, 300);
         record(&path, width, height, source, &stop).unwrap();
+        unsafe { DestroyWindow(shown).unwrap() };
         let (seconds, subtypes) = probe(&path);
         assert!((seconds - 1.2).abs() < 0.3, "lasts {seconds} s");
         assert!(subtypes.contains(&MFVideoFormat_H264), "{subtypes:?}");
@@ -771,7 +906,9 @@ mod tests {
     fn saves_a_screenshot_as_png() {
         let _com = Com::new();
         let path = temp("shot.png");
-        let pixels = opaque(Grabber::new(64, 48).unwrap().grab((0, 0, 64, 48)).unwrap());
+        let shown = window(0x00ff00, WS_POPUP, WINDOW_EX_STYLE(0), None, (0, 0, 64, 48));
+        let pixels = opaque(Grabber::new(64, 48).unwrap().grab(shown.0 as isize, screen_area(shown)).unwrap());
+        unsafe { DestroyWindow(shown).unwrap() };
         assert_eq!(pixels.len(), 64 * 48 * 4);
         save_png(&path, 64, 48, &pixels).unwrap();
         unsafe {

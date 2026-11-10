@@ -230,10 +230,11 @@ pub fn layout(app: &AppHandle, rect: Rect, radius: i32, visible: bool) {
     }
 }
 
-/// Where the picture is on the screen, while it is being shown.
-pub fn picture_on_screen(app: &AppHandle) -> Option<crate::capture::Area> {
+/// The window the picture is in, and where on the screen it is, while it is
+/// being shown.
+pub fn picture_on_screen(app: &AppHandle) -> Option<(isize, crate::capture::Area)> {
     match picture_state(app) {
-        crate::capture::Picture::Shown(area) => Some(area),
+        crate::capture::Picture::Shown { window, area } => Some((window, area)),
         _ => None,
     }
 }
@@ -241,15 +242,17 @@ pub fn picture_on_screen(app: &AppHandle) -> Option<crate::capture::Area> {
 /// Whether there is a picture, and where on the screen it is if it is shown.
 pub fn picture_state(app: &AppHandle) -> crate::capture::Picture {
     use crate::capture::Picture;
+    let Some(window) = main_hwnd(app) else { return Picture::Gone };
     let video = app.state::<Video>();
     let inner = video.inner.lock().unwrap();
     if inner.hwnd == 0 || !platform::is_window(inner.hwnd) {
         return Picture::Gone;
     }
-    if !inner.shown() || inner.rect.width <= 0 || inner.rect.height <= 0 {
+    // A minimised window draws nothing to copy.
+    if !inner.shown() || inner.rect.width <= 0 || inner.rect.height <= 0 || platform::is_minimized(window) {
         return Picture::Hidden;
     }
-    platform::screen_rect(inner.hwnd).map_or(Picture::Hidden, Picture::Shown)
+    platform::screen_rect(inner.hwnd).map_or(Picture::Hidden, |area| Picture::Shown { window, area })
 }
 
 fn main_hwnd(app: &AppHandle) -> Option<isize> {
@@ -273,7 +276,7 @@ mod platform {
     use windows::Win32::Graphics::Gdi::{CreateRoundRectRgn, SetWindowRgn};
     use windows::Win32::UI::WindowsAndMessaging::{
         EnumWindows, GetWindow, GetWindowLongPtrW, GetWindowRect, GetWindowThreadProcessId,
-        IsWindow, IsWindowVisible, SetParent, SetWindowLongPtrW, SetWindowPos, GWL_EXSTYLE,
+        IsIconic, IsWindow, IsWindowVisible, SetParent, SetWindowLongPtrW, SetWindowPos, GWL_EXSTYLE,
         GWL_STYLE, GW_OWNER, HWND_TOP, SWP_FRAMECHANGED, SWP_HIDEWINDOW, SWP_NOACTIVATE,
         SWP_SHOWWINDOW, WS_CAPTION, WS_CHILD, WS_CLIPSIBLINGS, WS_DISABLED, WS_EX_APPWINDOW,
         WS_EX_CLIENTEDGE, WS_EX_DLGMODALFRAME, WS_EX_NOACTIVATE, WS_EX_WINDOWEDGE,
@@ -286,6 +289,10 @@ mod platform {
 
     pub fn is_window(hwnd: isize) -> bool {
         unsafe { IsWindow(Some(handle(hwnd))).as_bool() }
+    }
+
+    pub fn is_minimized(hwnd: isize) -> bool {
+        unsafe { IsIconic(handle(hwnd)).as_bool() }
     }
 
     struct Search {
@@ -398,6 +405,9 @@ mod platform {
 mod platform {
     use super::Rect;
     pub fn is_window(_hwnd: isize) -> bool {
+        false
+    }
+    pub fn is_minimized(_hwnd: isize) -> bool {
         false
     }
     pub fn find_window(_pid: u32) -> Option<isize> {
