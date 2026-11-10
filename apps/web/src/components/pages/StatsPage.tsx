@@ -99,6 +99,10 @@ function DailyChart({ days }: { days: { date: string; downloads: number }[] }) {
         {active ? `${active.date} · ${number(active.downloads)} downloads` : `Peak: ${number(max)} in a day`}
       </p>
       <div className="mt-3 flex h-40 items-end gap-[2px] border-b border-line" onMouseLeave={() => setHover(null)}>
+        {/* Days not yet recorded keep their place, so one day is one thin bar, not the whole width. */}
+        {Array.from({ length: DAYS - shown.length }, (_, index) => (
+          <span key={`empty-${index}`} className="min-w-0 flex-1" aria-hidden="true" />
+        ))}
         {shown.map((day, index) => (
           <button
             key={day.date}
