@@ -230,6 +230,28 @@ pub fn layout(app: &AppHandle, rect: Rect, radius: i32, visible: bool) {
     }
 }
 
+/// Where the picture is on the screen, while it is being shown.
+pub fn picture_on_screen(app: &AppHandle) -> Option<crate::capture::Area> {
+    match picture_state(app) {
+        crate::capture::Picture::Shown(area) => Some(area),
+        _ => None,
+    }
+}
+
+/// Whether there is a picture, and where on the screen it is if it is shown.
+pub fn picture_state(app: &AppHandle) -> crate::capture::Picture {
+    use crate::capture::Picture;
+    let video = app.state::<Video>();
+    let inner = video.inner.lock().unwrap();
+    if inner.hwnd == 0 || !platform::is_window(inner.hwnd) {
+        return Picture::Gone;
+    }
+    if !inner.shown() || inner.rect.width <= 0 || inner.rect.height <= 0 {
+        return Picture::Hidden;
+    }
+    platform::screen_rect(inner.hwnd).map_or(Picture::Hidden, Picture::Shown)
+}
+
 fn main_hwnd(app: &AppHandle) -> Option<isize> {
     #[cfg(windows)]
     {
@@ -303,6 +325,20 @@ mod platform {
         (search.found != 0).then_some(search.found)
     }
 
+    /// Where the window is on the screen: left, top, width and height, in
+    /// physical pixels. Hidden windows have no place.
+    pub fn screen_rect(hwnd: isize) -> Option<(i32, i32, i32, i32)> {
+        let mut rect = RECT::default();
+        unsafe {
+            if !IsWindowVisible(handle(hwnd)).as_bool() {
+                return None;
+            }
+            GetWindowRect(handle(hwnd), &mut rect).ok()?;
+        }
+        let (width, height) = (rect.right - rect.left, rect.bottom - rect.top);
+        (width > 0 && height > 0).then_some((rect.left, rect.top, width, height))
+    }
+
     /// The window's size, in physical pixels.
     pub fn size(hwnd: isize) -> Option<(i32, i32)> {
         let mut rect = RECT::default();
@@ -368,6 +404,9 @@ mod platform {
         None
     }
     pub fn size(_hwnd: isize) -> Option<(i32, i32)> {
+        None
+    }
+    pub fn screen_rect(_hwnd: isize) -> Option<(i32, i32, i32, i32)> {
         None
     }
     pub fn adopt(_hwnd: isize, _parent: isize, _interactive: bool) {}

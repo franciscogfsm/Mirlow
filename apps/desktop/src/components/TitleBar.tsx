@@ -1,6 +1,17 @@
 import { Mark } from "@mirlow/ui";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { Maximize, Minimize, Minus, Settings as SettingsIcon, Unplug, X } from "lucide-react";
+import {
+  Camera,
+  Circle,
+  Maximize,
+  Minimize,
+  Minus,
+  PictureInPicture2,
+  Settings as SettingsIcon,
+  Square,
+  Unplug,
+  X,
+} from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { MIRROR_BAR } from "../lib/frame";
@@ -34,9 +45,15 @@ export function TitleBar({
   release,
   mirroring,
   fullscreen,
+  mini,
+  recording,
+  notice,
   onToggleFullscreen,
   onDisconnect,
   onOpenSettings,
+  onScreenshot,
+  onToggleRecording,
+  onToggleMini,
 }: {
   label: string;
   /** A shorter wording for when the window is narrow, as it is around a phone held upright. */
@@ -46,16 +63,27 @@ export function TitleBar({
   release?: string;
   mirroring: boolean;
   fullscreen: boolean;
+  /** The small always-on-top window: only the capture controls fit. */
+  mini: boolean;
+  /** Set while recording: how long so far, as shown. */
+  recording: string | null;
+  /** A passing message (a file saved, say), clickable when it leads somewhere. */
+  notice: { text: string; onClick?: () => void } | null;
   onToggleFullscreen: () => void;
   onDisconnect: () => void;
   onOpenSettings: () => void;
+  onScreenshot: () => void;
+  onToggleRecording: () => void;
+  onToggleMini: () => void;
 }) {
   const { t } = useI18n();
   const appWindow = getCurrentWindow();
   const compact = useCompact();
   const slim = mirroring && !fullscreen;
   const text = compact && compactLabel ? compactLabel : label;
-  const key = release ? `release:${release}` : text;
+  const key = release ? `release:${release}` : notice ? `notice:${notice.text}` : recording ? "recording" : text;
+  const icon = slim ? 13 : 15;
+  const iconSize = slim ? 26 : 34;
   const dot = slim
     ? tone === "warn"
       ? "bg-warn"
@@ -100,6 +128,38 @@ export function TitleBar({
               </kbd>
               <span className="truncate text-white/85">{release}</span>
             </motion.span>
+          ) : notice ? (
+            <motion.button
+              key={key}
+              type="button"
+              disabled={!notice.onClick}
+              onClick={notice.onClick}
+              className={`flex min-w-0 items-center gap-2 rounded-full bg-white/10 px-2.5 py-0.5 font-medium text-white/90 enabled:cursor-pointer enabled:hover:bg-white/15 ${
+                slim ? "text-[12px]" : "text-[12.5px]"
+              }`}
+              initial={{ opacity: 0, scale: 0.92 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              transition={{ type: "spring", stiffness: 420, damping: 30 }}
+              role="status"
+              aria-live="polite"
+            >
+              <span className="truncate">{notice.text}</span>
+            </motion.button>
+          ) : recording ? (
+            <motion.span
+              key={key}
+              data-tauri-drag-region
+              className={`flex min-w-0 items-center gap-2 font-medium tabular-nums text-ink ${slim ? "text-[12px]" : "text-[12.5px]"}`}
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.25 }}
+              role="status"
+            >
+              <span className="recording-dot h-2 w-2 shrink-0 rounded-full bg-[#ff453a]" />
+              <span className="truncate">{recording}</span>
+            </motion.span>
           ) : (
             <motion.span
               key={key}
@@ -124,6 +184,29 @@ export function TitleBar({
       <div className={`flex shrink-0 items-center ${slim ? "gap-1" : "gap-1.5"}`}>
         {mirroring && (
           <>
+            <GlassIconButton label={t.mirroring.screenshot} onClick={onScreenshot} size={iconSize}>
+              <Camera size={icon} />
+            </GlassIconButton>
+            <GlassIconButton
+              label={recording ? t.mirroring.stopRecording : t.mirroring.record}
+              onClick={onToggleRecording}
+              size={iconSize}
+            >
+              {recording ? (
+                <Square size={icon - 3} fill="#ff453a" stroke="#ff453a" />
+              ) : (
+                <Circle size={icon - 2} fill="#ff453a" stroke="#ff453a" />
+              )}
+            </GlassIconButton>
+            {!fullscreen && (
+              <GlassIconButton label={mini ? t.mirroring.exitMini : t.mirroring.mini} onClick={onToggleMini} size={iconSize}>
+                <PictureInPicture2 size={icon} />
+              </GlassIconButton>
+            )}
+          </>
+        )}
+        {mirroring && !mini && (
+          <>
             {compact || slim ? (
               <GlassIconButton label={t.mirroring.disconnect} onClick={onDisconnect} size={slim ? 26 : 34}>
                 <Unplug size={slim ? 13 : 15} />
@@ -143,10 +226,12 @@ export function TitleBar({
             </GlassIconButton>
           </>
         )}
-        <ChromeButton label={t.settings.open} compact={slim} onClick={onOpenSettings}>
-          <SettingsIcon size={slim ? 14 : 16} strokeWidth={1.8} />
-        </ChromeButton>
-        {!fullscreen && (
+        {!mini && (
+          <ChromeButton label={t.settings.open} compact={slim} onClick={onOpenSettings}>
+            <SettingsIcon size={slim ? 14 : 16} strokeWidth={1.8} />
+          </ChromeButton>
+        )}
+        {!fullscreen && !mini && (
           <>
             <ChromeButton label={t.window.minimize} compact={slim} onClick={() => void appWindow.minimize()}>
               <Minus size={slim ? 14 : 16} strokeWidth={1.8} />

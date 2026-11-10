@@ -61,6 +61,23 @@ export const pt: Dictionary = {
       fullscreen: "Ecrã inteiro",
       exitFullscreen: "Sair do ecrã inteiro",
       disconnect: "Desligar",
+      screenshot: "Captura de ecrã (Ctrl+Shift+S)",
+      record: "Gravar (Ctrl+Shift+R)",
+      stopRecording: "Parar de gravar (Ctrl+Shift+R)",
+      recording: "A gravar · {time}",
+      mini: "Mini janela, sempre visível (Ctrl+Shift+M)",
+      exitMini: "Voltar à janela normal (Ctrl+Shift+M)",
+      savedPhoto: "Captura guardada · Mostrar",
+      savedVideo: "Gravação guardada · Mostrar",
+      captureFailed: "Não resultou. Tente de novo",
+    },
+    files: {
+      drop: "Largue para enviar para {device}",
+      sending: "A enviar {name}…",
+      sent: "{name} está na pasta Transferências do telemóvel",
+      installed: "{name} instalado",
+      failed: "Não foi possível enviar {name}",
+      onlyAndroid: "Só é possível enviar ficheiros para telemóveis Android",
     },
     paused: {
       label: "{device} · em pausa",
@@ -85,11 +102,12 @@ export const pt: Dictionary = {
       release: "devolve-lhe o rato",
     },
     wifi: {
-      ready: "Pronto por Wi‑Fi",
+      ready: "Os seus telemóveis Android",
       mirror: "Projetar {device}",
       setUp: "Sem atraso, com rato e teclado: configure a projeção por Wi‑Fi",
       hint: "{device} · clique e escreva na imagem",
       hintUnknown: "Clique e escreva na imagem",
+      allowUsb: "Há um telemóvel ligado por cabo: toque em Permitir nele para este PC o projetar.",
     },
     audio: {
       headline: "A reproduzir o som de {device}",
@@ -278,13 +296,15 @@ export const pt: Dictionary = {
         speedHint: "No meio, o cursor do telemóvel acompanha o cursor do PC.",
       },
       wifi: {
-        label: "Android por Wi‑Fi",
+        label: "Android por Wi‑Fi ou USB",
         description:
-          "Projete um telemóvel Android quase sem atraso, com som, e use-o com o rato e o teclado. Android 11 ou mais recente, Pixel incluído.",
+          "Projete um telemóvel Android quase sem atraso, com som, e use-o com o rato e o teclado. Por Wi‑Fi (Android 11 ou mais recente, Pixel incluído) ou com um cabo USB.",
         unavailable: "Esta cópia do Mirlow foi criada sem esta funcionalidade.",
         none: "Nenhum telemóvel ligado. No telemóvel, ative a Depuração sem fios. O telemóvel e este PC têm de estar na mesma rede Wi‑Fi.",
         mirror: "Projetar",
         mirroring: "A projetar",
+        usb: "USB",
+        allow: "Toque em Permitir no telemóvel",
         setUp: "Configurar um telemóvel",
         setUpAnother: "Configurar outro telemóvel",
         tutorial: {
@@ -298,7 +318,7 @@ export const pt: Dictionary = {
           },
           wireless: {
             title: "Ative a Depuração sem fios",
-            body: "Volte às Definições e abra as Opções de programador, em Sistema ou mesmo no fim. Ative a Depuração sem fios e toque em Permitir. O telemóvel e este PC têm de estar na mesma rede Wi‑Fi.",
+            body: "Volte às Definições e abra as Opções de programador, em Sistema ou mesmo no fim. Ative a Depuração sem fios e toque em Permitir. O telemóvel e este PC têm de estar na mesma rede Wi‑Fi. Tem um cabo USB? Ative antes a Depuração USB, ligue o telemóvel e toque em Permitir: aparece pronto a projetar, sem código.",
           },
           scan: {
             title: "Leia o código",
@@ -332,7 +352,7 @@ export const pt: Dictionary = {
         retry: "Tentar de novo",
         cancel: "Cancelar",
         tip: "Da próxima vez, ative a Depuração sem fios e clique em Projetar. Mais rápido ainda: adicione o mosaico às Definições rápidas, em Opções de programador › Mosaicos de programador para definições rápidas.",
-        shortcuts: "Na imagem, o botão direito volta atrás e o botão do meio vai para o ecrã principal.",
+        shortcuts: "Na imagem, o botão direito volta atrás e o botão do meio vai para o ecrã principal. Largue ficheiros na janela para os enviar para o telemóvel.",
       },
       theme: {
         label: "Aspeto",

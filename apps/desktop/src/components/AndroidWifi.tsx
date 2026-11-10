@@ -363,16 +363,25 @@ export function AndroidWifiSetting() {
                     className="flex items-center justify-between gap-3 rounded-xl bg-raised/60 py-1.5 pl-3.5 pr-1.5"
                   >
                     <span className="flex min-w-0 items-center gap-2 font-medium text-ink">
-                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-mint" />
-                      <span className="truncate">{phone.name}</span>
+                      <span
+                        className={`h-1.5 w-1.5 shrink-0 rounded-full ${phone.authorized ? "bg-mint" : "bg-warn"}`}
+                      />
+                      <span className="truncate">{phone.authorized ? phone.name : w.allow}</span>
+                      {phone.usb && (
+                        <span className="shrink-0 rounded-md border border-line-strong px-1.5 text-[10.5px] font-semibold leading-[16px] text-soft">
+                          {w.usb}
+                        </span>
+                      )}
                     </span>
-                    <GlassButton
-                      tone="accent"
-                      disabled={mirroring}
-                      onClick={() => void api.androidMirror(phone.serial).catch(() => {})}
-                    >
-                      {mirroring ? w.mirroring : w.mirror}
-                    </GlassButton>
+                    {phone.authorized && (
+                      <GlassButton
+                        tone="accent"
+                        disabled={mirroring}
+                        onClick={() => void api.androidMirror(phone.serial).catch(() => {})}
+                      >
+                        {mirroring ? w.mirroring : w.mirror}
+                      </GlassButton>
+                    )}
                   </li>
                 );
               })}

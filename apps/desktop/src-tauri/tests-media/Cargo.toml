@@ -1,0 +1,29 @@
+# Runs the tests of src/capture/media.rs on their own. The app's own test
+# binary cannot start on Windows (Tauri's manifest is only given to the app),
+# and this code needs nothing from Tauri.
+#
+#   cargo test --manifest-path apps/desktop/src-tauri/tests-media/Cargo.toml
+[package]
+name = "mirlow-media-tests"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[workspace]
+
+[lib]
+path = "src/lib.rs"
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.61", features = [
+  "Win32_Foundation",
+  "Win32_Graphics_Gdi",
+  "Win32_Graphics_Imaging",
+  "Win32_Media_Audio",
+  "Win32_Media_MediaFoundation",
+  "Win32_System_Com",
+  "Win32_System_Com_StructuredStorage",
+  "Win32_System_Performance",
+  "Win32_System_SystemInformation",
+  "Win32_System_Variant",
+] }

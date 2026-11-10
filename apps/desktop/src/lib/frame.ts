@@ -7,7 +7,8 @@ export const HOME_MIN = { width: 380, height: 540 };
  * is wider than a portrait picture, and that extra width becomes black bars
  * down both sides.
  */
-export const MIRROR_MIN = { width: 260, height: 320 };
+// 290: the title bar's controls (capture, mini window, window buttons) need it.
+export const MIRROR_MIN = { width: 290, height: 320 };
 
 /** Caption height while a picture is showing. The title bar uses this exact height. */
 export const MIRROR_BAR = 34;

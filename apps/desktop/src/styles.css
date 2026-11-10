@@ -212,12 +212,24 @@
     }
   }
 
+  /* The red dot of a recording in progress, breathing slowly. */
+  .recording-dot {
+    animation: recording-dot 1.6s ease-in-out infinite;
+  }
+
+  @keyframes recording-dot {
+    50% {
+      opacity: 0.35;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .ambient::before,
     .ambient::after,
     .ambient > i,
     .signal-pulse,
-    .sound-bars > i {
+    .sound-bars > i,
+    .recording-dot {
       animation: none;
     }
     .signal-pulse {

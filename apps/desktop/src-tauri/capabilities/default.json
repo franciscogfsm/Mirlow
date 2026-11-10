@@ -21,8 +21,11 @@
     "core:window:allow-outer-size",
     "core:window:allow-scale-factor",
     "core:window:allow-center",
+    "core:window:allow-set-always-on-top",
+    "core:window:allow-set-min-size",
     "core:window:allow-current-monitor",
     "opener:allow-open-url",
+    "opener:allow-reveal-item-in-dir",
     {
       "identifier": "opener:allow-open-path",
       "allow": [{ "path": "$RESOURCE/licenses/**" }]

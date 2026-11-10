@@ -144,7 +144,10 @@ export function WaitingView({
   const { t, format } = useI18n();
   const link = useAndroidLink();
   // Paired Android phones on the network, one click from mirroring.
-  const phones = link?.enabled && !link.mirroring ? link.phones : [];
+  const listed = link?.enabled && !link.mirroring ? link.phones : [];
+  const phones = listed.filter((phone) => phone.authorized);
+  // Plugged in, but waiting for someone to tap Allow on the phone.
+  const asking = listed.some((phone) => !phone.authorized);
   const [phone, setPhone] = useState<Device>(savedDevice);
   const chooseDevice = (next: Device) => {
     setPhone(next);
@@ -252,6 +255,7 @@ export function WaitingView({
                   {status.name}
                 </LiquidGlass>
 
+                {asking && <p className="mt-5 max-w-[300px] text-[12.5px] text-soft">{t.wifi.allowUsb}</p>}
                 {phones.length > 0 && (
                   <div className="mt-5 flex flex-col items-center gap-2">
                     <p className="text-[12px] font-medium uppercase tracking-[0.08em] text-faint">

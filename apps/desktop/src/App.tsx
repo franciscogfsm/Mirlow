@@ -1,6 +1,8 @@
 import { localeTags } from "@mirlow/i18n";
 import { LogicalPosition, LogicalSize } from "@tauri-apps/api/dpi";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { currentMonitor, getCurrentWindow } from "@tauri-apps/api/window";
+import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FeedbackSheets } from "./components/FeedbackSheets";
@@ -27,9 +29,10 @@ let resizeRun = 0;
 
 /**
  * Glides the window to a new size instead of snapping to it, growing and
- * shrinking around its centre and staying on the screen it is on.
+ * shrinking around its centre (or ending with its corner `at`), and staying
+ * on the screen it is on.
  */
-async function animateWindowTo(target: { width: number; height: number }) {
+async function animateWindowTo(target: { width: number; height: number }, at?: { x: number; y: number }) {
   const appWindow = getCurrentWindow();
   const run = ++resizeRun;
   const [scale, size, position, monitor] = await Promise.all([
@@ -43,8 +46,8 @@ async function animateWindowTo(target: { width: number; height: number }) {
   if (Math.abs(from.width - target.width) < 2 && Math.abs(from.height - target.height) < 2) return;
 
   // Where the window should end up: same centre, nudged back on screen if needed.
-  let endX = origin.x + (from.width - target.width) / 2;
-  let endY = origin.y + (from.height - target.height) / 2;
+  let endX = at ? at.x : origin.x + (from.width - target.width) / 2;
+  let endY = at ? at.y : origin.y + (from.height - target.height) / 2;
   if (monitor) {
     const left = monitor.position.x / scale;
     const top = monitor.position.y / scale;
@@ -75,8 +78,14 @@ async function animateWindowTo(target: { width: number; height: number }) {
 }
 const CONTROLS_IDLE_MS = 2600;
 
-/** Sizes the window around a picture of the given proportions. */
-async function fitWindowTo(video: VideoSize) {
+/** The smallest the mini window may be made, by hand. */
+const MINI_MIN = { width: 150, height: 180 };
+
+/**
+ * Sizes the window around a picture of the given proportions. The `mini`
+ * window is small and sits in the bottom-right corner of the screen.
+ */
+async function fitWindowTo(video: VideoSize, mini = false) {
   const appWindow = getCurrentWindow();
   if ((await appWindow.isFullscreen()) || (await appWindow.isMaximized())) return;
 
@@ -87,6 +96,27 @@ async function fitWindowTo(video: VideoSize) {
 
   const aspect = video.width / video.height;
   const chrome = MIRROR_BAR + MIRROR_FRAME * 2;
+
+  if (mini) {
+    const screen = {
+      x: monitor ? monitor.position.x / scale : 0,
+      y: monitor ? monitor.position.y / scale : 0,
+      width: monitor ? monitor.size.width / scale : 1600,
+      height: monitor ? monitor.size.height / scale : 900,
+    };
+    // About two fifths of the screen's height for a phone held upright.
+    const pictureHeight =
+      aspect < 1 ? Math.min(screen.height * 0.42, 460) : Math.min(screen.width * 0.3, 520) / aspect;
+    const width = Math.round(pictureHeight * aspect + MIRROR_FRAME * 2);
+    const height = Math.round(pictureHeight + chrome);
+    await appWindow.setMinSize(new LogicalSize(MINI_MIN.width, MINI_MIN.height)).catch(() => {});
+    await animateWindowTo(
+      { width, height },
+      // Clear of the taskbar, in the corner where little else lives.
+      { x: screen.x + screen.width - width - 16, y: screen.y + screen.height - 48 - height - 16 },
+    );
+    return;
+  }
   let height = Math.min(maxHeight - chrome, aspect < 1 ? 780 : 600);
   let width = height * aspect;
   if (width > maxWidth - MIRROR_FRAME * 2) {
@@ -120,6 +150,15 @@ function Shell({
   const [helpOpen, setHelpOpen] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const [controlsVisible, setControlsVisible] = useState(true);
+  // The small window that stays on top of everything.
+  const [mini, setMini] = useState(false);
+  // Where the window was before it went small, to go back to.
+  const beforeMini = useRef<{ x: number; y: number; width: number; height: number } | null>(null);
+  // When the recording in progress began.
+  const [recordingSince, setRecordingSince] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+  // A passing message in the title bar: a file saved, a file sent.
+  const [notice, setNotice] = useState<{ text: string; onClick?: () => void; sticky?: boolean } | null>(null);
   // Checked while the PC waits for a phone, so problems show before anyone looks for help.
   const diagnostics = useDiagnostics(status.phase === "ready" || helpOpen);
 
@@ -137,9 +176,89 @@ function Shell({
 
   const toggleFullscreen = useCallback(async () => {
     const next = !(await appWindow.isFullscreen());
+    if (next && mini) return; // the mini window is left first, by its own button
     await appWindow.setFullscreen(next);
     setFullscreen(next);
-  }, [appWindow]);
+  }, [appWindow, mini]);
+
+  const toggleMini = useCallback(async () => {
+    if (!video || fullscreen) return;
+    if (!mini) {
+      const [scale, size, position] = await Promise.all([
+        appWindow.scaleFactor(),
+        appWindow.innerSize(),
+        appWindow.outerPosition(),
+      ]);
+      beforeMini.current = {
+        x: position.x / scale,
+        y: position.y / scale,
+        width: size.width / scale,
+        height: size.height / scale,
+      };
+      setMini(true);
+      await fitWindowTo(video, true);
+    } else {
+      setMini(false);
+      const before = beforeMini.current;
+      if (before) await animateWindowTo(before, before);
+      else await fitWindowTo(video);
+      await appWindow.setMinSize(new LogicalSize(MIRROR_MIN.width, MIRROR_MIN.height)).catch(() => {});
+    }
+  }, [appWindow, video, mini, fullscreen]);
+
+  // On top of everything while small, and while recording, since whatever
+  // covered the picture would be recorded too.
+  const recording = recordingSince !== null;
+  useEffect(() => {
+    void appWindow.setAlwaysOnTop(mini || recording).catch(() => {});
+  }, [appWindow, mini, recording]);
+
+  const show = (text: string, onClick?: () => void, sticky = false) => setNotice({ text, onClick, sticky });
+  const reveal = (path: string) => () => void revealItemInDir(path).catch(() => {});
+
+  useEffect(() => {
+    if (!notice || notice.sticky) return;
+    const timer = window.setTimeout(() => setNotice(null), 5000);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
+
+  const screenshot = useCallback(() => {
+    api
+      .captureScreenshot()
+      .then((path) => show(t.mirroring.savedPhoto, reveal(path)))
+      .catch(() => show(t.mirroring.captureFailed));
+  }, [t]);
+
+  const toggleRecording = useCallback(() => {
+    void api.captureRecord(!recording).catch(() => show(t.mirroring.captureFailed));
+  }, [recording, t]);
+
+  useEffect(() => {
+    void api.captureRecording().then((on) => setRecordingSince(on ? Date.now() : null));
+    const unlisten = api.onRecording((event) => {
+      if (event.state === "started") {
+        setRecordingSince(Date.now());
+        return;
+      }
+      setRecordingSince(null);
+      if (event.state === "saved") show(t.mirroring.savedVideo, reveal(event.path));
+      else show(t.mirroring.captureFailed);
+    });
+    return () => void unlisten.then((stop) => stop());
+  }, [t]);
+
+  // The time on the recording, ticking.
+  useEffect(() => {
+    if (!recording) return;
+    const timer = window.setInterval(() => setNow(Date.now()), 500);
+    return () => window.clearInterval(timer);
+  }, [recording]);
+  const elapsed = recordingSince === null ? 0 : Math.max(0, Math.floor((now - recordingSince) / 1000));
+  const recordingLabel = recording
+    ? format(t.mirroring.recording, {
+        time: `${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, "0")}`,
+      })
+    : null;
 
   // The window takes the shape of the picture while mirroring (and follows it
   // when the phone is rotated), then returns to its compact size.
@@ -147,13 +266,16 @@ function Shell({
   useEffect(() => {
     void (async () => {
       if (video) {
-        await fitWindowTo(video);
+        await fitWindowTo(video, mini);
       } else if (wasMirroring.current) {
         if (await appWindow.isFullscreen()) {
           await appWindow.setFullscreen(false);
           setFullscreen(false);
         }
-        if (!(await appWindow.isMaximized())) await animateWindowTo(HOME_SIZE);
+        // The mini window goes back to where the window was before it.
+        const before = mini ? beforeMini.current : null;
+        if (mini) setMini(false);
+        if (!(await appWindow.isMaximized())) await animateWindowTo(HOME_SIZE, before ?? undefined);
         await appWindow.setMinSize(new LogicalSize(HOME_MIN.width, HOME_MIN.height)).catch(() => {});
       }
       wasMirroring.current = video !== null;
@@ -202,11 +324,49 @@ function Shell({
       } else if (event.key === "," && event.ctrlKey) {
         event.preventDefault();
         setSettingsOpen(true);
+      } else if (mirroring && event.ctrlKey && event.shiftKey) {
+        const key = event.key.toLowerCase();
+        if (key === "s") screenshot();
+        else if (key === "r") toggleRecording();
+        else if (key === "m") void toggleMini();
+        else return;
+        event.preventDefault();
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [toggleFullscreen, fullscreen, mirroring, settingsOpen, helpOpen]);
+  }, [toggleFullscreen, fullscreen, mirroring, settingsOpen, helpOpen, screenshot, toggleRecording, toggleMini]);
+
+  // Files dropped on the window go to an Android phone being mirrored. (On
+  // the picture itself, scrcpy takes them and does the same.)
+  const device = status.client?.name;
+  useEffect(() => {
+    const unlisten = getCurrentWebview().onDragDropEvent((event) => {
+      if (!mirroring) return;
+      const kind = event.payload.type;
+      if (kind === "enter") {
+        show(direct ? format(t.files.drop, { device: device ?? "Android" }) : t.files.onlyAndroid, undefined, true);
+      } else if (kind === "leave") {
+        setNotice(null);
+      } else if (kind === "drop") {
+        setNotice(null);
+        if (!direct) show(t.files.onlyAndroid);
+        else void api.androidSendFiles(event.payload.paths).catch(() => show(t.mirroring.captureFailed));
+      }
+    });
+    return () => void unlisten.then((stop) => stop());
+  }, [mirroring, direct, device, t]);
+
+  useEffect(() => {
+    const unlisten = api.onTransfer((transfer) => {
+      const name = transfer.name;
+      if (transfer.state === "sending") show(format(t.files.sending, { name }), undefined, true);
+      else if (transfer.state === "sent") show(format(t.files.sent, { name }));
+      else if (transfer.state === "installed") show(format(t.files.installed, { name }));
+      else show(format(t.files.failed, { name }));
+    });
+    return () => void unlisten.then((stop) => stop());
+  }, [t]);
 
   // No browser context menu or accidental page zoom in a desktop app.
   useEffect(() => {
@@ -215,7 +375,6 @@ function Shell({
     return () => window.removeEventListener("contextmenu", block);
   }, []);
 
-  const device = status.client?.name;
   const label = (() => {
     switch (status.phase) {
       case "mirroring":
@@ -278,9 +437,15 @@ function Shell({
           release={captured ? t.control.release : undefined}
           mirroring={mirroring}
           fullscreen={fullscreen}
+          mini={mini}
+          recording={recordingLabel}
+          notice={notice}
           onToggleFullscreen={() => void toggleFullscreen()}
           onDisconnect={() => void api.restartEngine()}
           onOpenSettings={() => setSettingsOpen(true)}
+          onScreenshot={screenshot}
+          onToggleRecording={toggleRecording}
+          onToggleMini={() => void toggleMini()}
         />
       </motion.div>
 

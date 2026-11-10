@@ -46,15 +46,20 @@ let settings: Settings = {
 };
 
 // preview.html?phones=Pixel 9,Galaxy S24 shows Android over Wi-Fi on, with those phones ready;
+// &usb=Galaxy A55 adds one plugged in by cable, and &allow=1 one waiting for "Allow USB debugging";
 // &pairing=waiting (or searching, pairing, paired, refused, notFound) shows the setup.
 const qrSize = 29;
 const androidLink: AndroidLink = {
   enabled: params.has("phones"),
   available: true,
-  phones: (params.get("phones") ?? "")
-    .split(",")
-    .filter(Boolean)
-    .map((name, index) => ({ serial: `adb-${index}._adb-tls-connect._tcp`, name })),
+  phones: [
+    ...(params.get("phones") ?? "")
+      .split(",")
+      .filter(Boolean)
+      .map((name, index) => ({ serial: `adb-${index}._adb-tls-connect._tcp`, name, usb: false, authorized: true })),
+    ...(params.get("usb") ? [{ serial: "R58N123ABC", name: params.get("usb")!, usb: true, authorized: true }] : []),
+    ...(params.get("allow") ? [{ serial: "R58N999XYZ", name: "Android", usb: true, authorized: false }] : []),
+  ],
   pairing:
     params.get("pairing") === "waiting" || !params.get("pairing")
       ? {
@@ -140,6 +145,11 @@ mockIPC((command, payload) => {
           resolve(diagnostics);
         }, 1500),
       );
+    // &recording=1 shows a recording in progress; &mini=1 is not mocked (it is the window's size).
+    case "capture_recording":
+      return params.has("recording");
+    case "capture_screenshot":
+      return "C:\\Users\\Ana\\Pictures\\Mirlow\\Mirlow 2026-11-09 16.40.12.png";
     case "plugin:app|version":
       return "0.1.0";
     case "plugin:window|is_fullscreen":
@@ -152,6 +162,11 @@ mockIPC((command, payload) => {
 
 // &setup=1 opens the settings onto pairing a phone (with &sheet=settings).
 if (params.has("setup")) requestSetup();
+// &seen=1 skips the one-time notes (thank-you, what's new), as on a PC that has seen them.
+if (params.has("seen")) {
+  localStorage.setItem("mirlow.welcomeSeen", "1");
+  localStorage.setItem("mirlow.lastVersion", "0.1.0");
+}
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

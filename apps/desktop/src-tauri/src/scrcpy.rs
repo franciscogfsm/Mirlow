@@ -52,6 +52,32 @@ pub struct Phone {
     pub serial: String,
     /// What the phone calls itself ("Galaxy S24", or the name its owner gave it).
     pub name: String,
+    /// Plugged in with a cable rather than reached over Wi-Fi.
+    pub usb: bool,
+    /// False while the phone asks whether to allow USB debugging from this PC:
+    /// it is listed, but cannot be mirrored until someone taps Allow.
+    pub authorized: bool,
+}
+
+/// What became of a file dropped on the picture.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase", tag = "state")]
+pub enum Transfer {
+    Sending { name: String },
+    /// Copied to the phone's Download folder.
+    Sent { name: String },
+    /// An app, installed.
+    Installed { name: String },
+    Failed { name: String },
+}
+
+/// The event that carries [`Transfer`] to the interface.
+const TRANSFER_EVENT: &str = "android:transfer";
+
+/// adb's serial for a phone on a cable. Over Wi-Fi it is an address
+/// ("192.168.1.20:5555") or a network service ("adb-R58N…._adb-tls-connect._tcp").
+fn is_usb(serial: &str) -> bool {
+    !serial.contains(':') && !serial.contains("._adb-tls-connect") && !serial.starts_with("emulator-")
 }
 
 /// A QR code, as rows of dark (`1`) and light (`0`) modules, `size` by `size`.
@@ -245,7 +271,7 @@ impl Scrcpy {
         let shared = &self.shared;
         let name = {
             let link = shared.link.lock().unwrap();
-            link.phones.iter().find(|phone| phone.serial == serial).map(|phone| phone.name.clone())
+            link.phones.iter().find(|phone| phone.serial == serial && phone.authorized).map(|phone| phone.name.clone())
         }
         .ok_or_else(|| "That phone is no longer connected.".to_string())?;
 
@@ -330,6 +356,46 @@ impl Scrcpy {
                     }
                     crate::video::replace(&shared.app);
                 }
+            }
+        });
+        Ok(())
+    }
+
+    /// Sends files to the phone being mirrored, one after another: apps
+    /// (.apk) are installed, anything else lands in its Download folder.
+    /// [`TRANSFER_EVENT`] reports each one.
+    pub fn send_files(&self, paths: Vec<PathBuf>) -> Result<(), String> {
+        let serial = self.shared.session.lock().unwrap().as_ref().map(|session| session.serial.clone());
+        let serial = serial.ok_or("No Android phone is being mirrored.")?;
+        // Only real files, by full path: anything else, a name starting
+        // with "-" included, could be read by adb as an option.
+        let paths: Vec<PathBuf> = paths.into_iter().filter(|path| path.is_absolute() && path.is_file()).collect();
+        if paths.is_empty() {
+            return Err("Only files can be sent.".into());
+        }
+        let shared = self.shared.clone();
+        thread::spawn(move || {
+            for path in paths {
+                let name = path.file_name().map(|name| name.to_string_lossy().into_owned()).unwrap_or_default();
+                let _ = shared.app.emit(TRANSFER_EVENT, Transfer::Sending { name: name.clone() });
+                let text = path.to_string_lossy().into_owned();
+                let app = path.extension().is_some_and(|extension| extension.eq_ignore_ascii_case("apk"));
+                let answer = if app {
+                    shared.adb(&["-s", &serial, "install", "-r", &text], Duration::from_secs(10 * 60))
+                } else {
+                    shared.adb(&["-s", &serial, "push", &text, "/sdcard/Download/"], Duration::from_secs(60 * 60))
+                }
+                .unwrap_or_default();
+                let done = if app { answer.contains("Success") } else { answer.contains("1 file pushed") };
+                if !done {
+                    shared.note(format!("sending {name} failed: {}", answer.trim()));
+                }
+                let transfer = match (done, app) {
+                    (false, _) => Transfer::Failed { name },
+                    (true, true) => Transfer::Installed { name },
+                    (true, false) => Transfer::Sent { name },
+                };
+                let _ = shared.app.emit(TRANSFER_EVENT, transfer);
             }
         });
         Ok(())
@@ -548,9 +614,19 @@ impl Shared {
     fn devices_changed(&self, report: &str) {
         let mut phones: Vec<Phone> = Vec::new();
         let mut seen = Vec::new();
-        for line in report.lines() {
+        // Cables first, so a phone reached both ways is mirrored over the
+        // cable, which is quicker and steadier.
+        let mut lines: Vec<&str> = report.lines().collect();
+        lines.sort_by_key(|line| !line.split_whitespace().next().is_some_and(is_usb));
+        for line in lines {
             let mut fields = line.split_whitespace();
             let (Some(serial), Some(state)) = (fields.next(), fields.next()) else { continue };
+            // A phone on a cable asks first whether to trust this PC; until
+            // then adb can do nothing with it, but it can be shown waiting.
+            if state == "unauthorized" && is_usb(serial) {
+                phones.push(Phone { serial: serial.to_string(), name: "Android".into(), usb: true, authorized: false });
+                continue;
+            }
             if state != "device" {
                 continue;
             }
@@ -565,7 +641,7 @@ impl Shared {
                 continue;
             }
             seen.push(number);
-            phones.push(Phone { serial: serial.to_string(), name });
+            phones.push(Phone { serial: serial.to_string(), name, usb: is_usb(serial), authorized: true });
         }
         // A phone that goes away while mirrored ends scrcpy, and the session
         // ends with it.
@@ -887,6 +963,14 @@ mod tests {
             vec![("mirlow-abc".to_string(), "192.168.1.20:37000".to_string())]
         );
         assert_eq!(services_of(listing, "_adb-tls-connect").len(), 1);
+    }
+
+    #[test]
+    fn tells_cables_from_wifi() {
+        assert!(is_usb("R58N123ABC"));
+        assert!(!is_usb("192.168.1.20:5555"));
+        assert!(!is_usb("adb-R58N123ABC-xYz12._adb-tls-connect._tcp"));
+        assert!(!is_usb("emulator-5554"));
     }
 
     #[test]

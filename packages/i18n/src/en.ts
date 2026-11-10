@@ -58,6 +58,23 @@ export const en = {
       fullscreen: "Full screen",
       exitFullscreen: "Exit full screen",
       disconnect: "Disconnect",
+      screenshot: "Screenshot (Ctrl+Shift+S)",
+      record: "Record (Ctrl+Shift+R)",
+      stopRecording: "Stop recording (Ctrl+Shift+R)",
+      recording: "Recording · {time}",
+      mini: "Mini window, always on top (Ctrl+Shift+M)",
+      exitMini: "Back to the full window (Ctrl+Shift+M)",
+      savedPhoto: "Screenshot saved · Show",
+      savedVideo: "Recording saved · Show",
+      captureFailed: "That didn't work. Try again",
+    },
+    files: {
+      drop: "Drop to send to {device}",
+      sending: "Sending {name}…",
+      sent: "{name} is in the phone's Download folder",
+      installed: "{name} installed",
+      failed: "Couldn't send {name}",
+      onlyAndroid: "Files can be sent to Android phones",
     },
     paused: {
       label: "{device} · paused",
@@ -82,11 +99,12 @@ export const en = {
       release: "gives your mouse back",
     },
     wifi: {
-      ready: "Ready over Wi‑Fi",
+      ready: "Your Android phones",
       mirror: "Mirror {device}",
       setUp: "No delay, with mouse and keyboard: set up Wi‑Fi mirroring",
       hint: "{device} · click and type on the picture",
       hintUnknown: "Click and type on the picture",
+      allowUsb: "A phone is plugged in: tap Allow on it to let this PC mirror it.",
     },
     audio: {
       headline: "Playing sound from {device}",
@@ -272,13 +290,15 @@ export const en = {
         speedHint: "In the middle, the phone's pointer keeps pace with your PC's cursor.",
       },
       wifi: {
-        label: "Android over Wi‑Fi",
+        label: "Android over Wi‑Fi or USB",
         description:
-          "Mirror an Android phone with almost no delay, sound included, and use it with your mouse and keyboard. Android 11 or later, Pixel too.",
+          "Mirror an Android phone with almost no delay, sound included, and use it with your mouse and keyboard. Over Wi‑Fi (Android 11 or later, Pixel too) or with a USB cable.",
         unavailable: "This copy of Mirlow was built without it.",
         none: "No phone connected. On your phone, turn on Wireless debugging. It and this PC need to be on the same Wi‑Fi.",
         mirror: "Mirror",
         mirroring: "Mirroring",
+        usb: "USB",
+        allow: "Tap Allow on the phone",
         setUp: "Set up a phone",
         setUpAnother: "Set up another phone",
         tutorial: {
@@ -292,7 +312,7 @@ export const en = {
           },
           wireless: {
             title: "Turn on Wireless debugging",
-            body: "Go back to Settings and open Developer options, under System or at the very end. Turn on Wireless debugging and tap Allow. Your phone and this PC need to be on the same Wi‑Fi.",
+            body: "Go back to Settings and open Developer options, under System or at the very end. Turn on Wireless debugging and tap Allow. Your phone and this PC need to be on the same Wi‑Fi. Have a USB cable? Turn on USB debugging instead, plug the phone in and tap Allow: it shows up ready to mirror, no code needed.",
           },
           scan: {
             title: "Scan the code",
@@ -325,7 +345,7 @@ export const en = {
         retry: "Try again",
         cancel: "Cancel",
         tip: "Next time, turn on Wireless debugging and click Mirror. Quicker still: add its tile to Quick Settings, from Developer options › Quick settings developer tiles.",
-        shortcuts: "On the picture, right-click goes back and middle-click goes home.",
+        shortcuts: "On the picture, right-click goes back and middle-click goes home. Drop files on the window to send them to the phone.",
       },
       theme: {
         label: "Appearance",

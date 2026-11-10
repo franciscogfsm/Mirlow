@@ -1,13 +1,17 @@
 {
-  "version": "1.10",
+  "version": "1.11",
   "en": [
-    "Ask questions, suggest features and report problems from Help and Settings.",
-    "Vote on other people's ideas: the most-voted are built first.",
-    "A short note like this one after each new version, so you know what changed."
+    "Record your phone, with its sound: the red button at the top, or Ctrl+Shift+R. Videos go to Videos › Mirlow.",
+    "Screenshots in one click: the camera button, or Ctrl+Shift+S. They go to Pictures › Mirlow.",
+    "Mini window: keep your phone small, in a corner, on top of everything (Ctrl+Shift+M).",
+    "Android with a USB cable: turn on USB debugging, plug the phone in and tap Allow. No Wi‑Fi or code needed.",
+    "Send files to an Android phone by dropping them on the window. Apps (.apk) are installed."
   ],
   "pt": [
-    "Faça perguntas, sugira funcionalidades e reporte problemas a partir da Ajuda e das Definições.",
-    "Vote nas ideias dos outros: as mais votadas são feitas primeiro.",
-    "Uma nota curta como esta depois de cada nova versão, para saber o que mudou."
+    "Grave o telemóvel, com som: o botão vermelho em cima, ou Ctrl+Shift+R. Os vídeos ficam em Vídeos › Mirlow.",
+    "Capturas de ecrã num clique: o botão da câmara, ou Ctrl+Shift+S. Ficam em Imagens › Mirlow.",
+    "Mini janela: o telemóvel pequeno, num canto, por cima de tudo (Ctrl+Shift+M).",
+    "Android com cabo USB: ative a Depuração USB, ligue o telemóvel e toque em Permitir. Sem Wi‑Fi nem código.",
+    "Envie ficheiros para um telemóvel Android largando-os na janela. As apps (.apk) são instaladas."
   ]
 }

@@ -1,4 +1,5 @@
 mod awake;
+mod capture;
 mod diagnostics;
 mod engine;
 mod letterbox;
@@ -126,6 +127,12 @@ fn android_mirror(serial: String, scrcpy: State<'_, Scrcpy>) -> Result<(), Strin
     scrcpy.mirror(&serial)
 }
 
+/// Sends files dropped on the window to the Android phone being mirrored.
+#[tauri::command]
+fn android_send_files(paths: Vec<PathBuf>, scrcpy: State<'_, Scrcpy>) -> Result<(), String> {
+    scrcpy.send_files(paths)
+}
+
 #[tauri::command]
 fn get_remote_status(remote: State<'_, Remote>) -> remote::RemoteStatus {
     remote.status()
@@ -244,6 +251,29 @@ fn open_windows_settings(page: &str) {
     }
 }
 
+/// Saves what the picture shows as a PNG in Pictures\Mirlow, and says where.
+#[tauri::command]
+async fn capture_screenshot(app: AppHandle) -> Result<String, String> {
+    capture::screenshot(&app).map(|path| path.to_string_lossy().into_owned())
+}
+
+/// Starts or stops recording the picture into Videos\Mirlow; `capture:recording`
+/// reports how it goes.
+#[tauri::command]
+fn capture_record(recording: bool, app: AppHandle) -> Result<(), String> {
+    if recording {
+        capture::start(&app)
+    } else {
+        capture::stop(&app);
+        Ok(())
+    }
+}
+
+#[tauri::command]
+fn capture_recording(app: AppHandle) -> bool {
+    capture::recording(&app)
+}
+
 /// Tells the native video window where the interface wants the picture.
 #[tauri::command]
 fn layout_video(app: AppHandle, rect: video::Rect, visible: bool, radius: i32) {
@@ -284,6 +314,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(video::Video::default())
+        .manage(capture::Recorder::default())
         // Closing the window keeps Mirlow running in the notification area, so
         // the PC stays discoverable. Quitting is done from the tray menu.
         .on_window_event(|window, event| {
@@ -303,6 +334,7 @@ pub fn run() {
             android_pair_code,
             android_cancel_pairing,
             android_mirror,
+            android_send_files,
             get_engine_log,
             get_remote_status,
             remote_capture,
@@ -312,6 +344,9 @@ pub fn run() {
             open_network_settings,
             open_windows_settings,
             layout_video,
+            capture_screenshot,
+            capture_record,
+            capture_recording,
             tray::set_tray_text,
             tray::reveal,
             updater::check_update,

@@ -58,11 +58,25 @@ export interface Settings {
   androidWifi: boolean;
 }
 
-/** An Android phone connected over Wi-Fi, ready to mirror. Mirrors `scrcpy::Phone`. */
+/** An Android phone connected over Wi-Fi or USB. Mirrors `scrcpy::Phone`. */
 export interface Phone {
   serial: string;
   name: string;
+  /** Plugged in with a cable. */
+  usb: boolean;
+  /** False while the phone asks whether to allow USB debugging: not mirrorable yet. */
+  authorized: boolean;
 }
+
+/** What became of a recording. Mirrors `capture::Recording`. */
+export type Recording = { state: "started" } | { state: "saved"; path: string } | { state: "failed" };
+
+/** What became of a file sent to the phone. Mirrors `scrcpy::Transfer`. */
+export type Transfer =
+  | { state: "sending"; name: string }
+  | { state: "sent"; name: string }
+  | { state: "installed"; name: string }
+  | { state: "failed"; name: string };
 
 /** A QR code: `size` rows of `size` modules, "1" dark and "0" light. */
 export interface Qr {
@@ -164,6 +178,17 @@ export const api = {
   androidPairCode: (code: string) => invoke<void>("android_pair_code", { code }),
   androidCancelPairing: () => invoke<void>("android_cancel_pairing"),
   androidMirror: (serial: string) => invoke<void>("android_mirror", { serial }),
+  /** Sends files to the Android phone being mirrored; `onTransfer` reports each. */
+  androidSendFiles: (paths: string[]) => invoke<void>("android_send_files", { paths }),
+  onTransfer: (handler: (transfer: Transfer) => void): Promise<UnlistenFn> =>
+    listen<Transfer>("android:transfer", (event) => handler(event.payload)),
+  /** Saves what the picture shows as a PNG; resolves to where. */
+  captureScreenshot: () => invoke<string>("capture_screenshot"),
+  /** Starts or stops recording the picture; `onRecording` reports how it goes. */
+  captureRecord: (recording: boolean) => invoke<void>("capture_record", { recording }),
+  captureRecording: () => invoke<boolean>("capture_recording"),
+  onRecording: (handler: (recording: Recording) => void): Promise<UnlistenFn> =>
+    listen<Recording>("capture:recording", (event) => handler(event.payload)),
   getRemoteStatus: () => invoke<RemoteStatus>("get_remote_status"),
   onRemoteStatus: (handler: (status: RemoteStatus) => void): Promise<UnlistenFn> =>
     listen<RemoteStatus>("remote:status", (event) => handler(event.payload)),
