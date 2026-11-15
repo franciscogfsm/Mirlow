@@ -74,6 +74,7 @@ PLUGINS=(
   videoparsersbad                                       # h264parse / h265parse
   libav                                                 # avdec_aac, avdec_alac, avdec_h264 (software fallback)
   d3d11                                                 # d3d11h264dec (hardware) + d3d11videosink
+  d3d                                                   # d3dvideosink, when d3d11 cannot load
   videoconvertscale videofilter                         # videoconvert, videoscale, videoflip
   audioconvert audioresample volume level audioparsers  # audio chain
   wasapi2 wasapi directsound autodetect                 # audio output

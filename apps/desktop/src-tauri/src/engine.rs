@@ -71,6 +71,9 @@ pub enum ErrorKind {
     Discovery,
     /// The engine keeps exiting.
     Crashed,
+    /// GStreamer plugins that ship with Mirlow will not load, even after a
+    /// fresh scan: Windows is refusing them, usually Smart App Control.
+    Blocked,
     Unknown,
 }
 
@@ -314,15 +317,49 @@ struct Supervisor {
     session: Session,
 }
 
+/// GStreamer's plugin cache. One per app version, so an update starts from a
+/// fresh scan rather than what an earlier version found.
+fn registry_file(data_dir: &Path) -> PathBuf {
+    data_dir.join(concat!("gstreamer-registry-", env!("CARGO_PKG_VERSION"), ".bin"))
+}
+
+fn forget_old_registries(data_dir: &Path) {
+    let current = registry_file(data_dir);
+    let Ok(entries) = std::fs::read_dir(data_dir) else { return };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let name = entry.file_name();
+        if name.to_string_lossy().starts_with("gstreamer-registry") && path != current {
+            let _ = std::fs::remove_file(path);
+        }
+    }
+}
+
+/// True the first time GStreamer reports that the Direct3D 11 sink is not
+/// there, which is what happens when Windows blocks `libgstd3dshader`.
+fn switched_to_d3d9(line: &str, d3d9: &mut bool) -> bool {
+    if *d3d9 || !line.contains("no element \"d3d11videosink\"") {
+        return false;
+    }
+    *d3d9 = true;
+    true
+}
+
 impl Supervisor {
     fn run(mut self) {
         let mut failures: Vec<Instant> = Vec::new();
         // Set when the GPU decoder fails mid-session; lasts until the app closes.
         let mut software_fallback = false;
+        // Set when the Direct3D 11 plugin cannot load, as when Smart App
+        // Control blocks one of its libraries; lasts until the app closes.
+        let mut d3d9 = false;
+        // Set once the plugin cache has been rebuilt because plugins were missing.
+        let mut rescanned = false;
+        forget_old_registries(&self.shared.data_dir);
 
         loop {
             let settings = self.shared.settings.lock().unwrap().clone();
-            let software = settings.compatibility || software_fallback;
+            let software = settings.compatibility || software_fallback || d3d9;
             self.shared.connections.store(0, Ordering::Relaxed);
             self.session = Session::default();
             self.update(|status| {
@@ -336,7 +373,7 @@ impl Supervisor {
                 status.locked = false;
             });
 
-            let mut child = match self.spawn(&settings, software) {
+            let mut child = match self.spawn(&settings, software, d3d9) {
                 Ok(child) => child,
                 Err(error) => {
                     self.log_line(format!("[mirlow] could not start the engine: {error}"));
@@ -366,6 +403,12 @@ impl Supervisor {
                 match self.rx.recv_timeout(Duration::from_millis(200)) {
                     Ok(Message::Line(line)) => {
                         self.handle_line(&line, &mut hint, &mut video_failed);
+                        if switched_to_d3d9(&line, &mut d3d9) {
+                            self.log_line(
+                                "[mirlow] Direct3D 11 is unavailable, switching to Direct3D 9".into(),
+                            );
+                            break Outcome::Restart;
+                        }
                     }
                     Ok(Message::Restart) => break Outcome::Restart,
                     Ok(Message::Shutdown) => break Outcome::Shutdown,
@@ -382,13 +425,23 @@ impl Supervisor {
             self.shared.pid.store(0, Ordering::Relaxed);
             video::detach(&self.shared.app);
             // Lines the engine printed on its way out.
+            let mut switched = false;
             while let Ok(message) = self.rx.try_recv() {
                 match message {
-                    Message::Line(line) => self.handle_line(&line, &mut hint, &mut video_failed),
+                    Message::Line(line) => {
+                        self.handle_line(&line, &mut hint, &mut video_failed);
+                        if switched_to_d3d9(&line, &mut d3d9) {
+                            self.log_line(
+                                "[mirlow] Direct3D 11 is unavailable, switching to Direct3D 9".into(),
+                            );
+                            switched = true;
+                        }
+                    }
                     Message::Shutdown => return,
                     Message::Restart => {}
                 }
             }
+            let outcome = if switched { Outcome::Restart } else { outcome };
 
             match outcome {
                 Outcome::Shutdown => return,
@@ -400,6 +453,25 @@ impl Supervisor {
             }
 
             self.log_line("[mirlow] the engine exited unexpectedly".into());
+            if hint == Some(ErrorKind::Blocked) {
+                // GStreamer remembers plugins that failed to load. Forget
+                // them once, in case what stopped them has since gone away.
+                if !rescanned {
+                    self.log_line("[mirlow] plugins are missing, rebuilding the plugin cache".into());
+                    let _ = std::fs::remove_file(registry_file(&self.shared.data_dir));
+                    rescanned = true;
+                    continue;
+                }
+                self.fail(ErrorKind::Blocked);
+                match self.wait_for_command() {
+                    Outcome::Shutdown => return,
+                    _ => {
+                        rescanned = false;
+                        failures.clear();
+                        continue;
+                    }
+                }
+            }
             if video_failed && !software {
                 self.log_line("[mirlow] switching to software video decoding".into());
                 software_fallback = true;
@@ -439,7 +511,7 @@ impl Supervisor {
         }
     }
 
-    fn spawn(&self, settings: &Settings, software: bool) -> std::io::Result<Child> {
+    fn spawn(&self, settings: &Settings, software: bool, d3d9: bool) -> std::io::Result<Child> {
         let dir = &self.shared.engine_dir;
         let bin = dir.join("bin");
         let exe = bin.join("mirlow-engine.exe");
@@ -474,9 +546,18 @@ impl Supervisor {
             .arg(self.shared.data_dir.join("receiver.pem"))
             .arg("-m")
             .arg(device_id(&self.shared.data_dir))
-            // Direct3D 11 output in the engine's own window, which `video`
+            // Direct3D output in the engine's own window, which `video`
             // then places inside ours. No Alt+Enter handling of its own.
-            .args(["-vs", "d3d11videosink fullscreen-toggle-mode=none"]);
+            // Direct3D 9 does not use libgstd3dshader, the library Windows
+            // sometimes refuses to load.
+            .args([
+                "-vs",
+                if d3d9 {
+                    "d3dvideosink"
+                } else {
+                    "d3d11videosink fullscreen-toggle-mode=none"
+                },
+            ]);
         if software {
             command.arg("-avdec");
         } else {
@@ -517,7 +598,10 @@ impl Supervisor {
                 "GST_PLUGIN_SCANNER_1_0",
                 dir.join("libexec").join("gstreamer-1.0").join("gst-plugin-scanner.exe"),
             )
-            .env("GST_REGISTRY_1_0", self.shared.data_dir.join("gstreamer-registry.bin"))
+            .env("GST_REGISTRY_1_0", registry_file(&self.shared.data_dir))
+            // Why a plugin failed to load, in the log.
+            .env("GST_DEBUG", "GST_PLUGIN_LOADING:2")
+            .env("GST_DEBUG_NO_COLOR", "1")
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
@@ -525,8 +609,16 @@ impl Supervisor {
         #[cfg(windows)]
         {
             use std::os::windows::process::CommandExt;
+            use windows::Win32::System::Diagnostics::Debug::{
+                SetErrorMode, SEM_FAILCRITICALERRORS, SEM_NOOPENFILEERRORBOX,
+            };
             const CREATE_NO_WINDOW: u32 = 0x0800_0000;
             command.creation_flags(CREATE_NO_WINDOW);
+            // The engine and its plugin scanner inherit this. A library that
+            // Windows refuses to load (Smart App Control blocks unsigned ones
+            // it does not know) then fails quietly instead of holding the
+            // engine up behind a "Bad Image" dialog.
+            unsafe { SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOOPENFILEERRORBOX) };
         }
 
         command.spawn()
@@ -557,6 +649,9 @@ impl Supervisor {
             *video_failed = true;
         }
         let lower = line.to_ascii_lowercase();
+        if line.starts_with("Required gstreamer plugin") {
+            *hint = Some(ErrorKind::Blocked);
+        }
         if lower.contains("dnssd") && (lower.contains("fail") || lower.contains("could not")) {
             *hint = Some(ErrorKind::Discovery);
         }

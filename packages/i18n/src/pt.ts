@@ -126,6 +126,8 @@ export const pt: Dictionary = {
         "O Mirlow não conseguiu anunciar este PC na rede. Confirme que está ligado por Wi‑Fi ou Ethernet.",
       crashed:
         "O recetor está sempre a parar. Experimentar o modo de compatibilidade nas Definições costuma ajudar.",
+      blocked:
+        "O Windows impediu que alguns ficheiros do Mirlow fossem carregados, normalmente por causa do Controlo Inteligente de Aplicações (Segurança do Windows → Controlo de aplicações e browser).",
       unknown: "Aconteceu algo inesperado.",
       retry: "Tentar novamente",
       details: "Mostrar detalhes",

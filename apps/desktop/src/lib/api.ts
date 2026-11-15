@@ -12,7 +12,7 @@ export type Phase =
   | "recovering"
   | "error";
 
-export type ErrorKind = "engineMissing" | "discovery" | "crashed" | "unknown";
+export type ErrorKind = "engineMissing" | "discovery" | "crashed" | "blocked" | "unknown";
 
 export interface Client {
   name: string;

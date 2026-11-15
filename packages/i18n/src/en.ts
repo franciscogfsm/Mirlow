@@ -121,6 +121,8 @@ export const en = {
       engineMissing: "A part of Mirlow is missing. Reinstalling Mirlow will fix this.",
       discovery: "Mirlow couldn't announce this PC on your network. Check that you're connected to Wi‑Fi or Ethernet.",
       crashed: "The receiver keeps stopping. Trying compatibility mode in Settings often helps.",
+      blocked:
+        "Windows stopped some of Mirlow's files from loading, usually because of Smart App Control (Windows Security → App & browser control).",
       unknown: "Something unexpected happened.",
       retry: "Try again",
       details: "Show details",

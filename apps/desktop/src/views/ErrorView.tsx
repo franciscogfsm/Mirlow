@@ -18,7 +18,9 @@ export function ErrorView({ kind }: { kind: ErrorKind | null }) {
         ? e.discovery
         : kind === "crashed"
           ? e.crashed
-          : e.unknown;
+          : kind === "blocked"
+            ? e.blocked
+            : e.unknown;
 
   const toggleDetails = async () => {
     if (log !== null) return setLog(null);
