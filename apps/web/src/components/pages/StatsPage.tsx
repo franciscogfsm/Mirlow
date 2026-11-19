@@ -10,7 +10,8 @@ import { useEffect, useState, type ReactNode } from "react";
 const source = "https://raw.githubusercontent.com/franciscogfsm/Mirlow/stats-data/stats.json";
 
 const api = "https://api.github.com/repos/franciscogfsm/Mirlow";
-const installer = "Mirlow-Setup-x64.exe";
+// What people download. Updates fetch separate copies (Mirlow-Update-*), which are not counted.
+const installers = ["Mirlow-Setup-x64.exe", "Mirlow-amd64.deb"];
 type ApiRelease = {
   tag_name: string;
   published_at: string | null;
@@ -180,7 +181,9 @@ export function StatsPage() {
             .map((each) => ({
               version: each.tag_name,
               published: each.published_at,
-              downloads: each.assets.find((asset) => asset.name === installer)?.download_count ?? 0,
+              downloads: each.assets
+        .filter((asset) => installers.includes(asset.name))
+        .reduce((sum, asset) => sum + asset.download_count, 0),
             }));
           stats.downloads = stats.releases.reduce((sum, each) => sum + each.downloads, 0);
         }
@@ -286,8 +289,8 @@ export function StatsPage() {
           </Section>
 
           <p className="mt-10 text-[13px] leading-relaxed text-faint">
-            Downloads and stars are live from GitHub; feedback and past days update when “npm run stats” runs. Every download of the installer counts,
-            including repeats and automatic updates, so this is an upper bound on the number of people.
+            Downloads and stars are live from GitHub; feedback and past days update when “npm run stats” runs. Every download of the installer (Windows or
+            Linux) counts, including someone downloading it again; automatic updates do not.
           </p>
         </>
       )}

@@ -34,10 +34,32 @@ const LOG_LINES: usize = 300;
 /// later and later, up to a second. So the output holds 60 ms, and no more
 /// than 100 ms may wait in front of it: past that, the oldest is let go,
 /// a few milliseconds every few minutes, and the sound stays with the picture.
+#[cfg(not(target_os = "linux"))]
 const LIVE_AUDIO: &str = concat!(
     "queue max-size-time=100000000 max-size-buffers=0 max-size-bytes=0 leaky=downstream",
     " ! wasapi2sink low-latency=true buffer-time=60000 latency-time=10000",
 );
+/// The same through PulseAudio (or PipeWire, which answers for it).
+#[cfg(target_os = "linux")]
+const LIVE_AUDIO: &str = concat!(
+    "queue max-size-time=100000000 max-size-buffers=0 max-size-bytes=0 leaky=downstream",
+    " ! pulsesink buffer-time=60000 latency-time=10000",
+);
+
+/// Where the engine shows the picture. On Windows, Direct3D in the engine's
+/// own window, which `video` then places inside ours, with no Alt+Enter
+/// handling of its own; Direct3D 9 does not use libgstd3dshader, the library
+/// Windows sometimes refuses to load. On Linux, OpenGL into the window
+/// `video` made for it, leaving the mouse and keyboard to the interface.
+fn video_sink(d3d9: bool) -> &'static str {
+    if cfg!(target_os = "linux") {
+        "glimagesink handle-events=false"
+    } else if d3d9 {
+        "d3dvideosink"
+    } else {
+        "d3d11videosink fullscreen-toggle-mode=none"
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -514,7 +536,7 @@ impl Supervisor {
     fn spawn(&self, settings: &Settings, software: bool, d3d9: bool) -> std::io::Result<Child> {
         let dir = &self.shared.engine_dir;
         let bin = dir.join("bin");
-        let exe = bin.join("mirlow-engine.exe");
+        let exe = program(dir);
         if !exe.is_file() {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
@@ -546,18 +568,7 @@ impl Supervisor {
             .arg(self.shared.data_dir.join("receiver.pem"))
             .arg("-m")
             .arg(device_id(&self.shared.data_dir))
-            // Direct3D output in the engine's own window, which `video`
-            // then places inside ours. No Alt+Enter handling of its own.
-            // Direct3D 9 does not use libgstd3dshader, the library Windows
-            // sometimes refuses to load.
-            .args([
-                "-vs",
-                if d3d9 {
-                    "d3dvideosink"
-                } else {
-                    "d3d11videosink fullscreen-toggle-mode=none"
-                },
-            ]);
+            .args(["-vs", video_sink(d3d9)]);
         if software {
             command.arg("-avdec");
         } else {
@@ -581,24 +592,49 @@ impl Supervisor {
             command.args(["-vsync", "no"]);
         }
 
-        // The engine must find only the libraries and plugins shipped with it.
-        let system_root = std::env::var("SystemRoot").unwrap_or_else(|_| r"C:\Windows".into());
-        let path = format!(r"{};{}\System32;{}", bin.display(), system_root, system_root);
-        for (key, _) in std::env::vars() {
-            if key.starts_with("GST_") || key.starts_with("GSTREAMER_") {
-                command.env_remove(key);
+        // On Windows the engine must find only the libraries and plugins
+        // shipped with it. On Linux it uses the system's GStreamer, which
+        // the package depends on.
+        #[cfg(windows)]
+        {
+            let system_root = std::env::var("SystemRoot").unwrap_or_else(|_| r"C:\Windows".into());
+            let path = format!(r"{};{}\System32;{}", bin.display(), system_root, system_root);
+            for (key, _) in std::env::vars() {
+                if key.starts_with("GST_") || key.starts_with("GSTREAMER_") {
+                    command.env_remove(key);
+                }
+            }
+            command
+                .env("PATH", path)
+                .env("HOME", &self.shared.data_dir)
+                .env("GST_PLUGIN_SYSTEM_PATH_1_0", dir.join("lib").join("gstreamer-1.0"))
+                .env(
+                    "GST_PLUGIN_SCANNER_1_0",
+                    dir.join("libexec").join("gstreamer-1.0").join("gst-plugin-scanner.exe"),
+                )
+                .env("GST_REGISTRY_1_0", registry_file(&self.shared.data_dir));
+        }
+        #[cfg(target_os = "linux")]
+        {
+            let _ = &bin;
+            if let Some(window) = video::engine_window() {
+                command.env("MIRLOW_WINDOW", window.to_string());
+            }
+            // The window is X11 (Mirlow runs under XWayland); on a Wayland
+            // desktop GStreamer's GL would otherwise pick Wayland and crash.
+            command.env("GST_GL_WINDOW", "x11");
+            // The engine goes when Mirlow does, however Mirlow ends; on
+            // SIGTERM it withdraws its name from the network first.
+            use std::os::unix::process::CommandExt;
+            unsafe {
+                command.pre_exec(|| {
+                    libc::prctl(libc::PR_SET_PDEATHSIG, libc::SIGTERM);
+                    Ok(())
+                });
             }
         }
         command
-            .env("PATH", path)
             .env("MIRLOW_SUPERVISED", "1")
-            .env("HOME", &self.shared.data_dir)
-            .env("GST_PLUGIN_SYSTEM_PATH_1_0", dir.join("lib").join("gstreamer-1.0"))
-            .env(
-                "GST_PLUGIN_SCANNER_1_0",
-                dir.join("libexec").join("gstreamer-1.0").join("gst-plugin-scanner.exe"),
-            )
-            .env("GST_REGISTRY_1_0", registry_file(&self.shared.data_dir))
             // Why a plugin failed to load, in the log.
             .env("GST_DEBUG", "GST_PLUGIN_LOADING:2")
             .env("GST_DEBUG_NO_COLOR", "1")
@@ -943,11 +979,16 @@ fn requested_resolution() -> String {
     format!("{}x{}", width.clamp(1920, 3840), height.clamp(1080, 2160))
 }
 
+/// The engine's program, in the folder [`locate`] gives.
+pub fn program(engine_dir: &Path) -> PathBuf {
+    engine_dir.join("bin").join(format!("mirlow-engine{}", std::env::consts::EXE_SUFFIX))
+}
+
 /// Where the bundled engine lives.
 pub fn locate(resource_dir: Option<&Path>) -> PathBuf {
     if let Some(dir) = resource_dir {
         let bundled = dir.join("engine");
-        if bundled.join("bin").join("mirlow-engine.exe").is_file() {
+        if program(&bundled).is_file() {
             return bundled;
         }
     }

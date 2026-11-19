@@ -186,7 +186,7 @@ fn get_engine_log(engine: State<'_, Engine>) -> String {
 /// The programs that receive a phone, and so must get through the firewall:
 /// the engine for AirPlay, and the app itself for Miracast.
 fn receivers(app: &AppHandle) -> Vec<PathBuf> {
-    let mut programs = vec![app.state::<AppState>().engine_dir.join("bin").join("mirlow-engine.exe")];
+    let mut programs = vec![engine::program(&app.state::<AppState>().engine_dir)];
     programs.extend(std::env::current_exe().ok());
     // Firewall rules hold plain paths; a "\\?\C:\..." one would never match.
     programs
@@ -305,6 +305,10 @@ fn note_panics() {
 
 pub fn run() {
     note_panics();
+    // The picture is another program's window placed inside Mirlow's, which
+    // X11 allows and Wayland does not; under Wayland, XWayland stands in.
+    #[cfg(target_os = "linux")]
+    std::env::set_var("GDK_BACKEND", "x11");
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             // Opening Mirlow again (from the desktop icon, say) brings back the

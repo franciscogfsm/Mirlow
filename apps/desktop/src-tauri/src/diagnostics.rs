@@ -39,6 +39,14 @@ pub struct Diagnostics {
 
 /// `programs` are the executables that must be let through the firewall.
 pub fn collect(android: AndroidStatus, programs: &[PathBuf]) -> Diagnostics {
+    // Linux desktops rarely run a firewall that blocks the engine, and there
+    // is no one firewall to ask: nothing to report or fix there.
+    #[cfg(not(windows))]
+    {
+        let _ = programs;
+        return Diagnostics { firewall_allowed: true, network: None, wifi_off: false, android };
+    }
+    #[allow(unreachable_code)]
     let (network, firewall_on) = network_and_firewall();
     Diagnostics {
         // A firewall that is off (or replaced by an antivirus's own, which

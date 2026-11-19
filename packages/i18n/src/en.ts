@@ -423,6 +423,7 @@ export const en = {
       worksWith: "Works with",
       devices: ["iPhone", "iPad", "Mac", "Android"],
       requires: "Windows 10 and 11 · 12 MB download",
+      linux: "Also on Linux (.deb)",
       sceneLabel:
         "Animation: a phone sends its screen wirelessly to a Windows PC, where it appears in the Mirlow window.",
       sceneReady: "Ready to mirror",
@@ -565,6 +566,7 @@ export const en = {
       body: "Free, private, and ready in under a minute.",
       cta: "Download for Windows — Free",
       note: "Windows 10 and 11 · 64‑bit",
+      linux: "Also on Linux (.deb)",
     },
     guides: {
       title: "Guides",

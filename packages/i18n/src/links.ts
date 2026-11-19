@@ -9,6 +9,8 @@ export const links = {
   releases: `${repository}/releases`,
   /** Always resolves to the installer attached to the newest release. */
   download: `${repository}/releases/latest/download/Mirlow-Setup-x64.exe`,
+  /** The Linux package (Ubuntu 24.04 and later, Debian 13, Mint 22) of the newest release. */
+  downloadLinux: `${repository}/releases/latest/download/Mirlow-amd64.deb`,
   licenses: `${repository}/blob/main/THIRD-PARTY-NOTICES.md`,
   issues: `${repository}/issues`,
   /** The page to share: friendlier to people who don't use GitHub. */

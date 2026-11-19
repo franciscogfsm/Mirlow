@@ -3,6 +3,8 @@
 # since signing changes the file). Writes:
 #   Mirlow-Update-x64.exe       the same installer, for the updater (kept apart so
 #                               updates do not count as downloads)
+#   Mirlow-Update-amd64.deb     the same for the Linux package, if
+#                               scripts\build-linux.ps1 made one
 #   latest.json                 what the app's updater reads: the newest version
 #                               and the installer's updater signature
 #   SHA256SUMS.txt              checksums of everything in .\release\
@@ -33,14 +35,17 @@ if (-not $env:TAURI_SIGNING_PRIVATE_KEY) {
     }
     $keyArgs = '--private-key-path', $UpdaterKey
 }
-# Through node rather than npm, which would split the paths at their spaces.
-# Input is piped in so it never asks for the password at a terminal: what is
-# typed there is not taken as the empty password the key has.
-'' | node (Join-Path $repo 'node_modules\@tauri-apps\cli\tauri.js') signer sign @keyArgs --app-version $version $installer
-if ($LASTEXITCODE -ne 0) { throw "Signing the update failed (exit code $LASTEXITCODE)." }
-$signatureFile = "$installer.sig"
-$signature = (Get-Content $signatureFile -Raw).Trim()
-Remove-Item $signatureFile
+function Get-UpdateSignature([string]$File) {
+    # Through node rather than npm, which would split the paths at their spaces.
+    # Input is piped in so it never asks for the password at a terminal: what is
+    # typed there is not taken as the empty password the key has.
+    '' | node (Join-Path $repo 'node_modules\@tauri-apps\cli\tauri.js') signer sign @keyArgs --app-version $version $File | Out-Host
+    if ($LASTEXITCODE -ne 0) { throw "Signing the update failed (exit code $LASTEXITCODE)." }
+    $signature = (Get-Content "$File.sig" -Raw).Trim()
+    Remove-Item "$File.sig"
+    $signature
+}
+$signature = Get-UpdateSignature $installer
 
 # The updater downloads its own copy of the installer, so GitHub's download
 # count of Mirlow-Setup-x64.exe is only people downloading it, not updates.
@@ -57,6 +62,15 @@ $manifest = [ordered]@{
             url       = "https://github.com/franciscogfsm/Mirlow/releases/download/v$version/Mirlow-Update-x64.exe"
         }
     }
+}
+# The Linux package, the same way. An installed .deb looks for linux-x86_64-deb.
+$deb = Join-Path $release 'Mirlow-amd64.deb'
+if (Test-Path $deb) {
+    $manifest.platforms['linux-x86_64-deb'] = [ordered]@{
+        signature = Get-UpdateSignature $deb
+        url       = "https://github.com/franciscogfsm/Mirlow/releases/download/v$version/Mirlow-Update-amd64.deb"
+    }
+    Copy-Item $deb (Join-Path $release 'Mirlow-Update-amd64.deb') -Force
 }
 # Without a byte-order mark, which the updater's JSON parser rejects.
 [IO.File]::WriteAllText((Join-Path $release 'latest.json'), ($manifest | ConvertTo-Json -Depth 4))

@@ -22,6 +22,8 @@ import { MirrorStage } from "./views/MirrorStage";
 import { WaitingView } from "./views/WaitingView";
 
 const RESIZE_MS = 420;
+// Screenshots and recordings use Windows' own capture and encoders.
+const canCapture = !navigator.userAgent.includes("Linux");
 
 const easeOutQuint = (t: number) => 1 - Math.pow(1 - t, 5);
 
@@ -326,8 +328,8 @@ function Shell({
         setSettingsOpen(true);
       } else if (mirroring && event.ctrlKey && event.shiftKey) {
         const key = event.key.toLowerCase();
-        if (key === "s") screenshot();
-        else if (key === "r") toggleRecording();
+        if (key === "s" && canCapture) screenshot();
+        else if (key === "r" && canCapture) toggleRecording();
         else if (key === "m") void toggleMini();
         else return;
         event.preventDefault();
@@ -443,8 +445,8 @@ function Shell({
           onToggleFullscreen={() => void toggleFullscreen()}
           onDisconnect={() => void api.restartEngine()}
           onOpenSettings={() => setSettingsOpen(true)}
-          onScreenshot={screenshot}
-          onToggleRecording={toggleRecording}
+          onScreenshot={canCapture ? screenshot : undefined}
+          onToggleRecording={canCapture ? toggleRecording : undefined}
           onToggleMini={() => void toggleMini()}
         />
       </motion.div>

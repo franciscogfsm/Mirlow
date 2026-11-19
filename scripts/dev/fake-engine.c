@@ -11,9 +11,14 @@
  * unlocked sideways; the sound stops. Back upright, the picture stops while
  * the device stays connected, then comes back. Then the device disconnects,
  * and it all repeats.
+ *
+ * On Linux it draws with OpenGL into the X11 window MIRLOW_WINDOW names, as
+ * the real engine does there.
  */
 #include <gst/gst.h>
+#include <gst/video/videooverlay.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 static GMainLoop *loop;
@@ -32,11 +37,25 @@ static void show(int width, int height) {
         gst_element_set_state(pipeline, GST_STATE_NULL);
         gst_object_unref(pipeline);
     }
+#ifdef _WIN32
     snprintf(launch, sizeof(launch),
              "d3d11testsrc pattern=smpte ! video/x-raw(memory:D3D11Memory),width=%d,height=%d,framerate=30/1 "
              "! d3d11videosink fullscreen-toggle-mode=none",
              width, height);
     pipeline = gst_parse_launch(launch, NULL);
+#else
+    snprintf(launch, sizeof(launch),
+             "videotestsrc pattern=smpte ! video/x-raw,width=%d,height=%d,framerate=30/1 "
+             "! glimagesink name=sink handle-events=false",
+             width, height);
+    pipeline = gst_parse_launch(launch, NULL);
+    const char *window = getenv("MIRLOW_WINDOW");
+    if (window) {
+        GstElement *sink = gst_bin_get_by_name(GST_BIN(pipeline), "sink");
+        gst_video_overlay_set_window_handle(GST_VIDEO_OVERLAY(sink), (guintptr) strtoull(window, NULL, 0));
+        gst_object_unref(sink);
+    }
+#endif
     gst_element_set_state(pipeline, GST_STATE_PLAYING);
     snprintf(event, sizeof(event), "video-size %d %d %d %d", width, height, width, height);
     say("video-codec h264");

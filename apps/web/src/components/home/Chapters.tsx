@@ -1,4 +1,4 @@
-import { type Dictionary, type Locale, release } from "@mirlow/i18n";
+import { type Dictionary, type Locale, links, release } from "@mirlow/i18n";
 import {
   Airplay,
   ArrowUpRight,
@@ -85,6 +85,9 @@ export function HeroChapter({ t, how }: { t: Site["hero"]; how: Site["how"] }) {
 
           <div className="rise mt-9 flex flex-wrap items-center justify-center gap-3 pinned:justify-start" style={order(4)}>
             <DownloadButton label={t.cta} />
+            <a href={links.downloadLinux} download className="text-[13.5px] text-soft underline-offset-4 hover:underline">
+              {t.linux}
+            </a>
           </div>
           <ul
             className="rise mt-5 flex flex-wrap justify-center gap-x-5 gap-y-2 text-[13.5px] text-soft pinned:justify-start"
@@ -339,7 +342,10 @@ export function FinalChapter({ t }: { t: Site["finalCta"] }) {
           <DownloadButton label={t.cta} />
         </div>
         <p className="rise mt-4 text-[13.5px] text-faint" style={order(4)}>
-          {t.note}
+          {t.note} ·{" "}
+          <a href={links.downloadLinux} download className="underline-offset-4 hover:underline">
+            {t.linux}
+          </a>
         </p>
       </div>
     </Frame>

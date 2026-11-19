@@ -153,11 +153,16 @@ pub struct Scrcpy {
     shared: Arc<Shared>,
 }
 
+/// A program's file name on this system.
+fn exe(name: &str) -> String {
+    format!("{name}{}", std::env::consts::EXE_SUFFIX)
+}
+
 /// Where the bundled scrcpy lives.
 pub fn locate(resource_dir: Option<&Path>) -> PathBuf {
     if let Some(dir) = resource_dir {
         let bundled = dir.join("scrcpy");
-        if bundled.join("scrcpy.exe").is_file() {
+        if bundled.join(exe("scrcpy")).is_file() {
             return bundled;
         }
     }
@@ -175,7 +180,7 @@ pub fn stop(app: &AppHandle) {
 
 impl Scrcpy {
     pub fn start(app: AppHandle, engine: Engine, settings: Arc<Mutex<Settings>>, dir: PathBuf) -> Self {
-        let available = dir.join("scrcpy.exe").is_file() && dir.join("adb.exe").is_file();
+        let available = dir.join(exe("scrcpy")).is_file() && dir.join(exe("adb")).is_file();
         let enabled = available && settings.lock().unwrap().android_wifi;
         let shared = Arc::new(Shared {
             app,
@@ -476,11 +481,11 @@ impl Shared {
     }
 
     fn command(&self, program: &str) -> Command {
-        let mut command = Command::new(self.dir.join(program));
+        let mut command = Command::new(self.dir.join(exe(program)));
         command
             .current_dir(&self.dir)
             .env("ANDROID_ADB_SERVER_PORT", ADB_PORT.to_string())
-            .env("ADB", self.dir.join("adb.exe"))
+            .env("ADB", self.dir.join(exe("adb")))
             .env("SCRCPY_SERVER_PATH", self.dir.join("scrcpy-server"))
             .env("SCRCPY_ICON_DIR", &self.dir)
             .stdin(Stdio::null());
@@ -505,7 +510,7 @@ impl Shared {
         if !self.server_up() {
             return None;
         }
-        let mut command = self.command("adb.exe");
+        let mut command = self.command("adb");
         command.args(args).stdout(Stdio::piped()).stderr(Stdio::piped());
         let mut child = command.spawn().ok()?;
         let mut stdout = child.stdout.take()?;
@@ -537,7 +542,7 @@ impl Shared {
         if server.as_mut().is_some_and(|child| child.try_wait().ok().flatten().is_none()) {
             return;
         }
-        let mut command = self.command("adb.exe");
+        let mut command = self.command("adb");
         command.args(["server", "nodaemon"]).stdout(Stdio::null()).stderr(Stdio::null());
         match command.spawn() {
             Ok(child) => {
@@ -576,7 +581,7 @@ impl Shared {
                 thread::sleep(Duration::from_millis(250));
                 continue;
             }
-            let mut command = self.command("adb.exe");
+            let mut command = self.command("adb");
             command.args(["track-devices", "-l"]).stdout(Stdio::piped()).stderr(Stdio::null());
             let Ok(mut child) = command.spawn() else {
                 thread::sleep(Duration::from_secs(1));
@@ -739,7 +744,7 @@ impl Shared {
 
     fn spawn_scrcpy(&self, serial: &str) -> std::io::Result<Child> {
         let sound = self.settings.lock().unwrap().sound;
-        let mut command = self.command("scrcpy.exe");
+        let mut command = self.command("scrcpy");
         command.args([
             "--serial",
             serial,
@@ -941,7 +946,19 @@ mod focus {
     }
 }
 
-#[cfg(not(windows))]
+/// On Linux the window gets the keyboard once, when it appears.
+/// shortcut: a click on Mirlow's interface keeps the keyboard there afterwards;
+/// follow scrcpy's clicks (XInput 2) if people miss typing into the phone.
+#[cfg(target_os = "linux")]
+mod focus {
+    pub use crate::video::platform::{close, focus as give};
+    pub fn follow_clicks(hwnd: isize, _pid: u32) {
+        give(hwnd);
+    }
+    pub fn stop_following() {}
+}
+
+#[cfg(not(any(windows, target_os = "linux")))]
 mod focus {
     pub fn give(_hwnd: isize) {}
     pub fn close(_hwnd: isize) {}

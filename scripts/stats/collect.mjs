@@ -9,7 +9,8 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 const [previousPath, outputPath] = process.argv.slice(2);
 const owner = "franciscogfsm";
 const name = "mirlow";
-const installer = "Mirlow-Setup-x64.exe";
+// What people download. Updates fetch separate copies (Mirlow-Update-*), which are not counted.
+const installers = ["Mirlow-Setup-x64.exe", "Mirlow-amd64.deb"];
 const headers = {
   Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
   Accept: "application/vnd.github+json",
@@ -26,7 +27,9 @@ const releases = (await get(`https://api.github.com/repos/${owner}/${name}/relea
   .map((each) => ({
     version: each.tag_name,
     published: each.published_at,
-    downloads: each.assets.find((asset) => asset.name === installer)?.download_count ?? 0,
+    downloads: each.assets
+        .filter((asset) => installers.includes(asset.name))
+        .reduce((sum, asset) => sum + asset.download_count, 0),
   }));
 
 const discussionFields = "title url createdAt upvoteCount isAnswered author { login } comments { totalCount }";

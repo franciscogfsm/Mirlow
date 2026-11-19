@@ -1,17 +1,9 @@
 {
-  "version": "1.11",
+  "version": "1.12",
   "en": [
-    "Record your phone, with its sound: the red button at the top, or Ctrl+Shift+R. Videos go to Videos › Mirlow.",
-    "Screenshots in one click: the camera button, or Ctrl+Shift+S. They go to Pictures › Mirlow.",
-    "Mini window: keep your phone small, in a corner, on top of everything (Ctrl+Shift+M).",
-    "Android with a USB cable: turn on USB debugging, plug the phone in and tap Allow. No Wi‑Fi or code needed.",
-    "Send files to an Android phone by dropping them on the window. Apps (.apk) are installed."
+    "Mirlow is now on Linux! Mirror your iPhone, or an Android phone over USB, on Ubuntu, Debian, Mint and other Linux PCs. Download the .deb from the Mirlow website."
   ],
   "pt": [
-    "Grave o telemóvel, com som: o botão vermelho em cima, ou Ctrl+Shift+R. Os vídeos ficam em Vídeos › Mirlow.",
-    "Capturas de ecrã num clique: o botão da câmara, ou Ctrl+Shift+S. Ficam em Imagens › Mirlow.",
-    "Mini janela: o telemóvel pequeno, num canto, por cima de tudo (Ctrl+Shift+M).",
-    "Android com cabo USB: ative a Depuração USB, ligue o telemóvel e toque em Permitir. Sem Wi‑Fi nem código.",
-    "Envie ficheiros para um telemóvel Android largando-os na janela. As apps (.apk) são instaladas."
+    "O Mirlow já está no Linux! Espelhe o iPhone, ou um Android por USB, no Ubuntu, Debian, Mint e outros PCs com Linux. Descarregue o .deb no site do Mirlow."
   ]
 }

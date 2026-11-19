@@ -430,6 +430,7 @@ export const pt: Dictionary = {
       worksWith: "Funciona com",
       devices: ["iPhone", "iPad", "Mac", "Android"],
       requires: "Windows 10 e 11 · Download de 12 MB",
+      linux: "Também para Linux (.deb)",
       sceneLabel:
         "Animação: um telemóvel envia o seu ecrã, sem fios, para um PC com Windows, onde aparece na janela do Mirlow.",
       sceneReady: "Pronto para projetar",
@@ -573,6 +574,7 @@ export const pt: Dictionary = {
       body: "Gratuito, privado e pronto em menos de um minuto.",
       cta: "Transferir para Windows — Grátis",
       note: "Windows 10 e 11 · 64 bits",
+      linux: "Também para Linux (.deb)",
     },
     guides: {
       title: "Guias",

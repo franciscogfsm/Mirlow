@@ -9,6 +9,7 @@ Mirlow makes to UxPlay, and are licensed, like UxPlay itself, under GPL-3.0.
 | `0001-mirlow-supervisor-events.patch` | When the environment variable `MIRLOW_SUPERVISED` is set, UxPlay prints one machine-readable line (`@@mirlow <event> …`) for each state change the desktop app cares about, and shuts down cleanly when its standard input closes. That includes the device's screen going to sleep and waking (`video-pause`, `video-resume`, so a locked phone's last frame can be hidden) and whether its sound can be heard (`sound 1`/`sound 0`, from the level meter already in the audio pipeline). Without the variable, behaviour is unchanged. |
 | `0002-windows-do-not-link-wsock32.patch` | Stops linking the legacy `wsock32` library on Windows. See below. |
 | `0003-windows-fix-udp-recvfrom-address-length.patch` | Passes the right address-length pointer to `recvfrom`. Without it there is no sound on Windows. See below. |
+| `0004-linux-supervised-and-window.patch` | Turns on what 0001 adds on Linux too (0001 only set it up on Windows), and when `MIRLOW_WINDOW` holds an X11 window id, draws the picture into that window, which the desktop app has placed inside its own. |
 
 ## Why 0002 exists
 

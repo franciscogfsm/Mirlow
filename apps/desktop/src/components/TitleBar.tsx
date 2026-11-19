@@ -72,8 +72,9 @@ export function TitleBar({
   onToggleFullscreen: () => void;
   onDisconnect: () => void;
   onOpenSettings: () => void;
-  onScreenshot: () => void;
-  onToggleRecording: () => void;
+  /** Left out where screenshots and recordings are not available (Linux). */
+  onScreenshot?: () => void;
+  onToggleRecording?: () => void;
   onToggleMini: () => void;
 }) {
   const { t } = useI18n();
@@ -184,20 +185,24 @@ export function TitleBar({
       <div className={`flex shrink-0 items-center ${slim ? "gap-1" : "gap-1.5"}`}>
         {mirroring && (
           <>
-            <GlassIconButton label={t.mirroring.screenshot} onClick={onScreenshot} size={iconSize}>
-              <Camera size={icon} />
-            </GlassIconButton>
-            <GlassIconButton
-              label={recording ? t.mirroring.stopRecording : t.mirroring.record}
-              onClick={onToggleRecording}
-              size={iconSize}
-            >
-              {recording ? (
-                <Square size={icon - 3} fill="#ff453a" stroke="#ff453a" />
-              ) : (
-                <Circle size={icon - 2} fill="#ff453a" stroke="#ff453a" />
-              )}
-            </GlassIconButton>
+            {onScreenshot && (
+              <GlassIconButton label={t.mirroring.screenshot} onClick={onScreenshot} size={iconSize}>
+                <Camera size={icon} />
+              </GlassIconButton>
+            )}
+            {onToggleRecording && (
+              <GlassIconButton
+                label={recording ? t.mirroring.stopRecording : t.mirroring.record}
+                onClick={onToggleRecording}
+                size={iconSize}
+              >
+                {recording ? (
+                  <Square size={icon - 3} fill="#ff453a" stroke="#ff453a" />
+                ) : (
+                  <Circle size={icon - 2} fill="#ff453a" stroke="#ff453a" />
+                )}
+              </GlassIconButton>
+            )}
             {!fullscreen && (
               <GlassIconButton label={mini ? t.mirroring.exitMini : t.mirroring.mini} onClick={onToggleMini} size={iconSize}>
                 <PictureInPicture2 size={icon} />

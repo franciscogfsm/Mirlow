@@ -1,6 +1,7 @@
 # Builds the Windows installer and collects everything a release needs in
 # .\release\ :
 #   Mirlow-Setup-x64.exe        the installer (the name the website links to)
+#   Mirlow-amd64.deb            the Linux package, built in WSL (scripts\build-linux.ps1)
 #   THIRD-PARTY-RUNTIME.md      the exact list of bundled libraries for this build
 #   latest.json                 what the app's updater reads: the newest version
 #                               and the installer's signature
@@ -10,12 +11,14 @@
 #
 #   .\scripts\build-installer.ps1               build the installer
 #   .\scripts\build-installer.ps1 -Engine       rebuild the AirPlay engine first
+#   .\scripts\build-installer.ps1 -NoLinux      leave out the Linux package
 #   .\scripts\build-installer.ps1 -BuildOnly    stop after the installer (to
 #                                               code-sign it), then run
 #                                               scripts\finish-release.ps1
 param(
     [switch]$Engine,
     [switch]$BuildOnly,
+    [switch]$NoLinux,
     [string]$MsysRoot = 'C:\msys64',
     # Rust's build output. Kept outside the repository so that a synced folder
     # (OneDrive, Dropbox) does not have to churn through gigabytes of it.
@@ -62,6 +65,7 @@ New-Item -ItemType Directory -Force $release | Out-Null
 $installer = Join-Path $release 'Mirlow-Setup-x64.exe'
 Copy-Item $built.FullName $installer -Force
 Copy-Item (Join-Path $repo 'apps\desktop\src-tauri\resources\engine\THIRD-PARTY-RUNTIME.md') $release -Force
+if (-not $NoLinux) { & (Join-Path $PSScriptRoot 'build-linux.ps1') -Engine:$Engine }
 
 if ($BuildOnly) {
     'Installer: {0} ({1:N1} MB)' -f $installer, ((Get-Item $installer).Length / 1MB)

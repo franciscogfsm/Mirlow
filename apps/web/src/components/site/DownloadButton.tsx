@@ -1,6 +1,10 @@
+"use client";
+
 import { downloadUrl } from "@/lib/site";
+import { links } from "@mirlow/i18n";
 import { LiquidGlass } from "@mirlow/ui";
 import { ArrowDown } from "lucide-react";
+import { useEffect, useState } from "react";
 
 /**
  * The one call to action. Solid ink under glass: the only filled control on
@@ -14,10 +18,17 @@ export function DownloadButton({
   size?: "large" | "small";
 }) {
   const large = size === "large";
+  // The page is static, so the Windows installer is the default; Linux
+  // desktops get the .deb once the browser says what it runs on.
+  const [href, setHref] = useState(downloadUrl);
+  useEffect(() => {
+    const agent = navigator.userAgent;
+    if (agent.includes("Linux") && !agent.includes("Android")) setHref(links.downloadLinux);
+  }, []);
   return (
     <LiquidGlass
       as="a"
-      href={downloadUrl}
+      href={href}
       download
       radius={999}
       bezel={large ? 16 : 11}

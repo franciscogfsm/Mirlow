@@ -1,0 +1,37 @@
+diff --git a/uxplay.cpp b/uxplay.cpp
+index c091448..c44d33f 100755
+--- a/uxplay.cpp
++++ b/uxplay.cpp
+@@ -662,7 +662,6 @@ static gboolean x11_window_callback(gpointer loop) {
+ 
+ static void cleanup();
+ 
+-#ifdef _WIN32
+ static gboolean handle_signal(gpointer data) {
+     relaunch_video = false;
+     g_main_loop_quit(gmainloop);
+@@ -685,6 +684,7 @@ static gpointer mirlow_stdin_watch(gpointer data) {
+     return NULL;
+ }
+ 
++#ifdef _WIN32
+ static BOOL WINAPI CtrlHandler(DWORD signal) {
+     switch (signal) {
+     case CTRL_C_EVENT:
+@@ -3373,6 +3373,16 @@ int main (int argc, char *argv[]) {
+     signal(SIGINT, CtrlHandler);
+     signal(SIGTERM, CtrlHandler);
+     signal(SIGHUP, CtrlHandler);
++    if (getenv("MIRLOW_SUPERVISED")) {
++        mirlow_supervised = true;
++        g_thread_unref(g_thread_new("mirlow-stdin", mirlow_stdin_watch, NULL));
++        audio_renderer_set_level_callback(mirlow_sound_level);
++        g_timeout_add(250, mirlow_sound_watch, NULL);
++    }
++    /* Mirlow: draw the picture into the X11 window the supervisor made for it. */
++    if (const char *window = getenv("MIRLOW_WINDOW")) {
++        video_renderer_set_window_handle((uintptr_t) strtoull(window, NULL, 0));
++    }
+ #endif
+ 
+ #ifdef __OpenBSD__

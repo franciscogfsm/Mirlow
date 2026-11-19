@@ -76,7 +76,7 @@ pub fn watch(app: &AppHandle, pid: u32) {
             if video.generation.load(Ordering::SeqCst) != generation {
                 return;
             }
-            if let Some(hwnd) = platform::find_window(pid) {
+            if let Some(hwnd) = engine_window().or_else(|| platform::find_window(pid)) {
                 let Some(parent) = main_hwnd(&app) else { return };
                 let mut inner = video.inner.lock().unwrap();
                 platform::adopt(hwnd, parent, false);
@@ -261,11 +261,37 @@ fn main_hwnd(app: &AppHandle) -> Option<isize> {
         let window = app.get_webview_window("main")?;
         window.hwnd().ok().map(|hwnd| hwnd.0 as isize)
     }
-    #[cfg(not(windows))]
+    #[cfg(target_os = "linux")]
+    {
+        use raw_window_handle::{HasWindowHandle, RawWindowHandle};
+        let window = app.get_webview_window("main")?;
+        match window.window_handle().ok()?.as_raw() {
+            RawWindowHandle::Xlib(handle) => Some(handle.window as isize),
+            _ => None,
+        }
+    }
+    #[cfg(not(any(windows, target_os = "linux")))]
     {
         let _ = app;
         None
     }
+}
+
+/// The window the engine draws into, on Linux: one Mirlow makes (GStreamer's
+/// windows do not say which program they belong to, so the engine's could not
+/// be found the way it is on Windows). It is made on its own, since Mirlow's
+/// window may not exist yet while it waits in the tray, and is placed inside
+/// that window once there is a picture, like the engine's elsewhere.
+/// Elsewhere the engine makes its own.
+pub fn engine_window() -> Option<isize> {
+    #[cfg(target_os = "linux")]
+    {
+        static WINDOW: std::sync::OnceLock<isize> = std::sync::OnceLock::new();
+        let window = *WINDOW.get_or_init(platform::create_window);
+        (window != 0).then_some(window)
+    }
+    #[cfg(not(target_os = "linux"))]
+    None
 }
 
 #[cfg(windows)]
@@ -401,7 +427,235 @@ mod platform {
     }
 }
 
-#[cfg(not(windows))]
+/// The same on Linux, with X11 (Mirlow asks for XWayland under Wayland, see
+/// `lib.rs`), where one program's window can be made a child of another's.
+#[cfg(target_os = "linux")]
+pub(crate) mod platform {
+    use super::Rect;
+    use std::os::raw::{c_int, c_uchar, c_uint, c_ulong};
+    use std::sync::atomic::{AtomicPtr, Ordering};
+    use std::sync::{Mutex, OnceLock};
+    use x11::xlib;
+
+    struct Connection(*mut xlib::Display);
+    // Only ever used under its mutex.
+    unsafe impl Send for Connection {}
+
+    static OURS: AtomicPtr<xlib::Display> = AtomicPtr::new(std::ptr::null_mut());
+    static PREVIOUS: OnceLock<Option<unsafe extern "C" fn(*mut xlib::Display, *mut xlib::XErrorEvent) -> c_int>> =
+        OnceLock::new();
+
+    /// A window that went away under us is an error Xlib's default handler
+    /// ends the program for. Ours are ignored; the rest go to GTK's handler.
+    unsafe extern "C" fn on_error(display: *mut xlib::Display, error: *mut xlib::XErrorEvent) -> c_int {
+        if display == OURS.load(Ordering::SeqCst) {
+            return 0;
+        }
+        match PREVIOUS.get().copied().flatten() {
+            Some(previous) => previous(display, error),
+            None => 0,
+        }
+    }
+
+    /// Runs `f` on Mirlow's own connection to the X server.
+    fn with<T: Default>(f: impl FnOnce(*mut xlib::Display) -> T) -> T {
+        static CONNECTION: OnceLock<Option<Mutex<Connection>>> = OnceLock::new();
+        let connection = CONNECTION.get_or_init(|| unsafe {
+            let display = xlib::XOpenDisplay(std::ptr::null());
+            if display.is_null() {
+                return None;
+            }
+            OURS.store(display, Ordering::SeqCst);
+            let _ = PREVIOUS.set(xlib::XSetErrorHandler(Some(on_error)));
+            Some(Mutex::new(Connection(display)))
+        });
+        let Some(connection) = connection else { return T::default() };
+        let connection = connection.lock().unwrap();
+        let result = f(connection.0);
+        unsafe { xlib::XSync(connection.0, 0) };
+        result
+    }
+
+    fn attributes(display: *mut xlib::Display, window: isize) -> Option<xlib::XWindowAttributes> {
+        let mut attributes: xlib::XWindowAttributes = unsafe { std::mem::zeroed() };
+        (unsafe { xlib::XGetWindowAttributes(display, window as c_ulong, &mut attributes) } != 0).then_some(attributes)
+    }
+
+    fn parent_of(display: *mut xlib::Display, window: c_ulong) -> Option<c_ulong> {
+        let (mut root, mut parent, mut children, mut count) = (0, 0, std::ptr::null_mut(), 0 as c_uint);
+        unsafe {
+            if xlib::XQueryTree(display, window, &mut root, &mut parent, &mut children, &mut count) == 0 {
+                return None;
+            }
+            if !children.is_null() {
+                xlib::XFree(children.cast());
+            }
+        }
+        Some(parent)
+    }
+
+    fn children_of(display: *mut xlib::Display, window: c_ulong) -> Vec<c_ulong> {
+        let (mut root, mut parent, mut children, mut count) = (0, 0, std::ptr::null_mut(), 0 as c_uint);
+        unsafe {
+            if xlib::XQueryTree(display, window, &mut root, &mut parent, &mut children, &mut count) == 0
+                || children.is_null()
+            {
+                return Vec::new();
+            }
+            let list = std::slice::from_raw_parts(children, count as usize).to_vec();
+            xlib::XFree(children.cast());
+            list
+        }
+    }
+
+    fn atom(display: *mut xlib::Display, name: &str) -> c_ulong {
+        let name = std::ffi::CString::new(name).unwrap();
+        unsafe { xlib::XInternAtom(display, name.as_ptr(), 0) }
+    }
+
+    fn pid_of(display: *mut xlib::Display, window: c_ulong, property: c_ulong) -> Option<u32> {
+        let (mut kind, mut format, mut count, mut after) = (0, 0, 0, 0);
+        let mut data: *mut c_uchar = std::ptr::null_mut();
+        unsafe {
+            let status = xlib::XGetWindowProperty(
+                display, window, property, 0, 1, 0, xlib::XA_CARDINAL,
+                &mut kind, &mut format, &mut count, &mut after, &mut data,
+            );
+            if data.is_null() {
+                return None;
+            }
+            let pid = (status == 0 && format == 32 && count == 1).then(|| *(data as *const std::os::raw::c_long) as u32);
+            xlib::XFree(data.cast());
+            pid
+        }
+    }
+
+    pub fn is_window(hwnd: isize) -> bool {
+        with(|display| attributes(display, hwnd).is_some())
+    }
+
+    /// Minimised, or put away in the tray: either way not on the screen.
+    pub fn is_minimized(hwnd: isize) -> bool {
+        with(|display| attributes(display, hwnd).map_or(true, |a| a.map_state != xlib::IsViewable))
+    }
+
+    /// The visible top-level window of process `pid`, as the program itself
+    /// reports it (`_NET_WM_PID`, which SDL sets and scrcpy draws with).
+    /// Window managers put each window in a frame of theirs, hence two levels.
+    pub fn find_window(pid: u32) -> Option<isize> {
+        if pid == 0 {
+            return None;
+        }
+        with(|display| unsafe {
+            let property = atom(display, "_NET_WM_PID");
+            let root = xlib::XDefaultRootWindow(display);
+            children_of(display, root)
+                .into_iter()
+                .flat_map(|top| std::iter::once(top).chain(children_of(display, top)))
+                .find(|&window| {
+                    pid_of(display, window, property) == Some(pid)
+                        && attributes(display, window as isize)
+                            .is_some_and(|a| a.map_state == xlib::IsViewable && a.width >= 16 && a.height >= 16)
+                })
+                .map(|window| window as isize)
+        })
+    }
+
+    pub fn screen_rect(hwnd: isize) -> Option<(i32, i32, i32, i32)> {
+        with(|display| unsafe {
+            let a = attributes(display, hwnd)?;
+            if a.map_state != xlib::IsViewable || a.width <= 0 || a.height <= 0 {
+                return None;
+            }
+            let (mut x, mut y, mut child) = (0, 0, 0);
+            xlib::XTranslateCoordinates(display, hwnd as c_ulong, a.root, 0, 0, &mut x, &mut y, &mut child);
+            Some((x, y, a.width, a.height))
+        })
+    }
+
+    pub fn size(hwnd: isize) -> Option<(i32, i32)> {
+        with(|display| attributes(display, hwnd).map(|a| (a.width, a.height)))
+    }
+
+    /// Makes `hwnd` a child of `parent`. The window manager is first let go of
+    /// it (by unmapping), or it would put the window back in its frame.
+    /// Input needs nothing here: the engine draws without taking any, and scrcpy
+    /// takes its own.
+    pub fn adopt(hwnd: isize, parent: isize, _interactive: bool) {
+        let (window, parent) = (hwnd as c_ulong, parent as c_ulong);
+        if with(|display| parent_of(display, window)) == Some(parent) {
+            return;
+        }
+        with(|display| unsafe {
+            let mut change: xlib::XSetWindowAttributes = std::mem::zeroed();
+            change.override_redirect = 1;
+            xlib::XChangeWindowAttributes(display, window, xlib::CWOverrideRedirect, &mut change);
+            xlib::XUnmapWindow(display, window);
+        });
+        std::thread::sleep(std::time::Duration::from_millis(100));
+        with(|display| unsafe { xlib::XReparentWindow(display, window, parent, 0, 0) });
+    }
+
+    /// shortcut: square corners on Linux, the radius is ignored; round them with
+    /// the X Shape extension if it looks out of place.
+    pub fn place(hwnd: isize, rect: Rect, _radius: i32, visible: bool) {
+        let show = visible && rect.width > 0 && rect.height > 0;
+        with(|display| unsafe {
+            let window = hwnd as c_ulong;
+            if show {
+                xlib::XMoveResizeWindow(display, window, rect.x, rect.y, rect.width as c_uint, rect.height as c_uint);
+                xlib::XMapRaised(display, window);
+            } else {
+                xlib::XUnmapWindow(display, window);
+            }
+        });
+    }
+
+    /// A black window, not shown yet, that the window manager leaves alone.
+    pub fn create_window() -> isize {
+        with(|display| unsafe {
+            let screen = xlib::XDefaultScreen(display);
+            let black = xlib::XBlackPixel(display, screen);
+            let mut attributes: xlib::XSetWindowAttributes = std::mem::zeroed();
+            attributes.background_pixel = black;
+            attributes.override_redirect = 1;
+            xlib::XCreateWindow(
+                display,
+                xlib::XRootWindow(display, screen),
+                0, 0, 1, 1, 0,
+                xlib::CopyFromParent,
+                xlib::InputOutput as c_uint,
+                std::ptr::null_mut(),
+                xlib::CWBackPixel | xlib::CWOverrideRedirect,
+                &mut attributes,
+            ) as isize
+        })
+    }
+
+    /// Gives `hwnd` the keyboard.
+    pub fn focus(hwnd: isize) {
+        with(|display| unsafe {
+            xlib::XSetInputFocus(display, hwnd as c_ulong, xlib::RevertToParent, xlib::CurrentTime);
+        });
+    }
+
+    /// Asks the window to close, as its close button would.
+    pub fn close(hwnd: isize) {
+        with(|display| unsafe {
+            let mut event: xlib::XClientMessageEvent = std::mem::zeroed();
+            event.type_ = xlib::ClientMessage;
+            event.window = hwnd as c_ulong;
+            event.message_type = atom(display, "WM_PROTOCOLS");
+            event.format = 32;
+            event.data.set_long(0, atom(display, "WM_DELETE_WINDOW") as std::os::raw::c_long);
+            event.data.set_long(1, xlib::CurrentTime as std::os::raw::c_long);
+            let mut event = xlib::XEvent { client_message: event };
+            xlib::XSendEvent(display, hwnd as c_ulong, 0, xlib::NoEventMask, &mut event);
+        });
+    }
+}
+
+#[cfg(not(any(windows, target_os = "linux")))]
 mod platform {
     use super::Rect;
     pub fn is_window(_hwnd: isize) -> bool {
