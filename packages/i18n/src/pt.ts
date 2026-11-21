@@ -234,6 +234,20 @@ export const pt: Dictionary = {
         noTitle: "Lamento",
         noBody: "Diga‑me o que correu mal ou o que falta, e farei o possível para resolver.",
       },
+      support: {
+        title: "Obrigado",
+        eyebrow: "A caminho das",
+        milestone: "1000",
+        unit: "transferências",
+        body: [
+          "Sou estudante e faço o Mirlow nos meus tempos livres. Vê‑lo a caminho das 1000 transferências ainda me parece irreal, e você é parte da razão.",
+          "O Mirlow é gratuito, sem anúncios e sem nada bloqueado. Se lhe tem sido útil e lhe apetecer, pode pagar‑me um café. Se não, só de o usar já significa muito.",
+        ],
+        coffee: "Pagar‑me um café",
+        later: "Talvez mais tarde",
+        label: "Apoiar o Mirlow",
+        description: "Totalmente opcional, sempre apreciado.",
+      },
     },
     settings: {
       title: "Definições",

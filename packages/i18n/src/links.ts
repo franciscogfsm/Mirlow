@@ -26,4 +26,5 @@ export const links = {
   /** Where people write to with problems and requests. Shown publicly on the site. */
   email: "francisco.soares.martins@tecnico.ulisboa.pt",
   uxplay: "https://github.com/FDH2/UxPlay",
+  coffee: "https://buymeacoffee.com/franciscogfsm",
 } as const;

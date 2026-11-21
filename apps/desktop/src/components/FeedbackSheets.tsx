@@ -1,6 +1,8 @@
 import { links, news } from "@mirlow/i18n";
 import { getVersion } from "@tauri-apps/api/app";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { Coffee } from "lucide-react";
+import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { useI18n } from "../lib/i18n";
 import { GlassButton } from "./controls";
@@ -10,8 +12,11 @@ import { WELCOME_KEY } from "./WelcomeSheet";
 const VERSION_KEY = "mirlow.lastVersion";
 const SESSIONS_KEY = "mirlow.sessions";
 const ASKED_KEY = "mirlow.askedLove";
+const SUPPORT_KEY = "mirlow.supportSeen";
 /** Sessions before asking whether Mirlow is any good: enough to have an opinion. */
 const SESSIONS_BEFORE_ASKING = 4;
+/** Never mention a coffee to someone who has only just tried it. */
+const SESSIONS_BEFORE_SUPPORT = 2;
 
 function read(key: string) {
   try {
@@ -87,7 +92,7 @@ function WhatsNewSheet() {
  * Asked once, after a few mirroring sessions have ended: happy people are
  * pointed at a star and a share, unhappy ones at somewhere to say why.
  */
-function LoveSheet({ mirroring }: { mirroring: boolean }) {
+function LoveSheet({ mirroring, onSupport }: { mirroring: boolean; onSupport: () => void }) {
   const { t } = useI18n();
   const l = t.feedback.love;
   const [step, setStep] = useState<"closed" | "ask" | "yes" | "no">("closed");
@@ -102,6 +107,8 @@ function LoveSheet({ mirroring }: { mirroring: boolean }) {
     if (ended && read(ASKED_KEY) !== "1" && Number(read(SESSIONS_KEY) ?? 0) >= SESSIONS_BEFORE_ASKING) {
       write(ASKED_KEY, "1");
       setStep("ask");
+    } else if (ended && read(SUPPORT_KEY) !== "1" && Number(read(SESSIONS_KEY) ?? 0) >= SESSIONS_BEFORE_SUPPORT) {
+      onSupport();
     }
   }, [mirroring]);
 
@@ -151,11 +158,63 @@ function LoveSheet({ mirroring }: { mirroring: boolean }) {
   );
 }
 
-export function FeedbackSheets({ mirroring }: { mirroring: boolean }) {
+/**
+ * The milestone and a note from the maker. Comes up by itself once, after a
+ * mirroring session, and stays reachable from Settings.
+ */
+export function SupportSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const { t } = useI18n();
+  const s = t.feedback.support;
+  const still = useReducedMotion();
+
+  useEffect(() => {
+    if (open) write(SUPPORT_KEY, "1");
+  }, [open]);
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange} title={s.title} closeLabel={t.settings.close}>
+      <div className="py-7 text-center">
+        <p className="text-[12.5px] text-soft">{s.eyebrow}</p>
+        <p className="mt-1 text-[68px] font-semibold leading-none tracking-[-0.05em] tabular-nums">
+          <span className="sr-only">{s.milestone}</span>
+          <span aria-hidden="true">
+            {Array.from(s.milestone).map((digit, index) => (
+              <motion.span
+                key={index}
+                className="inline-block"
+                initial={still ? false : { opacity: 0, y: 26, filter: "blur(8px)" }}
+                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                transition={{ delay: 0.12 + index * 0.07, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+              >
+                {digit}
+              </motion.span>
+            ))}
+          </span>
+        </p>
+        <p className="mt-2 text-[14px] font-medium">{s.unit}</p>
+      </div>
+      <div className="space-y-3 border-t border-line pt-5 text-[14px] leading-relaxed text-soft">
+        {s.body.map((line) => (
+          <p key={line}>{line}</p>
+        ))}
+        <p className="text-ink">{t.welcome.signature}</p>
+      </div>
+      <div className="mt-6 flex flex-wrap gap-2">
+        <GlassButton tone="accent" onClick={() => void openUrl(links.coffee)}>
+          <Coffee size={15} aria-hidden="true" />
+          {s.coffee}
+        </GlassButton>
+        <GlassButton onClick={() => onOpenChange(false)}>{s.later}</GlassButton>
+      </div>
+    </Sheet>
+  );
+}
+
+export function FeedbackSheets({ mirroring, onSupport }: { mirroring: boolean; onSupport: () => void }) {
   return (
     <>
       <WhatsNewSheet />
-      <LoveSheet mirroring={mirroring} />
+      <LoveSheet mirroring={mirroring} onSupport={onSupport} />
     </>
   );
 }

@@ -229,6 +229,20 @@ export const en = {
         noTitle: "Sorry about that",
         noBody: "Tell me what went wrong or what's missing, and I'll do my best to fix it.",
       },
+      support: {
+        title: "Thank you",
+        eyebrow: "On the way to",
+        milestone: "1,000",
+        unit: "downloads",
+        body: [
+          "I'm a student, and I build Mirlow in my free time. Watching it head towards 1,000 downloads still feels unreal, and you're part of the reason.",
+          "Mirlow is free, with no ads and nothing locked away. If it's been useful and you feel like it, you can buy me a coffee. If not, simply using it already means a lot.",
+        ],
+        coffee: "Buy me a coffee",
+        later: "Maybe later",
+        label: "Support Mirlow",
+        description: "Completely optional, always appreciated.",
+      },
     },
     settings: {
       title: "Settings",

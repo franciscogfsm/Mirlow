@@ -1,7 +1,7 @@
 import { links, localeNames, locales } from "@mirlow/i18n";
 import { getVersion } from "@tauri-apps/api/app";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { Check, ChevronRight } from "lucide-react";
+import { Check, ChevronRight, Coffee } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import {
   api,
@@ -13,7 +13,7 @@ import {
 } from "../lib/api";
 import { useI18n } from "../lib/i18n";
 import { AndroidWifiSetting } from "./AndroidWifi";
-import { Segmented, Switch } from "./controls";
+import { GlassButton, Segmented, Switch } from "./controls";
 import { Sheet } from "./Sheet";
 
 function Row({
@@ -241,6 +241,7 @@ export function SettingsSheet({
   remote,
   android,
   onChange,
+  onSupport,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -249,6 +250,7 @@ export function SettingsSheet({
   /** An Android phone is mirroring, so its steps come first. */
   android: boolean;
   onChange: (patch: Partial<Settings>) => void;
+  onSupport: () => void;
 }) {
   const { t, format } = useI18n();
   const s = t.settings;
@@ -378,6 +380,13 @@ export function SettingsSheet({
             ...locales.map((locale) => ({ value: locale, label: localeNames[locale] })),
           ]}
         />
+      </Row>
+
+      <Row label={t.feedback.support.label} description={t.feedback.support.description}>
+        <GlassButton className="shrink-0" onClick={onSupport}>
+          <Coffee size={15} aria-hidden="true" />
+          {t.feedback.support.coffee}
+        </GlassButton>
       </Row>
 
       <footer className="pt-6 text-[12px] leading-relaxed text-soft">

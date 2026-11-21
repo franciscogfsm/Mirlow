@@ -5,7 +5,7 @@ import { currentMonitor, getCurrentWindow } from "@tauri-apps/api/window";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { FeedbackSheets } from "./components/FeedbackSheets";
+import { FeedbackSheets, SupportSheet } from "./components/FeedbackSheets";
 import { HelpSheet } from "./components/HelpSheet";
 import { SettingsSheet } from "./components/SettingsSheet";
 import { TitleBar } from "./components/TitleBar";
@@ -150,6 +150,7 @@ function Shell({
   const appWindow = getCurrentWindow();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [supportOpen, setSupportOpen] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const [controlsVisible, setControlsVisible] = useState(true);
   // The small window that stays on top of everything.
@@ -320,7 +321,7 @@ function Shell({
       if (event.key === "F11" || (event.key.toLowerCase() === "f" && !typing && mirroring)) {
         event.preventDefault();
         void toggleFullscreen();
-      } else if (event.key === "Escape" && fullscreen && !settingsOpen && !helpOpen) {
+      } else if (event.key === "Escape" && fullscreen && !settingsOpen && !helpOpen && !supportOpen) {
         event.preventDefault();
         void toggleFullscreen();
       } else if (event.key === "," && event.ctrlKey) {
@@ -337,7 +338,7 @@ function Shell({
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [toggleFullscreen, fullscreen, mirroring, settingsOpen, helpOpen, screenshot, toggleRecording, toggleMini]);
+  }, [toggleFullscreen, fullscreen, mirroring, settingsOpen, helpOpen, supportOpen, screenshot, toggleRecording, toggleMini]);
 
   // Files dropped on the window go to an Android phone being mirrored. (On
   // the picture itself, scrcpy takes them and does the same.)
@@ -470,7 +471,7 @@ function Shell({
                 video={video}
                 fullscreen={fullscreen}
                 controlsVisible={controlsVisible}
-                hidden={settingsOpen || helpOpen}
+                hidden={settingsOpen || helpOpen || supportOpen}
                 pause={paused ? { locked: status.locked, sound: status.sound, device } : null}
                 control={control}
                 android={status.client?.model === "Android"}
@@ -504,10 +505,15 @@ function Shell({
         remote={remote}
         android={status.client?.model === "Android"}
         onChange={onSettingsChange}
+        onSupport={() => {
+          setSettingsOpen(false);
+          setSupportOpen(true);
+        }}
       />
       <HelpSheet open={helpOpen} onOpenChange={setHelpOpen} state={diagnostics} />
       <WelcomeSheet />
-      <FeedbackSheets mirroring={mirroring} />
+      <FeedbackSheets mirroring={mirroring} onSupport={() => setSupportOpen(true)} />
+      <SupportSheet open={supportOpen} onOpenChange={setSupportOpen} />
     </div>
   );
 }
